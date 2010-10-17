@@ -15,6 +15,10 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// This file is largely responsible for the decoding of the JPEG JFIF
+// marker segments. It does not parse the scan segment as that is
+// handled by the ImgDecode.cpp code.
+
 #include "stdafx.h"
 
 #include "JfifDecode.h"
@@ -33,6 +37,8 @@
 
 #define MAX_naValues	64			// Max size of decoded value array
 
+// ZigZag DQT coefficient reordering matrix
+// as defined by the ITU-T T.81 standard.
 const unsigned CjfifDecode::m_sZigZag[64] =
 {
 	 0, 1, 8,16, 9, 2, 3,10,
@@ -45,6 +51,7 @@ const unsigned CjfifDecode::m_sZigZag[64] =
 	53,60,61,54,47,55,62,63
 };
 
+// Reverse ZigZag reordering matrix
 const unsigned CjfifDecode::m_sUnZigZag[64] =
 {
 	 0, 1, 5, 6,14,15,27,28,
@@ -58,6 +65,9 @@ const unsigned CjfifDecode::m_sUnZigZag[64] =
 };
 
 
+// This matrix is used to convert a DQT table into its
+// rotated form (ie. by 90 degrees), used in the signature
+// search functionality.
 const unsigned CjfifDecode::m_sQuantRotate[] =
 {
 	0, 8,16,24,32,40,48,56,
@@ -70,6 +80,10 @@ const unsigned CjfifDecode::m_sQuantRotate[] =
 	7,15,23,31,39,47,55,63,
 };
 
+// The ITU-T standard provides some sample quantization
+// tables (for luminance and chrominance) that are often
+// the basis for many different quantization tables through
+// a scaling function.
 const unsigned CjfifDecode::m_sStdQuantLum[] =
 { 16, 11, 10, 16, 24, 40, 51, 61,
 12, 12, 14, 19, 26, 58, 60, 55,
@@ -90,12 +104,14 @@ const unsigned CjfifDecode::m_sStdQuantChr[] =
 99, 99, 99, 99, 99, 99, 99, 99,
 99, 99, 99, 99, 99, 99, 99, 99};
 
+// Structure used for each IPTC field
 struct iptc_field_t {
 	unsigned	id;
 	unsigned	fld_type;
 	CString		fld_name;
 };
 
+// Define all of the currently-known IPTC fields
 struct iptc_field_t iptc_fields[] =
 {
 	{  0,1,"Record Version"},
@@ -244,6 +260,11 @@ void CjfifDecode::Reset()
 }
 
 
+// Initialize the JFIF decoder. Several class pointers are provided
+// as parameters, so that we can directly access the output log, the
+// file buffer (CwindowBuf) and the Image scan decoder (CimgDecode).
+//
+// PRE: pLog, pWBuf, pImgDec are already initialized
 CjfifDecode::CjfifDecode(CDocLog* pLog,CwindowBuf* pWBuf,CimgDecode* pImgDec)
 {
 
@@ -282,6 +303,9 @@ CjfifDecode::~CjfifDecode()
 {
 }
 
+// Asynchronously update a local pointer to the status bar once
+// it becomes available. It was not ready at time of the CjfifDecode
+// class constructor call.
 void CjfifDecode::SetStatusBar(CStatusBar* pStatBar)
 {
 	m_pStatBar = pStatBar;
@@ -296,6 +320,7 @@ void CjfifDecode::ImgSrcChanged()
 	m_pImgSrcDirty = true;
 }
 
+// Reset the DQT tables in memory
 void CjfifDecode::ClearDQT()
 {
 	for (unsigned set=0;set<4;set++)
@@ -324,6 +349,7 @@ void CjfifDecode::SetDQTQuick(unsigned dqt0[64],unsigned dqt1[64])
 	m_strImgQuantCss = "NA";
 }
 
+// This routine builds a lookup table for the Huffman code masks
 void CjfifDecode::HuffMaskLookupGen()
 {
 	unsigned int mask;
@@ -336,7 +362,16 @@ void CjfifDecode::HuffMaskLookupGen()
 }
 
 
-// Make a shorthand accessor for the CwindowBuf class Buf()
+// Throughout the code, we are using Buf() as the means of reading
+// in the next byte from the file. This call normally
+// calls the WindowBuf Buf() call directly, but it redirects the
+// file reading to a local table in case we are faking out the DHT
+// (eg. for MotionJPEG files). This routine simply provides a shorthand
+// accessor function for the CwindowBuf.Buf()
+//
+// IN:     offset = file offset to read
+// IN:     bClean = forcibly disables any redirection to Fake DHT table
+// RETURN: byte from file (or local table)
 BYTE CjfifDecode::Buf(unsigned long offset,bool bClean=false)
 {
 	// Buffer can be redirected to internal array for AVI DHT
@@ -348,6 +383,7 @@ BYTE CjfifDecode::Buf(unsigned long offset,bool bClean=false)
 	}
 }
 
+// Write out a line to the log buffer if we are in verbose mode
 void CjfifDecode::DbgAddLine(const char* strLine)
 {
 	if (bVerbose)
