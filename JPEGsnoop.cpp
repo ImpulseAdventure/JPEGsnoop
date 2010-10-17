@@ -15,6 +15,8 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// JPEGsnoop is written in Microsoft Visual C++ 2003 using MFC
+
 // JPEGsnoop.cpp : Defines the class behaviors for the application.
 //
 
@@ -93,7 +95,11 @@ END_MESSAGE_MAP()
 //   AFX_IDS_OPENFILE 0xF000 (61440) = "Open Image / Movie" for Open Dialog
 // but linker complains error RC2151 "cannot reuse string constants"
 
-//CAL! My command line
+
+// ======================================
+// Command Line option support
+// ======================================
+
 class CMyCommandParser : public CCommandLineInfo
 {
  	typedef enum	{cla_idle,cla_input,cla_output,cla_err} cla_e;
@@ -277,9 +283,10 @@ BOOL CJPEGsnoopApp::InitInstance()
 	// Change the registry key under which our settings are stored
 	// TODO: You should modify this string to be something appropriate
 	// such as the name of your company or organization
-	//CAL! Somehow this call also seems to pull "JPEGsnoop" out of somewhere
+
+	//CAL! It appears that this call seems to pull "JPEGsnoop" out of somewhere
 	// to create the full key path "Software/ImpulseAdventure/JPEGsnoop/Recent File List"
-	// Assume that it comes from the DocTemplate, perhaps?
+	// Perhaps it comes from the DocTemplate?
 	SetRegistryKey(_T(REG_COMPANY_NAME));
 	LoadStdProfileSettings(4);  // Load standard INI file options (including MRU)
 
@@ -289,10 +296,12 @@ BOOL CJPEGsnoopApp::InitInstance()
 	// Assign defaults
 	m_pAppConfig->UseDefaults();
 
+	// Ensure that the user has previously signed the EULA
 	if (!CheckEula()) {
 		return false;
 	}
 
+	// Has the user enabled checking for program updates?
 	if (m_pAppConfig->bUpdateAuto) {
 		CheckUpdates(false);
 	}
@@ -412,7 +421,9 @@ BOOL CJPEGsnoopApp::InitInstance()
 }
 
 
-
+// If it has been more than "nUpdateAutoDays" days since our
+// last check for a recent update to the software, check the
+// website for a newer version.
 void CJPEGsnoopApp::CheckUpdates(bool force_now)
 {
 	CString		strUpdateLastChk = m_pAppConfig->strUpdateLastChk;
@@ -457,6 +468,8 @@ void CJPEGsnoopApp::CheckUpdates(bool force_now)
 
 }
 
+// Scrape the header of the web page to determine if a newer version
+// of the software is available.
 bool CJPEGsnoopApp::CheckUpdatesWww()
 {
 
@@ -542,7 +555,8 @@ bool CJPEGsnoopApp::CheckUpdatesWww()
 			}
 		}
 		
-
+		// Parse the HTTP result and search for the latest
+		// version identification string
 		len = m_strContents.GetLength();
 
 		CString	strData;
@@ -656,7 +670,8 @@ CString CJPEGsnoopApp::RemoveTokenFromCharset(CString& string, LPCTSTR charset) 
   return token;
 }
 
-
+// Ensure that the EULA has been previously signed, and if not, present
+// the user with a dialog box to sign.
 bool CJPEGsnoopApp::CheckEula()
 {
 	if (m_pAppConfig->bEulaAccepted) {
@@ -993,6 +1008,10 @@ void CJPEGsnoopApp::OnUpdateScansegmentNoidct(CCmdUI *pCmdUI)
 }
 
 
+// Launch the configuration options dialog box
+// and pre-populate it with the current m_pAppConfig
+// settings. If the user hits OK, then the revised
+// setttings are stored back into the registry.
 void CJPEGsnoopApp::OnOptionsConfiguration()
 {
 	CSettingsDlg	setDlg;
@@ -1031,6 +1050,10 @@ void CJPEGsnoopApp::OnOptionsCheckforupdates()
 	CheckUpdates(true);
 }
 
+
+// Present the user with the Manage Local signature database dialog.
+// This dialog enables the user to view and delete entries that are
+// defined and stored within the current installation file.
 void CJPEGsnoopApp::OnToolsManagelocaldb()
 {
 	CDbManageDlg	manageDlg;
