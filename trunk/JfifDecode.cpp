@@ -111,7 +111,8 @@ struct iptc_field_t {
 	CString		fld_name;
 };
 
-// Define all of the currently-known IPTC fields
+// Define all of the currently-known IPTC fields, used when we
+// parse the APP13 marker
 struct iptc_field_t iptc_fields[] =
 {
 	{  0,1,"Record Version"},
@@ -273,14 +274,18 @@ CjfifDecode::CjfifDecode(CDocLog* pLog,CwindowBuf* pWBuf,CimgDecode* pImgDec)
 	bOutputExcel = FALSE;
 	bOutputDB = FALSE;		// mySQL output for web
 
-	bVerbose = FALSE;	//CAL! ***
+	// Enable verbose reporting
+	bVerbose = FALSE;
 
 	m_pImgSrcDirty = TRUE;
 
+	// Generate lookup tables for Huffman codes
 	HuffMaskLookupGen();
 
+	// Window status bar is not ready yet, wait for call to SetStatusBar()
 	m_pStatBar = NULL;
 
+	// Save copies of other class pointers
 	m_pLog = pLog;
 	m_pWBuf = pWBuf;
 	m_pImgDec = pImgDec;
@@ -350,6 +355,14 @@ void CjfifDecode::SetDQTQuick(unsigned dqt0[64],unsigned dqt1[64])
 }
 
 // This routine builds a lookup table for the Huffman code masks
+// The result is a simple bit sequence of zeros followed by
+// an increasing number of 1 bits.
+//   00000000...00000001
+//   00000000...00000011
+//   00000000...00000111
+//   ...
+//   01111111...11111111
+//   11111111...11111111
 void CjfifDecode::HuffMaskLookupGen()
 {
 	unsigned int mask;
@@ -392,7 +405,8 @@ void CjfifDecode::DbgAddLine(const char* strLine)
 	}
 }
 
-// Take 32-bit value and decompose into 4 bytes
+// Take 32-bit value and decompose into 4 bytes, but support
+// both byte endian bytes
 void CjfifDecode::UnByteSwap4(unsigned nVal,unsigned &nByte0,unsigned &nByte1,unsigned &nByte2,unsigned &nByte3)
 {
 	if (m_nImgExifEndian == 0) {
@@ -410,6 +424,8 @@ void CjfifDecode::UnByteSwap4(unsigned nVal,unsigned &nByte0,unsigned &nByte1,un
 	}
 }
 
+// Convert from 4 unsigned bytes into a 32-bit dword, with
+// support for endian byte-swapping
 unsigned CjfifDecode::ByteSwap4(unsigned b0,unsigned b1, unsigned b2, unsigned b3)
 {
 	unsigned val;
@@ -427,6 +443,8 @@ unsigned CjfifDecode::ByteSwap4(unsigned b0,unsigned b1, unsigned b2, unsigned b
 	return val;
 }
 
+// Perform conversion from 2 bytes into half-word with
+// endian byte-swapping support
 unsigned CjfifDecode::ByteSwap2(unsigned b0,unsigned b1)
 {
 	unsigned val;
@@ -440,7 +458,9 @@ unsigned CjfifDecode::ByteSwap2(unsigned b0,unsigned b1)
 	return val;
 }
 
-
+// Decode Canon Makernotes
+// Only the most common makernotes are supported; there are a large
+// number of makernotes that have not been documented anywhere.
 CStr2 CjfifDecode::LookupMakerCanonTag(unsigned mainTag,unsigned subTag,unsigned val)
 {
 	CString tmpStr;
@@ -624,6 +644,7 @@ CStr2 CjfifDecode::LookupMakerCanonTag(unsigned mainTag,unsigned subTag,unsigned
 }
 
 
+// Perform decode of EXIF IFD tags
 CString CjfifDecode::LookupExifTag(CString sect,unsigned tag,bool &bUnknown)
 {
 	CString tmpStr;
@@ -858,6 +879,11 @@ CString CjfifDecode::LookupExifTag(CString sect,unsigned tag,bool &bUnknown)
 		}
 	} else if (sect == "MakerIFD") {
 
+		// Makernotes need special handling
+		// We only support a few different manufacturers for makernotes.
+		
+		// A few Canon tags are supported in this routine, the rest are
+		// handled by the LookupMakerCanonTag() call.
 		if (m_strImgExifMake == "Canon") {
 
 			switch(tag)
@@ -1355,6 +1381,9 @@ CString CjfifDecode::PrintAsHex(unsigned* naBytes,unsigned nCount)
 	return sFull;
 }
 
+// Process all of the entries within an EXIF IFD directory
+// Param: ifdStr - The IFD section that we are in
+//
 // NOTE: IFD1 typically contains the thumbnail!
 unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsigned start_ifd_ptr)
 {
@@ -1392,6 +1421,7 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 		faValues[ind] = 0;
 	}
 
+	// Move the file pointer to the start of the IFD
 	m_nPos = pos_exif_start+start_ifd_ptr;
 
 	tmpStr.Format(_T("  EXIF %s @ Absolute 0x%08X"),ifdStr,m_nPos);
@@ -1406,6 +1436,11 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 
 	tmpStr.Format(_T("ifdStr=[%s] m_strImgExifMake=[%s]"),ifdStr,m_strImgExifMake);
 	DbgAddLine(tmpStr);
+
+
+	// If this is the MakerNotes section, then we may want to skip
+	// altogether. Check to see if we are configured to process this
+	// section or if it is a supported manufacturer.
 
 	if (ifdStr == "MakerIFD")
 	{
@@ -1451,11 +1486,14 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 	m_pLog->AddLine(tmpStr);
 
 	// Start of IFD processing
-
+	// Step through each IFD entry and determine the type and
+	// decode accordingly.
 	for (unsigned ifdEntryInd=0;ifdEntryInd<ifdDirLen;ifdEntryInd++)
 	{
 
 		// By default, show single-line value summary
+		// extraDecode is used to indicate that additional special
+		// parsing output is available for this entry
 		extraDecode = FALSE;
 
 		tmpStr.Format(_T("    Entry #%02u:"),ifdEntryInd);
@@ -1481,9 +1519,10 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 		tmpStr.Format(_T("      # Comps = 0x%08X"),ifdNumComps);
 		DbgAddLine(tmpStr);
 
+		// Check to see how many components have been listed.
 		// This helps trap errors in corrupted IFD segments, otherwise
 		// we will hang trying to decode millions of entries!
-		// See testcase "eddy_tomo_bad_ifd_we2.jpg"
+		// See issue & testcase #1148
 		if (ifdNumComps > 4000) {
 			tmpStr.Format("      Excessive # components (%u). Limiting to first 4000.",ifdNumComps);
 			m_pLog->AddLineWarn(tmpStr);
@@ -1491,6 +1530,8 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 		}
 
 		// Read Component Value / Offset
+		// We first treat it as a string and then re-interpret it as an integer
+
 		// ... first as a string (just in case length <=4)
 		for (unsigned i=0;i<4;i++) {
 			ifdValOffsetStr[i] = (char)Buf(m_nPos+i);
@@ -1507,8 +1548,7 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 /*
 		// FIXME
 		// Important:
-		//   I have encountered a file (Submitted by John Leary)
-		//   that contains very large (negative?) numbers in the "value offset"
+		//   I have encountered a file that contains very large (negative?) numbers in the "value offset"
 		//   field (for makernotes). This will cause an exception if I try to read past
 		//   the end of the file, so to safeguard it, I will skip it here:
 		NOTE: Somehow I don't want this code to trigger in the normal case
@@ -1529,28 +1569,34 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 		}
 */
 
+		// The EXIF IFD entries can appear in a wide range of
+		// formats / data types. The formats that have been
+		// publicly documented include:
+		//   EXIF_FORMAT_BYTE       =  1,
+		//   EXIF_FORMAT_ASCII      =  2,
+		//   EXIF_FORMAT_SHORT      =  3,
+		//   EXIF_FORMAT_LONG       =  4,
+		//   EXIF_FORMAT_RATIONAL   =  5,
+		//   EXIF_FORMAT_SBYTE      =  6,
+		//   EXIF_FORMAT_UNDEFINED  =  7,
+		//   EXIF_FORMAT_SSHORT     =  8,
+		//   EXIF_FORMAT_SLONG      =  9,
+		//   EXIF_FORMAT_SRATIONAL  = 10,
+		//   EXIF_FORMAT_FLOAT      = 11,
+		//   EXIF_FORMAT_DOUBLE     = 12
 
-		/*
-		Apparently, the format strings for EXIF are:
-		00028 typedef enum {
-		00029         EXIF_FORMAT_BYTE       =  1,
-		00030         EXIF_FORMAT_ASCII      =  2,
-		00031         EXIF_FORMAT_SHORT      =  3,
-		00032         EXIF_FORMAT_LONG       =  4,
-		00033         EXIF_FORMAT_RATIONAL   =  5,
-		00034         EXIF_FORMAT_SBYTE      =  6,
-		00035         EXIF_FORMAT_UNDEFINED  =  7,
-		00036         EXIF_FORMAT_SSHORT     =  8,
-		00037         EXIF_FORMAT_SLONG      =  9,
-		00038         EXIF_FORMAT_SRATIONAL  = 10,
-		00039         EXIF_FORMAT_FLOAT      = 11,
-		00040         EXIF_FORMAT_DOUBLE     = 12
-		00041 } ExifFormat;
-
-		*/
+		// The IFD variable formatter logic operates in two stages:
+		// In the first stage, the format type is decoded, which results
+		// in a generic decode for the IFD entry. Then, we start a second
+		// stage which re-interprets the values for a number of known
+		// special types.
 
 		switch(ifdFormat)
 		{
+
+		// ----------------------------------------
+		// --- IFD Entry Type: Unsigned Byte
+		// ----------------------------------------
 		case 1:
 			fullStr = "        Unsigned Byte=[";
 			valStr = "";
@@ -1577,9 +1623,10 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 			break;
 
 
-
+		// ----------------------------------------
+		// --- IFD Entry Type: ASCII string
+		// ----------------------------------------
 		case 2:
-			// ASCII string
 			fullStr = "        String=";
 			valStr = "";
 			char cVal;
@@ -1645,6 +1692,10 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 
 			break;
 
+
+		// ----------------------------------------
+		// --- IFD Entry Type: Unsigned Short (2 bytes)
+		// ----------------------------------------
 		case 3:
 			// Unsigned Short (2 bytes)
 			if (ifdNumComps == 1) {
@@ -1716,8 +1767,11 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 			}
 			break;
 
+
+		// ----------------------------------------
+		// --- IFD Entry Type: Unsigned Long (4 bytes)
+		// ----------------------------------------
 		case 4:
-			// Unsigned Long
 			fullStr = "        Unsigned Long=[";
 			valStr = "";
 			for (unsigned ind=0;ind<ifdNumComps;ind++)
@@ -1734,6 +1788,10 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 			DbgAddLine(fullStr);
 			break;
 
+
+		// ----------------------------------------
+		// --- IFD Entry Type: Unsigned Rational (8 bytes)
+		// ----------------------------------------
 		case 5:
 			// Unsigned Rational
 			fullStr = "        Unsigned Rational=[";
@@ -1754,6 +1812,10 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 			DbgAddLine(fullStr);
 			break;
 
+
+		// ----------------------------------------
+		// --- IFD Entry Type: Undefined (?)
+		// ----------------------------------------
 		case 7:
 			// Undefined -- assume 1 word long
 			// This is supposed to be a series of 8-bit bytes
@@ -1785,6 +1847,10 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 
 			break;
 
+
+		// ----------------------------------------
+		// --- IFD Entry Type: Signed Short (2 bytes)
+		// ----------------------------------------
 		case 8:
 			// Signed Short (2 bytes)
 			if (ifdNumComps == 1) {
@@ -1839,6 +1905,10 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 			break;
 
 
+
+		// ----------------------------------------
+		// --- IFD Entry Type: Signed Rational (8 bytes)
+		// ----------------------------------------
 		case 10:
 			// Signed Rational
 			fullStr = "        Signed Rational=[";
@@ -1866,6 +1936,8 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 			return 2;
 			break;
 		} // switch ifdTagVal
+
+
 
 
 		// ======================================================
@@ -2166,7 +2238,6 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 			}
 		}
 
-		//CAL! TODO: Add CFAPattern
 		if (ifdTagStr == "CFAPattern") {
 			unsigned nHorzRepeat,nVertRepeat;
 			unsigned nCfaVal[16][16];
@@ -2210,7 +2281,11 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 			valStr.Format(_T("%c%c.%c%c"),naValues[0],naValues[1],naValues[2],naValues[3]);
 		}
 
-		// Handle MakerNotes
+
+		// ----------------------------------------
+		// Handle certain MakerNotes
+		//   For Canon, we have a special parser routine to handle these
+		// ----------------------------------------
 		if (ifdStr == "MakerIFD") {
 
 			if ((m_strImgExifMake == "Canon") && (ifdFormat == 3) && (ifdNumComps > 4)) {
@@ -2245,6 +2320,7 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 				valStr = "...";
 			}
 
+			// For Nikon & Sigma, we simply support the quality field
 			if ( (ifdTagStr=="Nikon1.Quality") || 
 				(ifdTagStr=="Nikon2.Quality") ||
 				(ifdTagStr=="Nikon3.Quality") ||
@@ -2339,6 +2415,8 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 		if (m_strImgExifMake != "") {
 			// 1) Identify the supported MakerNotes
 			// 2) Remap variations of the Maker field (e.g. Nikon)
+			//    as some manufacturers have been inconsistent in their
+			//    use of the Make field
 
 			m_bImgExifMakeSupported = FALSE;
 			if (m_strImgExifMake == "Canon") {
@@ -2405,6 +2483,10 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 }
 
 
+// Handle APP13 marker
+// This includes:
+// - Photoshop "Save As" and "Save for Web" quality settings
+// - IPTC entries
 unsigned CjfifDecode::DecodeApp13Ps()
 {
 	// Photoshop APP13 marker definition doesn't appear to have a 
@@ -2495,7 +2577,6 @@ unsigned CjfifDecode::DecodeApp13Ps()
 					break;
 				case 0x0404:
 					// IPTC
-					//CAL!
 					unsigned pos_iptc_saved;
 					unsigned seg_type1,seg_type2,seg_sz;
 					unsigned iptc_rec_type;
@@ -2509,6 +2590,10 @@ unsigned CjfifDecode::DecodeApp13Ps()
 						seg_type1 = Buf(m_nPos++)*256 + Buf(m_nPos++);
 						seg_type2 = Buf(m_nPos++);
 						seg_sz = Buf(m_nPos++)*256 + Buf(m_nPos++);
+
+						// Now search the IPTC value list to find the
+						// specific ID to lookup the format type and
+						// field name. The IPTC list is defined in: iptc_fields[]
 						iptc_rec_type = 0;
 						iptc_fld_found = false;
 						iptc_fld_done = false;
@@ -2520,6 +2605,7 @@ unsigned CjfifDecode::DecodeApp13Ps()
 								iptc_fld_found = true;
 							}
 							if (iptc_fld.id == 999) {
+								// 999 is the ID used to demarcate the end-of-list
 								iptc_fld_done = true;
 							}
 							iptc_fld_ind++;
@@ -2531,33 +2617,20 @@ unsigned CjfifDecode::DecodeApp13Ps()
 							iptc_rec_type = 0;
 							iptc_type_name = "???";
 						}
-						/*
-						switch (seg_type2) {
-						case 0: iptc_rec_type = 1; iptc_type_name = "Record Version"; break;
-						case 25: iptc_rec_type = 2; iptc_type_name = "Keywords"; break;
-						case 80: iptc_rec_type = 2; iptc_type_name = "By-line"; break;
-						case 90: iptc_rec_type = 2; iptc_type_name = "City"; break;
-						case 92: iptc_rec_type = 2; iptc_type_name = "Sub-location"; break;
-						case 95: iptc_rec_type = 2; iptc_type_name = "Prov/State"; break;
-						case 100: iptc_rec_type = 2; iptc_type_name = "CountryCode"; break;
-						case 101: iptc_rec_type = 2; iptc_type_name = "CountryName"; break;
-						case 105: iptc_rec_type = 2; iptc_type_name = "Headline"; break;
-						case 120: iptc_rec_type = 2; iptc_type_name = "Caption"; break;
 
-						default: break;
-						}
-						*/
-
+						// Now decode the IPTC field format type
 						if (iptc_rec_type == 1) {
-							// 2 byte binary value
+							// IPTC Format: Half-word
 							iptcStr = m_pWBuf->BufReadStrn(m_nPos,seg_sz);
 							tmpStr.Format("      IPTC [0x%04X:%03u] %s = [0x%02X%02X]",seg_type1,seg_type2,iptc_type_name,Buf(m_nPos),Buf(m_nPos+1));
 							m_pLog->AddLine(tmpStr);
 						} else if (iptc_rec_type == 2) {
+							// IPTC Format: String
 							iptcStr = m_pWBuf->BufReadStrn(m_nPos,seg_sz);
 							tmpStr.Format("      IPTC [0x%04X:%03u] %s = [%s]",seg_type1,seg_type2,iptc_type_name,iptcStr);
 							m_pLog->AddLine(tmpStr);
 						} else {
+							// IPTC Format: Unknown
 							tmpStr.Format("      IPTC [0x%04X:%03u] ? size=%d",seg_type1,seg_type2,seg_sz);
 							m_pLog->AddLine(tmpStr);
 
@@ -2565,7 +2638,8 @@ unsigned CjfifDecode::DecodeApp13Ps()
 
 						m_nPos += seg_sz;
 
-						//if ((m_nPos-pos_iptc_saved) >= bim_len) {
+						// Continue on processing entries until we find an entry that
+						// does not begin with the IPTC marker 0x1C02
 						if ( (Buf(m_nPos)*256 + Buf(m_nPos+1)) != 0x1C02 ) {
 							iptc_done = true;
 						}
@@ -2587,9 +2661,7 @@ unsigned CjfifDecode::DecodeApp13Ps()
 
 		} else {
 			// Not 8BIM???
-			//m_nPos += 1;
 			done = true;
-			//return 1;
 		}
 	}
 	return 0;
@@ -2620,6 +2692,7 @@ unsigned CjfifDecode::DecodeIccHeader(unsigned nPos)
 	unsigned nProfId[4];
 	unsigned nRsvd[7];
 
+	// Read in all of the ICC header bytes
 	nProfSz = ReadBe4(nPos);nPos+=4;
 	nPrefCmmType = ReadBe4(nPos);nPos+=4;
 	nProfVer = ReadBe4(nPos);nPos+=4;
@@ -2653,6 +2726,7 @@ unsigned CjfifDecode::DecodeIccHeader(unsigned nPos)
 	nRsvd[1] = ReadBe4(nPos);nPos+=4;
 	nRsvd[0] = ReadBe4(nPos);nPos+=4;
 
+	// Now output the formatted version of the above data structures
 	tmpStr.Format(_T("        %-33s : %u bytes"),"Profile Size",nProfSz);
 	m_pLog->AddLine(tmpStr);
 	
@@ -2772,13 +2846,6 @@ unsigned CjfifDecode::DecodeIccHeader(unsigned nPos)
 	tmpStr.Format(_T("        %-33s : %s (%s)"),"Primary platform",tmpStr1,Uint2Chars(nPrimPlatSig));
 	m_pLog->AddLine(tmpStr);
 
-/*
-	tmpStr1.Format(_T("Embedded: %s, Prof used independently: %s"),
-		(nProfFlags & 0x00000001)?"Yes":"No",
-		((nProfFlags & 0x00000002)>>1)?"Yes":"No");
-	tmpStr.Format(_T("        %-33s : %s (0x%08X)"),"Profile flags",tmpStr1,nProfFlags);
-	m_pLog->AddLine(tmpStr);
-*/
 	tmpStr.Format(_T("        %-33s : 0x%08X"),"Profile flags",nProfFlags);
 	m_pLog->AddLine(tmpStr);
 	tmpStr1 = (TestBit(nProfFlags,0))?"Embedded profile":"Profile not embedded";
@@ -2833,8 +2900,10 @@ unsigned CjfifDecode::DecodeIccHeader(unsigned nPos)
 	return 0;
 }
 
-//CAL! BUG: Need to confirm endian / byte order!!!
-// The following nParts was reversed to make it work :(
+// Provide special output formatter for ICC Date/Time
+// NOTE: It appears that the nParts had to be decoded in the
+//       reverse order from what I had expected, so one should
+//       confirm that the byte order / endianness is appropriate.
 CString CjfifDecode::DecodeIccDateTime(unsigned nVal[3])
 {
 	CString dateStr;
@@ -2850,6 +2919,7 @@ CString CjfifDecode::DecodeIccDateTime(unsigned nVal[3])
 	return dateStr;
 }
 
+// Simple helper routine to test whether an indexed bit is set
 bool CjfifDecode::TestBit(unsigned nVal,unsigned nBit)
 {
 	unsigned nTmp;
@@ -2861,6 +2931,9 @@ bool CjfifDecode::TestBit(unsigned nVal,unsigned nBit)
 	}
 }
 
+// Convert between unsigned integer to a 4-byte character string
+// (also known as FourCC codes). This field type is used often in
+// ICC profile entries.
 CString CjfifDecode::Uint2Chars(unsigned nVal)
 {
 	CString tmpStr;
@@ -2878,6 +2951,7 @@ CString CjfifDecode::Uint2Chars(unsigned nVal)
 	return tmpStr;
 }
 
+// Convert between unsigned int and a dotted-byte notation
 CString CjfifDecode::Uint2DotByte(unsigned nVal)
 {
 	CString tmpStr;
@@ -2890,6 +2964,7 @@ CString CjfifDecode::Uint2DotByte(unsigned nVal)
 	return tmpStr;
 }
 
+// Parser for APP2 ICC profile marker
 unsigned CjfifDecode::DecodeApp2IccProfile(unsigned nLen)
 {
 	CString tmpStr;
@@ -2907,9 +2982,6 @@ unsigned CjfifDecode::DecodeApp2IccProfile(unsigned nLen)
 	tmpStr.Format(_T("      Marker Number = %u of %u"),nMarkerSeqNum,nNumMarkers);
 	m_pLog->AddLine(tmpStr);
 
-//	tmpStr.Format(_T("      Marker Length = %u bytes"),nPayloadLen);
-//	m_pLog->AddLine(tmpStr);
-
 	if (nMarkerSeqNum == 1) {
 		nMarkerPosStart = m_nPos;
 		DecodeIccHeader(nMarkerPosStart);
@@ -2920,6 +2992,7 @@ unsigned CjfifDecode::DecodeApp2IccProfile(unsigned nLen)
 	return 0;
 }
 
+// Parser for APP2 FlashPix marker
 unsigned CjfifDecode::DecodeApp2Flashpix()
 {
 
@@ -2933,7 +3006,6 @@ unsigned CjfifDecode::DecodeApp2Flashpix()
 	unsigned	fpx_default;
 
 	bool		fpx_storage;
-//	BYTE		fpx_storage_cls[16];
 	CString		fpx_storage_clsStr;
 	unsigned	fpx_st_index_cont;
 	unsigned	fpx_st_offset;
@@ -2949,7 +3021,7 @@ unsigned CjfifDecode::DecodeApp2Flashpix()
 	fpx_ver = Buf(m_nPos++);
 	fpx_seg_type = Buf(m_nPos++);
 
-
+	// FlashPix segments: Contents List or Stream Data
 
 	if (fpx_seg_type == 1) {
 		// Contents List
@@ -2959,12 +3031,6 @@ unsigned CjfifDecode::DecodeApp2Flashpix()
 		fpx_interop_cnt = (Buf(m_nPos++)<<8) + Buf(m_nPos++);
 		tmpStr.Format("      Interoperability Count = %u",fpx_interop_cnt);
 		m_pLog->AddLine(tmpStr);
-
-		// Clear out the storage class ID space
-//		for (unsigned cls_ind=0;cls_ind<16;cls_ind++) {
-//			fpx_storage_cls[cls_ind] = 0;
-//		}
-
 
 		for (unsigned ind=0;ind<fpx_interop_cnt;ind++) {
 			tmpStr.Format("      Entity Index #%u",ind); 
@@ -2989,8 +3055,6 @@ unsigned CjfifDecode::DecodeApp2Flashpix()
 
 			fpx_default = Buf(m_nPos++);
 
-//			tmpStr.Format("***pos=[%08X]",m_nPos);
-//			m_pLog->AddLine(tmpStr);
 
 			//CAL! BUG #1112
 			streamStr = m_pWBuf->BufReadUniStr(m_nPos);
@@ -2999,22 +3063,9 @@ unsigned CjfifDecode::DecodeApp2Flashpix()
 			tmpStr.Format("        Stream Name = [%s]",streamStr);
 			m_pLog->AddLine(tmpStr);
 
-//			tmpStr.Format("***pos=[%08X]",m_nPos);
-//			m_pLog->AddLine(tmpStr);
 
 			// In the case of "storage", we decode the next 16 bytes as the class
 			if (fpx_storage) {
-				/*
-				for (unsigned cls_ind=0;cls_ind<16;cls_ind++) {
-					fpx_storage_cls[cls_ind] = Buf(m_nPos++);
-				}
-				tmpStr.Format("        Storage Class = [%02X%02X%02X%02X-%02X%02X%02X%02X-%02X%02X%02X%02X-%02X%02X%02X%02X]",
-					fpx_storage_cls[0],fpx_storage_cls[1],fpx_storage_cls[2],fpx_storage_cls[3],
-					fpx_storage_cls[4],fpx_storage_cls[5],fpx_storage_cls[6],fpx_storage_cls[7],
-					fpx_storage_cls[8],fpx_storage_cls[9],fpx_storage_cls[10],fpx_storage_cls[11],
-					fpx_storage_cls[12],fpx_storage_cls[13],fpx_storage_cls[14],fpx_storage_cls[15]);
-				m_pLog->AddLine(tmpStr);
-				*/
 
 				//CAL! NOTE: *** Very strange reordering required here. Doesn't seem consistent!
 				// This means that other fields are probably wrong as well (endian)
@@ -3030,8 +3081,7 @@ unsigned CjfifDecode::DecodeApp2Flashpix()
 
 
 			}
-//			tmpStr.Format("***pos=[%08X]",m_nPos);
-//			m_pLog->AddLine(tmpStr);
+
 		}
 
 		return 0;
@@ -3096,9 +3146,12 @@ unsigned CjfifDecode::DecodeApp2Flashpix()
 
 }
 
-
-// Inject mode is used to cause a fake/redirect to the stored
-// DHT table instead of the file Buf()
+// Decode the DHT marker segment (Huffman Tables)
+// In some cases (such as for MotionJPEG), we fake out
+// the DHT tables (when bInject=true) with a standard table
+// as each JPEG frame in the MJPG does not include the DHT.
+// In all other cases (bInject=false), we simply read the
+// DHT table from the file buffer via Buf()
 void CjfifDecode::DecodeDHT(bool bInject)
 {
 	unsigned	length;
@@ -3161,6 +3214,7 @@ void CjfifDecode::DecodeDHT(bool bInject)
 			break;
 		}
 
+		// Read in the array of DHT code lengths
 		for (unsigned int i=1;i<=16;i++)
 		{
 			m_anImgDhtCodesLen[i] = Buf(m_nPos++);
@@ -3171,16 +3225,20 @@ void CjfifDecode::DecodeDHT(bool bInject)
 		unsigned int dht_code_list[DECODE_DHT_MAX_DHT+1]; // Should only need max 162 codes
 		unsigned int dht_ind;
 		unsigned int dht_codes_total;
+
 		// Clear out the code list
 		for (dht_ind = 0;dht_ind <DECODE_DHT_MAX_DHT;dht_ind++)
 		{
 			dht_code_list[dht_ind] = 0xFFFF; // Dummy value
 		}
 
+		// Now read in all of the DHT codes according to the lengths
+		// read in earlier
 		dht_codes_total = 0;
 		dht_ind = 0;
 		for (unsigned int ind_len=1;((!m_bStateAbort)&&(ind_len<=16));ind_len++)
 		{
+			// Keep a total count of the number of DHT codes read
 			dht_codes_total += m_anImgDhtCodesLen[ind_len];
 
 			fullStr.Format(_T("    Codes of length %02u bits (%03u total): "),ind_len,m_anImgDhtCodesLen[ind_len]);
@@ -3194,6 +3252,7 @@ void CjfifDecode::DecodeDHT(bool bInject)
 				tmpStr.Format(_T("%02X "),tmp);
 				fullStr += tmpStr;
 
+				// Only write 16 codes per line
 				if ((ind_code % 16) == 15) {
 					m_pLog->AddLine(fullStr);
 					fullStr = "";
@@ -3217,7 +3276,6 @@ void CjfifDecode::DecodeDHT(bool bInject)
 		tmpStr.Format(_T("    Total number of codes: %03u"),dht_codes_total);
 		m_pLog->AddLine(tmpStr);
 
-		//unsigned int dht_lookup_set = dht_dest_id*2+dht_class;
 		unsigned int dht_lookup_ind = 0;
 
 		// Now print out the actual binary strings!
@@ -3245,6 +3303,8 @@ void CjfifDecode::DecodeDHT(bool bInject)
 					char binstr[17] = "";
 					unsigned int binstr_len = 0;
 
+					// If the user has enabled output of DHT expanded tables,
+					// report the bit-string sequences.
 					if (m_pAppConfig->bOutputDHTexpand) {
 						for (unsigned int bin_ind=bit_len;bin_ind>=1;bin_ind--)
 						{
@@ -3267,8 +3327,6 @@ void CjfifDecode::DecodeDHT(bool bInject)
 
 					unsigned tmp_bits = decval << (32-bit_len);
 					unsigned tmp_code = dht_code_list[dht_ind];
-//					bRet = m_pImgDec->SetDhtEntry(dht_lookup_set,dht_lookup_ind,bit_len,
-//						tmp_bits,tmp_mask,tmp_code);
 					bRet = m_pImgDec->SetDhtEntry(dht_dest_id,dht_class,dht_lookup_ind,bit_len,
 						tmp_bits,tmp_mask,tmp_code);
 
@@ -3281,6 +3339,7 @@ void CjfifDecode::DecodeDHT(bool bInject)
 					dht_ind++;
 				}
 			}
+			// For each loop iteration (on bit length), we shift the code value
 			code_val <<= 1;
 		}
 
@@ -3301,6 +3360,7 @@ void CjfifDecode::DecodeDHT(bool bInject)
 	}
 }
 
+
 // Check return value of previous call. If failed, then ask
 // user if they wish to continue decoding. If no, then flag to
 // the decoder that we're done (avoids continuous failures)
@@ -3313,6 +3373,9 @@ void CjfifDecode::DecodeErrCheck(bool bRet)
 	}
 }
 
+// This is the primary JFIF marker parser. It reads the
+// marker value at the current file position and launches the
+// specific parser routine. This routine exits when 
 #define DECMARK_OK 0
 #define DECMARK_ERR 1
 #define DECMARK_EOI 2
@@ -3338,12 +3401,10 @@ unsigned CjfifDecode::DecodeMarker()
 			if (!m_bAvi) {
 				tmpStr.Format(_T("NOTE: File did not start with JPEG marker. Consider using [Tools->Img Search Fwd] to locate embedded JPEG."));
 				m_pLog->AddLineErr(tmpStr);
-				//AfxMessageBox(tmpStr);
 			}
 		} else {
 			tmpStr.Format(_T("ERROR: Expected marker 0xFF, got 0x%02X @ offset 0x%08X. Consider using [Tools->Img Search Fwd/Rev]."),Buf(m_nPos),m_nPos);
 			m_pLog->AddLineErr(tmpStr);
-			//AfxMessageBox(tmpStr);
 		}
 		m_nPos++;
 		return DECMARK_ERR;
@@ -3518,16 +3579,6 @@ unsigned CjfifDecode::DecodeMarker()
 			}
 			tmpStr = PrintAsHexUC(identifier_tiff,8);
 			fullStr += tmpStr;
-
-/*
-			fullStr = "  Identifier TIFF = x[";
-			for (unsigned int i=0;i<8;i++) {
-				identifier_tiff[i] = (unsigned char)Buf(m_nPos++);
-				tmpStr.Format(_T("%02X "),identifier_tiff[i]);
-				fullStr += tmpStr;
-			}
-			fullStr += "]";
-*/
 			m_pLog->AddLine(fullStr);
 
 
@@ -3545,6 +3596,7 @@ unsigned CjfifDecode::DecodeMarker()
 				break;
 			}
 
+			// We expect the TAG mark of 0x002A (depending on endian mode)
 			unsigned test_002a;
 			test_002a = ByteSwap2(identifier_tiff[2],identifier_tiff[3]);
 			tmpStr.Format(_T("  TAG Mark x002A  = 0x%04X"),test_002a);
@@ -3578,8 +3630,6 @@ unsigned CjfifDecode::DecodeMarker()
 				// Now that we have gone through all entries in the IFD directory,
 				// we read the offset to the next IFD
 				offset_ifd1 = ByteSwap4(Buf(m_nPos+0),Buf(m_nPos+1),Buf(m_nPos+2),Buf(m_nPos+3));
-				//CAL! FIXME
-				//offset_ifd1 = m_pWBuf->BufX(m_nPos,4,!m_nImgExifEndian);
 				m_nPos += 4;
 
 
@@ -3783,7 +3833,6 @@ unsigned CjfifDecode::DecodeMarker()
 			// Only process remainder if it is JFIF. This marker
 			// is also used for application-specific functions.
 
-			//m_nPos+=5;
 			m_nPos += (unsigned)(strlen(m_strApp0Identifier)+1);
 
 			m_nImgVersionMajor = Buf(m_nPos++);
@@ -4019,7 +4068,7 @@ unsigned CjfifDecode::DecodeMarker()
 				}
 
 				// Now add the compare with Annex K
-				// Decided to disable this as it was confusing
+				// Decided to disable this as it was confusing users
 				/*
 				fullStr += "   AnnexRatio: <";
 				for (unsigned x=0;x<8;x++) {
@@ -4039,11 +4088,16 @@ unsigned CjfifDecode::DecodeMarker()
 
 
 
+			// Perform some statistical analysis of the quality factor
+			// to determine the likelihood of the current quantization
+			// table being a scaled version of the "standard" tables.
+			// If the variance is high, it is unlikely to be the case.
 			double qual, var;
-
 			cum_sum /= 64.0;	/* mean scale factor */
 			cum_sum2 /= 64.0;
 			var = cum_sum2 - (cum_sum * cum_sum); /* variance */
+
+			// Generate the equivalent IJQ "quality" factor
 			if (quant_allones)		/* special case for all-ones table */
 				qual = 100.0;
 			else if (cum_sum <= 100.0)
@@ -4394,7 +4448,6 @@ unsigned CjfifDecode::DecodeMarker()
 					m_nSkipCount++;
 					if (m_nSkipData == 0x00) {
 						// Byte stuff
-						//tmpStr.Format(_T("[%03u]=%02x (byte stuff)"),m_nSkipCount,m_nSkipData);
 						m_nSkipData = 0xFF;
 					} else if ((m_nSkipData >= JFIF_RST0) && (m_nSkipData <= JFIF_RST7)) {
 						// Skip over
@@ -4486,7 +4539,7 @@ unsigned CjfifDecode::DecodeMarker()
 		tmpStr.Format(_T("  length     = %u"),len);
 		m_pLog->AddLine(tmpStr);
 		nVal = Buf(m_nPos+2)*256 + Buf(m_nPos+3);
-		//CAL! BUG FIX #1143
+
 		// According to ITU-T spec B.2.4.4, we only expect
 		// restart markers if DRI value is non-zero!
 		m_nImgRstInterval = nVal;
@@ -4535,6 +4588,8 @@ unsigned CjfifDecode::DecodeMarker()
 	return DECMARK_OK;
 }
 
+
+// Print out a header for the current JFIF marker code
 void CjfifDecode::AddHeader(unsigned code)
 {
 	CString tmpStr;
@@ -4628,6 +4683,7 @@ void CjfifDecode::AddHeader(unsigned code)
 }
 
 
+// Update the status bar with a message
 void CjfifDecode::SetStatusText(CString str)
 {
 	// Make sure that we have been connected to the status
@@ -4638,7 +4694,10 @@ void CjfifDecode::SetStatusText(CString str)
 	}
 }
 
-// Generate all of the final outputs
+// Generate a special output form of the current image's
+// compression signature and other characteristics. This is only
+// used during development and batch import to build the online
+// web repository.
 void CjfifDecode::OutputSpecial()
 {
 	CString tmpStr;
@@ -4646,40 +4705,10 @@ void CjfifDecode::OutputSpecial()
 
 	ASSERT(m_nImgLandscape!=ENUM_LANDSCAPE_UNSET);
 
-	//CAL! - start only for me: Web output
-	/*
-	//CAL! Need to modify this to step through dqt_dest_id=0,1
-	if (bOutputWeb)
-	{
-	m_pLog->AddLine(_T("*** WEB OUTPUT START ***"));
-	for (unsigned y=0;y<8;y++) {
-	tmpStr.Format(_T("<tr> "));
-	m_pLog->AddLine(tmpStr);
-	for (unsigned x=0;x<8;x++) {
-	tmpStr.Format(_T("<td>%3u</td>"),m_anImgDqt[dqt_dest_id][y*8+x]);
-	m_pLog->AppendLine(tmpStr);
-	}
-	tmpStr.Format(_T(" </tr>"));
-	m_pLog->AppendLine(tmpStr);
-	}
-	m_pLog->AddLine(_T("*** WEB OUTPUT END ***"));
-	}
-
-	//CAL! Need to modify this to step through dqt_dest_id=0,1
-	if (bOutputExcel)
-	{
-	m_pLog->AddLine(_T("*** EXCEL OUTPUT START ***"));
-	for (unsigned y=0;y<8;y++) {
-	m_pLog->AddLine(_T(""));
-	for (unsigned x=0;x<8;x++) {
-	tmpStr.Format(_T("%3u\t"),m_anImgDqt[dqt_dest_id][y*8+x]);
-	m_pLog->AppendLine(tmpStr);
-	}
-	}
-	m_pLog->AddLine(_T("*** EXCEL OUTPUT END ***"));
-	}
-	*/
-
+	// This mode of operation is currently only supported & used by me
+	// to import the local signature database into a MySQL database
+	// backend on the website. It simply reports the MySQL commands
+	// which can then be imported into a MySQL client application.
 	if (bOutputDB)
 	{
 		m_pLog->AddLine(_T("*** DB OUTPUT START ***"));
@@ -4745,6 +4774,8 @@ void CjfifDecode::OutputSpecial()
 
 }
 
+// Generate the compression signatures (both unrotated and
+// rotated) in advance of submitting to the database.
 void CjfifDecode::PrepareSignature()
 {
 	// Set m_strHash
@@ -4861,6 +4892,7 @@ void CjfifDecode::PrepareSignatureSingle(bool bRotate)
 
 }
 
+// Generate the compression signatures for the thumbnails
 void CjfifDecode::PrepareSignatureThumb()
 {
 	// Generate m_strHashThumb
@@ -4976,6 +5008,11 @@ void CjfifDecode::PrepareSignatureThumbSingle(bool bRotate)
 
 }
 
+
+// Compare the image compression signature & metadata against the database.
+// This is the routine that is also responsible for creating an
+// "Image Assessment" -- ie. whether the image may have been edited or not.
+//
 // PRE: m_strHash signature has already been calculated by PrepareSignature()
 bool CjfifDecode::CompareSignature(bool bQuiet=false)
 {
@@ -5268,33 +5305,7 @@ bool CjfifDecode::CompareSignature(bool bQuiet=false)
 		m_pLog->AddLine("  NOTE: JFIF COMMENT field is known software");
 	}
 
-	// ============================================
-	// Image Assessment Algorithm (old)
-	// ============================================
-/*
-	// Determine if image has been processed/edited
-	m_nImgEdited = EDITED_UNSET;
-	if (bCurXsw && bSrchXsw) {
-		m_nImgEdited = EDITED_YES;
-	} else if (bCurXps) {
-		// Photoshop IRB present
-		m_nImgEdited = EDITED_YES;
-	} else if (!bCurXmm) {
-		m_nImgEdited = EDITED_YES;
-	} else if (!bCurXmkr) {
-		// NOTE: Old digicams might give false here,
-		// e.g. "Sony Cybershot" and cellphones
-		m_nImgEdited = EDITED_YESPROB;
-	} else if (bCurXextrasw) {
-		m_nImgEdited = EDITED_YES;
-	} else if (bCurXcomsw) {
-		m_nImgEdited = EDITED_YES;
-	} else if (!bCurXsw && bCurXmm && bCurXmkr && bSrchXmmUsig) {
-		m_nImgEdited = EDITED_NO;
-	} else {
-		m_nImgEdited = EDITED_UNSURE;
-	}
-*/
+
 
 	// ============================================
 	// Image Assessment Algorithm
@@ -5428,20 +5439,16 @@ bool CjfifDecode::CompareSignature(bool bQuiet=false)
 	m_pLog->AddLine("  Based on the analysis of compression characteristics and EXIF metadata:");
 	m_pLog->AddLine("");
 	if (m_nImgEdited == EDITED_YES) {
-//		m_pLog->AddLine("  ASSESSMENT: Image is  processed/edited");
 		m_pLog->AddLine("  ASSESSMENT: Class 1 - Image is processed/edited");
 	} else if (m_nImgEdited == EDITED_YESPROB) {
-//		m_pLog->AddLine("  ASSESSMENT: Image is very likely processed/edited");
 		m_pLog->AddLine("  ASSESSMENT: Class 2 - Image has high probability of being processed/edited");
 	} else if (m_nImgEdited == EDITED_NO) {
-//		m_pLog->AddLine("  ASSESSMENT: Image is likely original (based on compression analysis)");
 		m_pLog->AddLine("  ASSESSMENT: Class 3 - Image has high probability of being original");
 		// In case the EXIF Software field was detected, 
 		if (bEditNotUnknownSw) {
 			m_pLog->AddLine("              Note that EXIF Software field is set (typically contains Firmware version)");
 		}
 	} else if (m_nImgEdited == EDITED_UNSURE) {
-//		m_pLog->AddLine("  ASSESSMENT: Uncertain if processed or original");
 		m_pLog->AddLine("  ASSESSMENT: Class 4 - Uncertain if processed or original");
 		m_pLog->AddLine("              While the EXIF fields indicate original, no compression signatures ");
 		m_pLog->AddLine("              in the current database were found matching this make/model");
@@ -5461,11 +5468,9 @@ bool CjfifDecode::CompareSignature(bool bQuiet=false)
 	// This section should be rewritten! It appears to be overly complex
 
 	m_nDbReqSuggest = DB_ADD_SUGGEST_UNSET;
-//	if (!bCurXsw && bCurXmm && bCurXmkr && bSrchXmmUsig) {
 	if (m_nImgEdited == EDITED_NO) {
 		bDbReqAdd = false;
 		m_nDbReqSuggest = DB_ADD_SUGGEST_CAM;
-//	} else if (!bCurXsw && bCurXmm && bCurXmkr && !bSrchXmmUsig) {
 	} else if (m_nImgEdited == EDITED_UNSURE) {
 		bDbReqAdd = true;
 		bDbReqAddAuto = true;
@@ -5536,7 +5541,10 @@ bool CjfifDecode::CompareSignature(bool bQuiet=false)
 }
 
 
-
+// Build the image data string that will be sent to the database repository
+// This data string contains the compression siganture and a few special
+// fields such as image dimensions, etc.
+//
 // If Portrait, Rotates DQT table, Width/Height.
 //   m_strImgQuantCss is already rotated by process()
 // PRE: m_strHash already defined
@@ -5609,6 +5617,9 @@ void CjfifDecode::PrepareSendSubmit(CString strQual,unsigned nUserSource,CString
 
 }
 
+
+// Send the compression signature string to the local database file
+// in addition to the web repository if the user has enabled it.
 void CjfifDecode::SendSubmit(CString exif_make, CString exif_model, CString qual,
 							 CString dqt0, CString dqt1, CString dqt2, CString dqt3,
 							 CString css,
@@ -5675,10 +5686,6 @@ void CjfifDecode::SendSubmit(CString exif_make, CString exif_model, CString qual
 		strFormat += "&x_extra=%s&u_notes=%s&c_sigthumb=%s&c_sigthumbrot=%s&x_landscape=%u";
 		strFormat += "&x_thumbx=%u&x_thumby=%u";
 
-#ifdef TEST_APPROVE
-		// Force m_set value to be "approved" instead of "unverified"
-		strFormat += "&approve=99";
-#endif
 
 		strFormDataPre.Format(strFormat,
 			DB_SUBMIT_WWW_VER,exif_make,exif_model,
@@ -5837,7 +5844,9 @@ void CjfifDecode::SendSubmit(CString exif_make, CString exif_model, CString qual
 }
 
 
-
+// Parse the embedded JPEG thumbnail. This routine is a much-reduced
+// version of the main JFIF parser, in that it focuses primarily on the
+// DQT tables.
 void CjfifDecode::DecodeEmbeddedThumb()
 {
 	CString		tmpStr;
@@ -6080,6 +6089,8 @@ void CjfifDecode::DecodeEmbeddedThumb()
 	m_nPos = nPosSaved;
 }
 
+
+// Lookup the EXIF marker name from the code value
 bool CjfifDecode::GetMarkerName(unsigned code,CString &markerStr)
 {
 	bool done = false;
@@ -6107,7 +6118,8 @@ bool CjfifDecode::GetMarkerName(unsigned code,CString &markerStr)
 
 }
 
-// Is this file an AVI MJPEG?
+// Determine if the file is an AVI MJPEG.
+// If so, parse the headers.
 bool CjfifDecode::DecodeAvi()
 {
 	CString		tmpStr;
@@ -6388,7 +6400,10 @@ bool CjfifDecode::DecodeAvi()
 
 
 
-
+// This is the primary JFIF parsing routine.
+// The main loop steps through all of the JFIF markers and calls
+// DecodeMarker() each time until we reach the end of file or an error.
+// Finally, we invoke the compression signature search function.
 void CjfifDecode::process(CFile* inFile)
 {
 
@@ -6534,8 +6549,10 @@ void CjfifDecode::process(CFile* inFile)
 }
 
 
-
-// See if we are in a good state to do an image extraction
+// Export the embedded JPEG image at the current position in the file
+// (may be the primary image or even an embedded thumbnail).
+// Start be determining if the current state is sufficient for an
+// image extraction.
 bool CjfifDecode::ExportJpegPrepare(CString strFileIn,bool bForceEoi,bool bIgnoreEoi)
 {
 	// Extract from current file
@@ -6614,7 +6631,7 @@ bool CjfifDecode::ExportJpegPrepare(CString strFileIn,bool bForceEoi,bool bIgnor
 
 #define EXPORT_BUF_SIZE 131072
 
-// Export the entire file, using the current Buffer (with overlays)
+// Export the entire image file, using the current Buffer (with overlays)
 bool CjfifDecode::ExportJpegDo(CString strFileIn, CString strFileOut, 
 			unsigned long nFileLen, bool bOverlayEn,bool bDhtAviInsert,bool bForceEoi)
 {
@@ -6721,7 +6738,6 @@ bool CjfifDecode::ExportJpegDo(CString strFileIn, CString strFileOut,
 
 	// Step 3
 	nCopyStart = m_nPosSos;
-//	nCopyEnd   = m_nPosEmbedEnd;
 	nCopyEnd   = m_nPosEmbedEnd-1;
 	ind = nCopyStart;
 	while (ind<nCopyEnd) {
@@ -6759,6 +6775,7 @@ bool CjfifDecode::ExportJpegDo(CString strFileIn, CString strFileOut,
 
 	return true;
 }
+
 
 // Export a subset of the file with no overlays or mods
 bool CjfifDecode::ExportJpegDoRange(CString strFileIn, CString strFileOut, 
@@ -6861,7 +6878,7 @@ bool CjfifDecode::ExportJpegDoRange(CString strFileIn, CString strFileOut,
 
 
 
-
+// List of the JFIF markers
 const MarkerNameTable CjfifDecode::m_pMarkerNames[] = {
 	{JFIF_SOI,"SOI"},
 	{JFIF_APP0,"APP0"},
@@ -6916,6 +6933,9 @@ const MarkerNameTable CjfifDecode::m_pMarkerNames[] = {
 };
 
 
+// For Motion JPEG, define the DHT tables that we use since they won't exist
+// in each frame within the AVI. This table will be read in during
+// DecodeDHT()'s call to Buf().
 const BYTE CjfifDecode::m_abMJPGDHTSeg[JFIF_DHT_FAKE_SZ] = {
 	/* JPEG DHT Segment for YCrCb omitted from MJPG data */
 	0xFF,0xC4,0x01,0xA2,
