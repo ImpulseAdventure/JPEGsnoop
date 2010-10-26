@@ -110,9 +110,9 @@ public:
 	void		SetDQTQuick(unsigned dqt0[64],unsigned dqt1[64]);
 
 //	void		ExportRangeSet(unsigned nStart, unsigned nEnd);
-	bool		ExportJpegPrepare(CString strFileIn,bool bForceEoi,bool bIgnoreEoi);
+	bool		ExportJpegPrepare(CString strFileIn,bool bForceSoi,bool bForceEoi,bool bIgnoreEoi);
 	bool		ExportJpegDo(CString strFileIn, CString strFileOut, unsigned long nFileLen,
-					bool bOverlayEn, bool bDhtAviInsert,bool bForceEoi);
+					bool bOverlayEn, bool bDhtAviInsert,bool bForceSoi,bool bForceEoi);
 	bool		ExportJpegDoRange(CString strFileIn, CString strFileOut, 
 					unsigned long nStart, unsigned long nEnd);
 

@@ -94,6 +94,8 @@
 #define IDC_EDIT3                       1073
 #define IDC_CHECK1                      1074
 #define IDC_FORCE_EOI                   1077
+#define IDC_FORCE_EOI2                  1078
+#define IDC_FORCE_SOI                   1078
 #define IDC_IGNORE_EOI                  1081
 #define IDC_BTN_LOAD                    1109
 #define IDC_EDIT_FNAME                  1112

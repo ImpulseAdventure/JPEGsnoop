@@ -404,7 +404,13 @@
 			RelativePath=".\res\JPEGsnoop.manifest">
 		</File>
 		<File
+			RelativePath=".\README-FILES.txt">
+		</File>
+		<File
 			RelativePath=".\ReadMe.txt">
+		</File>
+		<File
+			RelativePath=".\VERSION.txt">
 		</File>
 	</Files>
 	<Globals>

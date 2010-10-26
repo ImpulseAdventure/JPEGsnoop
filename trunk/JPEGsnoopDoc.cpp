@@ -1565,7 +1565,7 @@ void CJPEGsnoopDoc::OnToolsExtractembeddedjpeg()
 		// Is the currently-decoded file in a suitable
 		// state for JPEG extraction (ie. have we seen all
 		// the necessary markers?)
-		bRet = m_pJfifDec->ExportJpegPrepare(m_strPathName,exportDlg.m_bForceEoi,exportDlg.m_bIgnoreEoi);
+		bRet = m_pJfifDec->ExportJpegPrepare(m_strPathName,exportDlg.m_bForceSoi,exportDlg.m_bForceEoi,exportDlg.m_bIgnoreEoi);
 		if (!bRet) {
 			return;
 		}
@@ -1620,7 +1620,7 @@ void CJPEGsnoopDoc::OnToolsExtractembeddedjpeg()
 
 		// Perform the actual extraction
 		unsigned int nFileSize = m_lFileSize;	// TODO: How to handle bit truncation?
-		bRet = m_pJfifDec->ExportJpegDo(m_strPathName,strEmbedFileName,nFileSize,exportDlg.m_bOverlayEn,exportDlg.m_bDhtAviInsert,exportDlg.m_bForceEoi);
+		bRet = m_pJfifDec->ExportJpegDo(m_strPathName,strEmbedFileName,nFileSize,exportDlg.m_bOverlayEn,exportDlg.m_bDhtAviInsert,exportDlg.m_bForceSoi,exportDlg.m_bForceEoi);
 
 		// For export, we need to call AnalyzeClose()
 		AnalyzeClose();

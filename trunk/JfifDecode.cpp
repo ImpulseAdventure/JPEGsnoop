@@ -3146,12 +3146,16 @@ unsigned CjfifDecode::DecodeApp2Flashpix()
 
 }
 
+
 // Decode the DHT marker segment (Huffman Tables)
 // In some cases (such as for MotionJPEG), we fake out
 // the DHT tables (when bInject=true) with a standard table
 // as each JPEG frame in the MJPG does not include the DHT.
 // In all other cases (bInject=false), we simply read the
 // DHT table from the file buffer via Buf()
+//
+// ITU-T standard indicates that we can expect up to a
+// maximum of 16-bit huffman code bitstrings.
 void CjfifDecode::DecodeDHT(bool bInject)
 {
 	unsigned	length;
@@ -6553,7 +6557,7 @@ void CjfifDecode::process(CFile* inFile)
 // (may be the primary image or even an embedded thumbnail).
 // Start be determining if the current state is sufficient for an
 // image extraction.
-bool CjfifDecode::ExportJpegPrepare(CString strFileIn,bool bForceEoi,bool bIgnoreEoi)
+bool CjfifDecode::ExportJpegPrepare(CString strFileIn,bool bForceSoi,bool bForceEoi,bool bIgnoreEoi)
 {
 	// Extract from current file
 	//   [m_nPosEmbedStart ... m_nPosEmbedEnd]
@@ -6594,11 +6598,18 @@ bool CjfifDecode::ExportJpegPrepare(CString strFileIn,bool bForceEoi,bool bIgnor
 		m_pLog->AddLineErr(tmpStr);
 		return false;
 	}
+
 	if (!m_bStateSoi) {
-		tmpStr.Format("  ERROR: Missing marker: %s","SOI");
-		m_pLog->AddLineErr(tmpStr);
-		m_pLog->AddLineErr("         Aborting export");
-		return false;
+		if (!bForceSoi) {
+			tmpStr.Format("  ERROR: Missing marker: %s","SOI");
+			m_pLog->AddLineErr(tmpStr);
+			m_pLog->AddLineErr("         Aborting export. Consider enabling [Force SOI] option");
+			return false;
+		} else {
+			// We're missing the SOI but the user has requested
+			// that we force an SOI, so let's fix things up
+		}
+		
 	}
 	if (!m_bStateSos) {
 		tmpStr.Format("  ERROR: Missing marker: %s","SOS");
@@ -6633,7 +6644,7 @@ bool CjfifDecode::ExportJpegPrepare(CString strFileIn,bool bForceEoi,bool bIgnor
 
 // Export the entire image file, using the current Buffer (with overlays)
 bool CjfifDecode::ExportJpegDo(CString strFileIn, CString strFileOut, 
-			unsigned long nFileLen, bool bOverlayEn,bool bDhtAviInsert,bool bForceEoi)
+			unsigned long nFileLen, bool bOverlayEn,bool bDhtAviInsert,bool bForceSoi,bool bForceEoi)
 {
 	CFile*		pFileOutput;
 	CString		tmpStr = "";
@@ -6688,6 +6699,7 @@ bool CjfifDecode::ExportJpegDo(CString strFileIn, CString strFileOut,
 		AfxMessageBox(tmpStr);
 		m_pLog->AddLineErr(tmpStr);
 
+		if (pFileOutput) { delete pFileOutput; pFileOutput = NULL; }
 		return false;
 	}
 
@@ -6706,12 +6718,21 @@ bool CjfifDecode::ExportJpegDo(CString strFileIn, CString strFileOut,
 
 	pBuf = new BYTE[EXPORT_BUF_SIZE+10];
 	if (!pBuf) {
+		if (pFileOutput) { delete pFileOutput; pFileOutput = NULL; }
 		return false;
 	}
 
 
 
 	// Step 1
+
+	// If we need to force an SOI, do it now
+	if (!m_bStateSoi && bForceSoi) {
+		m_pLog->AddLine("    Forcing SOI Marker");
+		BYTE	anBufSoi[2] = {0xFF,JFIF_SOI};
+		pFileOutput->Write(&anBufSoi,2);
+	}
+
 	nCopyStart = m_nPosEmbedStart;
 	nCopyEnd   = (m_nPosSos-1);
 	ind = nCopyStart;
@@ -6768,6 +6789,10 @@ bool CjfifDecode::ExportJpegDo(CString strFileIn, CString strFileOut,
 		pBuf = NULL;
 	}
 
+	if (pFileOutput) {
+		delete pFileOutput;
+		pFileOutput = NULL;
+	}
 
 	SetStatusText("");
 	tmpStr.Format("  Export done");
@@ -6838,6 +6863,7 @@ bool CjfifDecode::ExportJpegDoRange(CString strFileIn, CString strFileOut,
 
 	pBuf = new BYTE[EXPORT_BUF_SIZE+10];
 	if (!pBuf) {
+		if (pFileOutput) { delete pFileOutput; pFileOutput = NULL; }
 		return false;
 	}
 
@@ -6868,6 +6894,10 @@ bool CjfifDecode::ExportJpegDoRange(CString strFileIn, CString strFileOut,
 		pBuf = NULL;
 	}
 
+	if (pFileOutput) {
+		delete pFileOutput;
+		pFileOutput = NULL;
+	}
 
 	SetStatusText("");
 	tmpStr.Format("  Export range done");
