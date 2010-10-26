@@ -33,6 +33,7 @@ CExportDlg::CExportDlg(CWnd* pParent /*=NULL*/)
 	, m_strOffsetStart(_T(""))
 	, m_bForceEoi(FALSE)
 	, m_bIgnoreEoi(FALSE)
+	, m_bForceSoi(FALSE)
 {
 }
 
@@ -48,6 +49,7 @@ void CExportDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_OFFSET_START, m_strOffsetStart);
 	DDX_Check(pDX, IDC_FORCE_EOI, m_bForceEoi);
 	DDX_Check(pDX, IDC_IGNORE_EOI, m_bIgnoreEoi);
+	DDX_Check(pDX, IDC_FORCE_SOI, m_bForceSoi);
 }
 
 

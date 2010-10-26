@@ -1,0 +1,46 @@
+// ==================================
+// Revision History
+// ==================================
+
+1.4.3
+	- *** Move to Open Source ***
+	  Initial license: GPLv2
+	- Added "Force SOI" to Export JPEG
+	- Fixed memory leak in ExportJpegDo()
+	- Code cleanup
+	
+1.4.2		(10/13/09)
+	- Fixed bug #1002: Detailed scan decode + stuff bytes
+	- Added Detailed Decode "Load" feature (uses last 2 clicks)
+	- Fixed DRI bug #1143: don't expect RST if DRI value=0
+	- TIFF export (8b/16b RGB, 8b YCC)
+	- Increased size of MARKMCUMAP_SIZE to handle larger files (Bug Fix #1146)
+
+1.4.1		(05/28/09)
+	- Icon updated (no 256x256 Vista icon yet)
+	- License agreement updated to clarify commercial-use free
+	- Added check for data following EOI
+
+1.4.0		(04/30/09)
+	- Started adding "//CAL! BUG #xxxx" to known issues
+	- Added support for 12-bit lossy JPEGs (changed MAX_DHT_CODES 
+	  from 180 to 260, added m_nPrecision divider to bring down 
+	  to 8-bit precision)
+	- Started GPS decode
+	- Started work on rewriting EXIF parsing
+	- Fixed a number of bugs in EXIF parsing (esp. arrays, etc.)
+	- Fixed Canon makernote decode, added custom decodes
+	- Added custom decodes to EXIF
+	- Fixed unsigned byte array EXIF decode
+	- Added proper hex decodes to EXIF
+	- Limited EXIF decode (64 bytes) & makernote decodes (400 entries?)
+1.3.1 beta 1 (incl all above)
+	- Added more GPS fields
+	- Added EXIF Interoperability IFD
+	- Added "Hide Unknown EXIF tags" to disable display of unknown tags
+	- Started adding ICC decode (first marker only), and only header
+	- Added Windows XP EXIF tags (eg. XPComments)
+	- Reworked much of the EXIF displays
+	- EXIF strings displayed with quotes to end, ignore bad chars / nulls
+	- Added APP1 XMP output (Adobe metadata)
+

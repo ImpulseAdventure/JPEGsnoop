@@ -41,4 +41,5 @@ public:
 	CString m_strOffsetStart;
 	BOOL m_bForceEoi;
 	BOOL m_bIgnoreEoi;
+	BOOL m_bForceSoi;
 };
