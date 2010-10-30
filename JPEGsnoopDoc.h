@@ -26,6 +26,10 @@
 #include "WindowBuf.h"
 #include "DocLog.h"
 
+#include "FolderDlg.h"
+#include "BatchDlg.h"
+
+
 #define DOCLOG_MAX_LINES 30000
 
 #define ITER_TEST_MAX 2000 //800
@@ -70,7 +74,7 @@ public:
 	CStatusBar* GetStatusBar();
 
 	void	recurseBatchSingle(CString szFileName);
-	bool	recurseBatch(HANDLE hSearchedFile,CString szPathName);
+	bool	recurseBatch(HANDLE hSearchedFile,CString szPathName,bool bSubdirs);
 
 	BOOL ReadLine(CString& strLine, int nLength, LONG lOffset = -1L);
 	BOOL AnalyzeOpen();
@@ -84,10 +88,10 @@ public:
 
 	// Misc helper
 //	CString Dec2Bin(unsigned nVal,unsigned nLen);
-unsigned short	Swap16(unsigned short nVal);
+	unsigned short	Swap16(unsigned short nVal);
 
 
-private:
+public:
 	void	batchProcess();
 
 

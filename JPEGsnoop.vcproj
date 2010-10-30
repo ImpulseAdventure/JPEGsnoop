@@ -129,6 +129,9 @@
 				RelativePath=".\AboutDlg.cpp">
 			</File>
 			<File
+				RelativePath=".\BatchDlg.cpp">
+			</File>
+			<File
 				RelativePath=".\CmdLine.cpp">
 			</File>
 			<File
@@ -252,6 +255,9 @@
 			UniqueIdentifier="{93995380-89BD-4b04-88EB-625FBE52EBFB}">
 			<File
 				RelativePath=".\AboutDlg.h">
+			</File>
+			<File
+				RelativePath=".\BatchDlg.h">
 			</File>
 			<File
 				RelativePath=".\CmdLine.h">

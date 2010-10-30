@@ -142,6 +142,7 @@ CJPEGsnoopDoc::CJPEGsnoopDoc()
 
 }
 
+// Cleanup all of the allocated classes
 CJPEGsnoopDoc::~CJPEGsnoopDoc()
 {
 	if (m_pJfifDec != NULL)
@@ -201,24 +202,6 @@ BOOL CJPEGsnoopDoc::OnNewDocument()
 	// TODO: add reinitialization code here
 	// (SDI documents will reuse this document)
 	Reset();
-
-
-	//
-	/*
-	FIXME these functions rely on View already been
-	   defined so that we can call log functions! If we
-	   are running in batch mode, this is too early to call
-	   these, as no view is ready. Or else we need to avoid
-	   any of the log functions???
-	   */
-
-	// Now perform any batch operations
-
-#ifdef BATCH_DO
-	// Test batch operation!
-	batchProcess();
-#endif
-
 
 	return TRUE;
 }
@@ -741,8 +724,52 @@ BOOL CJPEGsnoopDoc::ReadLine(CString& strLine,
 }
 
 
+// --------------------------------------------------------------------
+// --- START OF BATCH PROCESSING
+// --------------------------------------------------------------------
 
-bool CJPEGsnoopDoc::recurseBatch(HANDLE hSearchedFile,CString szPathName)
+
+// The root of the batch recursion. It simply jumps into the
+// recursion loop but initializes the search to start with an
+// empty search result.
+void CJPEGsnoopDoc::batchProcess()
+{
+	CFolderDialog	myFolderDlg(NULL);
+	CString			strDir;
+	bool			bSubdirs;
+
+	LPCITEMIDLIST	myItemIdList;
+	myItemIdList = myFolderDlg.BrowseForFolder("Select folder to process",0,0,false);
+	strDir = myFolderDlg.GetPathName(myItemIdList);
+	
+	// If the user did not select CANCEL, then proceed with
+	// the batch operation.
+	if (strDir != "") {
+
+		// Bring up dialog to select subdir recursion
+		CBatchDlg myBatchDlg;
+		myBatchDlg.m_bProcessSubdir = false;
+		myBatchDlg.m_strDir = strDir;
+		if (myBatchDlg.DoModal() == IDOK) {
+
+			// Fetch the settings from the dialog and start the batch operation
+			bSubdirs = myBatchDlg.m_bProcessSubdir;
+			recurseBatch(NULL,strDir,bSubdirs);
+
+			// TODO: Clean up after last log output
+
+			// Alert the user that we are done
+			AfxMessageBox("Batch Processing Complete!");
+		}
+	}
+}
+
+
+// Recursive routine that searches for files and folders
+// Used in batch file processing mode
+// INPUT:  hSearchedFile = File handle from previous file search (or NULL if first call)
+// INPUT:  szPathName    = Directory path for current search
+bool CJPEGsnoopDoc::recurseBatch(HANDLE hSearchedFile,CString szPathName,bool bSubdirs)
 {
     WIN32_FIND_DATA stFindData;
 	CString szCurFilename;
@@ -751,8 +778,9 @@ bool CJPEGsnoopDoc::recurseBatch(HANDLE hSearchedFile,CString szPathName)
 	szCurFilename = szPathName;
 	szCurPathname = szPathName;
 
+	// Attempt to find the next file or folder that matches the current path
     if((hSearchedFile == NULL)||(hSearchedFile ==INVALID_HANDLE_VALUE))
-    {// start the search
+    {
 		szCurFilename = "";
 		szCurFilename.Format("%s\\*.*",szPathName);
 
@@ -762,45 +790,62 @@ bool CJPEGsnoopDoc::recurseBatch(HANDLE hSearchedFile,CString szPathName)
     }
     else
     {
+		// If our search didn't return any more hits, then we close the
+		// search handle and terminate this branch of the recursion. This
+		// is the only place where we end the recursion loop.
         if(!FindNextFile(hSearchedFile,&stFindData))
-        {// if no more file exists close it
+        {
             FindClose(hSearchedFile);
             return 0;
         }
     }
 
+	// Update the filename to include the found file or folder
 	szCurPathname += "\\";
 	szCurPathname += stFindData.cFileName;
 
-#ifdef BATCH_DO_RECURSE
-    if(stFindData.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)
-    {// if it is a folder then ....
-        if((!stricmp(stFindData.cFileName,"."))||
-            (!stricmp(stFindData.cFileName,".."))||
-            (!stricmp(stFindData.cFileName,"")))
-        {
-            // call it recursively
-            return recurseBatch(hSearchedFile,szPathName);
-        }
-        
-        // call the set function for the found folder
-        recurseBatchSingle(szCurPathname);
+	// Descend into directories if folder recursion is enabled
+	if (bSubdirs) {
+		if(stFindData.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)
+		{
+			// The found entry is a folder
 
-        // call it recursively
-        recurseBatch(NULL,szCurPathname);
-    }
-#endif
+			// If the folder is not one of the special
+			// DOS current & parent directory references,
+			// enter into it.
+			if((!stricmp(stFindData.cFileName,"."))||
+				(!stricmp(stFindData.cFileName,".."))||
+				(!stricmp(stFindData.cFileName,"")))
+			{
+				// Descend into folder recursively
+				return recurseBatch(hSearchedFile,szPathName,bSubdirs);
+			}
+	        
+			// Since the entry was one of the special folders,
+			// process it here.
+			//CAL! FIXME: Perhaps I should be skipping this?
+			// TODO: Need to debug and check this flow
 
-    // control will come here only if the found one is a file
+			recurseBatchSingle(szCurPathname);
+
+			recurseBatch(NULL,szCurPathname,bSubdirs);
+		}
+	}
+
+	// If we have reached here, then the search above must
+	// have located a file. Otherwise, the above code would
+	// have entered recursion within the found subdirectory
 
 
-    //  set the date time to the file	
+    // Perform the batch operations on a single file
 	recurseBatchSingle(szCurPathname);
 
-    // call it recursively
-    return recurseBatch(hSearchedFile,szPathName);
+    // Continue with the recursion
+    return recurseBatch(hSearchedFile,szPathName,bSubdirs);
 }
 
+// Perform processing on file selected by the batch recursion
+// process recurseBatch().
 void CJPEGsnoopDoc::recurseBatchSingle(CString fName)
 {
 	CString		fNameLower;
@@ -809,6 +854,7 @@ void CJPEGsnoopDoc::recurseBatchSingle(CString fName)
 	unsigned	ind;
 	CString fNameOnly;
 
+	// Extract the filename (without extension) from the full pathname
 	fNameOnly = fName.Mid(fName.ReverseFind('\\')+1);
 	ind = fNameOnly.ReverseFind('.');
 	fNameOnly = fNameOnly.Mid(0,ind);
@@ -816,17 +862,25 @@ void CJPEGsnoopDoc::recurseBatchSingle(CString fName)
 	fNameLower = fName;
 	fNameLower.MakeLower();
 
+	// Extract the file extension
 	ind = fName.ReverseFind('.');
 	fNameExt = fName.Mid(ind);
+	fNameExt.MakeLower();
 
-	if (fNameExt == ".jpg") {
+	// Only process files that have an extension that implies JPEG
+	//CAL! TODO: Should enable the user to provide a list of extensions
+	// or even disable check altogether.
+	if ((fNameExt == ".jpg") || (fNameExt == ".jpeg")) {
 
+		// Open the file & begin normal processing
 		OnOpenDocument(fName);
+
+		// Now that we have completed processing, optionally create
+		// a log file with the report results. Note that this call
+		// automatically overwrites the previous log filename.
 		fName = fName.Left(ind);
 		fName.Append(".txt");
-#ifdef BATCH_DO_LOG
 		DoDirectSave(fName);
-#endif
 
 		// Now submit entry to database!
 #ifdef BATCH_DO_DBSUBMIT
@@ -842,10 +896,10 @@ void CJPEGsnoopDoc::recurseBatchSingle(CString fName)
 
 
 
-void CJPEGsnoopDoc::batchProcess()
-{
-	recurseBatch(NULL,BATCH_DIR);
-}
+// --------------------------------------------------------------------
+// --- END OF BATCH PROCESSING
+// --------------------------------------------------------------------
+
 
 
 void CJPEGsnoopDoc::OnFileOffset()
@@ -1105,16 +1159,18 @@ BOOL CJPEGsnoopDoc::OnOpenDocument(LPCTSTR lpszPathName)
 	return status;
 }
 
+
 // Force a Save in text only format, with no prompting for filename
-// Force overwrite too.
+// WARNING: This routine forces an overwrite of the logfile.
 void CJPEGsnoopDoc::DoDirectSave(CString strLogName)
 {
 	BOOL	bRTF;
 	bRTF = m_bRTF;
 	m_bRTF = false;
-	DoSave(theApp.m_pAppConfig->cmdline_output_fname,false);
+	DoSave(strLogName,false);
 	m_bRTF = bRTF;
 }
+
 
 // Bring up Save As dialog box before saving.
 void CJPEGsnoopDoc::OnFileSaveAs()
@@ -1128,10 +1184,10 @@ void CJPEGsnoopDoc::OnFileSaveAs()
 	bRTF = m_bRTF;
 
 	// FIXME
-	//CAL! How do I allow user to select between Plain-Text & RTF and have
-	// the filename change when they change the filter type? Currently they
-	// would have to do that manually.
-	// Need to use OnLBSelChangeNotify override of CFileDialog
+	//CAL! What is the best way to allow user to select between Plain-Text 
+	// & RTF formats and have the filename change when they change the 
+	// filter type? Currently they would have to do that manually.
+	// Possible solution: Use OnLBSelChangeNotify override of CFileDialog
 	m_bRTF = false;
 	m_strPathName = m_strPathName + ".txt";
 
@@ -1156,7 +1212,6 @@ void CJPEGsnoopDoc::OnFileSaveAs()
 	
 	if( FileDlg.DoModal() == IDOK )
 	{
-		//sFileName = FileDlg.GetFileName();
 		sFileName = FileDlg.GetPathName();
 
 		// Determine the extension

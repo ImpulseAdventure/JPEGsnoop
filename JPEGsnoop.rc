@@ -108,6 +108,7 @@ BEGIN
         MENUITEM "&Open Image...\tCtrl+O",      ID_FILE_OPEN
         MENUITEM "&Save Log...\tCtrl+S",        ID_FILE_SAVE_AS
         MENUITEM "Reprocess File\tCtrl+R",      ID_FILE_REPROCESS
+        MENUITEM "Batch Process...",            ID_FILE_BATCHPROCESS
         MENUITEM SEPARATOR
         MENUITEM "Offset...",                   ID_FILE_OFFSET
         MENUITEM SEPARATOR
@@ -595,6 +596,19 @@ BEGIN
     EDITTEXT        IDC_EDIT_FNAME,66,12,120,14,ES_AUTOHSCROLL | ES_READONLY
 END
 
+IDD_BATCHDLG DIALOGEX 0, 0, 186, 78
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Batch Processing"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,126,36,50,16
+    PUSHBUTTON      "Cancel",IDCANCEL,126,54,50,16
+    CONTROL         "Process subdirectories?",IDC_CHECK_SUBDIRS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,12,42,98,10
+    EDITTEXT        IDC_EDIT_DIR,12,18,162,14,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Directory:",IDC_STATIC,6,6,42,8
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -602,8 +616,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,4,3,0
- PRODUCTVERSION 1,4,3,0
+ FILEVERSION 1,5,0,0
+ PRODUCTVERSION 1,5,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -620,12 +634,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "ImpulseAdventure"
             VALUE "FileDescription", "JPEGsnoop"
-            VALUE "FileVersion", "1.4.3.0"
+            VALUE "FileVersion", "1.5.0.0"
             VALUE "InternalName", "JPEGsnoop.exe"
             VALUE "LegalCopyright", "(c) 2010 Calvin Hass.  All rights reserved."
             VALUE "OriginalFilename", "JPEGsnoop.exe"
             VALUE "ProductName", "JPEGsnoop"
-            VALUE "ProductVersion", "1.4.3.0"
+            VALUE "ProductVersion", "1.5.0.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -753,6 +767,14 @@ BEGIN
         RIGHTMARGIN, 249
         TOPMARGIN, 7
         BOTTOMMARGIN, 101
+    END
+
+    IDD_BATCHDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 71
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -1002,6 +1024,7 @@ END
 STRINGTABLE 
 BEGIN
     ID_OPTIONS_HIDEUKNOWNEXIFTAGS "Hide Unknown EXIF Tags\nEXIF Tags"
+    ID_FILE_BATCHPROCESS    "Start batch processing"
 END
 
 #endif    // English (U.S.) resources

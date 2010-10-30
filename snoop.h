@@ -24,7 +24,7 @@
 // - Note that when the version number is incremented, I need
 //   to also update the corresponding version numbers in the
 //   JPEGsnoop.rc resource under "Version.VS_VERSION_INFO".
-#define VERSION_STR "1.4.3"
+#define VERSION_STR "1.5.0"
 
 // Version number for the database signatures
 // - This version number has been provided in case I decide
@@ -48,21 +48,10 @@
 
 // The following DEFINEs are used in debugging and local batch operations
 //#define DEBUG_SIG		// Print debugging info for signature generation
-//#define TEST_APPROVE	// Automatically approve database submissions (m_set=20)
-//#define BATCH_DO
-//#define BATCH_DO_LOG
 //#define BATCH_DO_RECURSE
 //#define BATCH_DO_DBSUBMIT
 //#define BATCH_DO_DBSUBMIT_ALL
 
-
-#ifdef BATCH_DO
-  #define BATCH_DIR "E:\\Photos Cal\\JPEG Analysis SW\\ijg_quality\\grayscale\\baseline\\"
-#else
-  #define BATCH_DIR "E:\\Test Dir\\"
-#endif
-
-#define BATCH_IMPORT_FILE "E:\\Test Dir\\"
 
 // Internet access parameters
 // - If the user has enabled sharing of the signature data with the online

@@ -88,6 +88,7 @@ BEGIN_MESSAGE_MAP(CJPEGsnoopApp, CWinApp)
 	ON_UPDATE_COMMAND_UI(ID_SCANSEGMENT_HISTOGRAM, OnUpdateScansegmentHistogram)
 	ON_COMMAND(ID_OPTIONS_HIDEUKNOWNEXIFTAGS, OnOptionsHideuknownexiftags)
 	ON_UPDATE_COMMAND_UI(ID_OPTIONS_HIDEUKNOWNEXIFTAGS, OnUpdateOptionsHideuknownexiftags)
+	ON_COMMAND(ID_FILE_BATCHPROCESS, OnFileBatchprocess)
 END_MESSAGE_MAP()
 
 //CAL! FIXME
@@ -346,6 +347,9 @@ BOOL CJPEGsnoopApp::InitInstance()
 	// command-line handling. Therefore, we probably want to force
 	// a FileNew so that we get a control to work with. There doesn't
 	// seem to be any harm with doing this.
+	//
+	// BUG: One issue with the above is that it ends up calling
+	// OnFileNew() twice because of the CCommandLineInfo code below
 	//
 	// We also do a show-window so that we don't get partial drawn frames
 	// when we are processing a file. Normally, we wouldn't want to display
@@ -710,7 +714,6 @@ void CJPEGsnoopApp::OnAppAbout()
 
 // CJPEGsnoopApp message handlers
 
-//CAL!
 void CJPEGsnoopApp::MyOnFileOpen()
 {
 
@@ -753,7 +756,6 @@ void CJPEGsnoopApp::MyOnFileOpen()
 
 }
 
-//CAL!
 void CJPEGsnoopApp::MyOnFileNew()
 {
 	// Default
@@ -1177,5 +1179,15 @@ void CJPEGsnoopApp::OnUpdateOptionsHideuknownexiftags(CCmdUI *pCmdUI)
 		pCmdUI->SetCheck(TRUE);
 	} else {
 		pCmdUI->SetCheck(FALSE);
+	}
+}
+
+void CJPEGsnoopApp::OnFileBatchprocess()
+{
+	// TODO: Add your command handler code here
+	CJPEGsnoopDoc* pMyDoc;
+	pMyDoc = GetCurDoc();
+	if (pMyDoc) {
+		pMyDoc->batchProcess();
 	}
 }
