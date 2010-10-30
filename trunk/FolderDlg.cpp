@@ -36,9 +36,15 @@ IMPLEMENT_DYNAMIC(CFolderDialog, CCmdTarget);
 //
 CFolderDialog::CFolderDialog(CWnd* pWnd)
 {
-	ASSERT(pWnd);
+
+	//CAL! Modified the following to allow us to call this
+	//     routine without a parent window defined. This
+	//     is a temporary workaround so that I can call
+	//     CFolderDialog() from the JPEGsnoopDoc class.
+
+//CAL!	ASSERT(pWnd);
 	memset(&m_brinfo,0,sizeof(m_brinfo));
-	m_brinfo.hwndOwner=pWnd->m_hWnd;		 // use parent window
+//CAL!	m_brinfo.hwndOwner=pWnd->m_hWnd;		 // use parent window
 	m_bFilter = FALSE;						 // default: no filtering
 	SHGetDesktopFolder(&m_shfRoot);		 // get root IShellFolder
 }

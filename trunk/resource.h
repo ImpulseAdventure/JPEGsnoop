@@ -16,6 +16,7 @@
 #define IDD_EXPORTDLG                   112
 #define IDD_DECODEDETAILDLG             113
 #define IDD_EXPORTTIFFDLG               116
+#define IDD_BATCHDLG                    117
 #define IDR_MAINFRAME                   128
 #define IDR_JPEGsnoopTYPE               129
 #define IDR_MAINFRAME_BAK               129
@@ -94,7 +95,6 @@
 #define IDC_EDIT3                       1073
 #define IDC_CHECK1                      1074
 #define IDC_FORCE_EOI                   1077
-#define IDC_FORCE_EOI2                  1078
 #define IDC_FORCE_SOI                   1078
 #define IDC_IGNORE_EOI                  1081
 #define IDC_BTN_LOAD                    1109
@@ -102,6 +102,8 @@
 #define IDC_RAD_RGB16                   1113
 #define IDC_RAD_YCC8                    1114
 #define IDC_RAD_RGB8                    1115
+#define IDC_CHECK_SUBDIRS               1117
+#define IDC_EDIT_DIR                    1118
 #define ID_CANCEL_EDIT_CNTR             32768
 #define ID_TOOLS_DECODE                 32771
 #define ID_FILE_OFFSET                  32772
@@ -177,14 +179,15 @@
 #define ID_SCANSEGMENT_HISTOGRAM        32872
 #define ID_OPTIONS_HIDEUKNOWNEXIFTAGS   32883
 #define ID_TOOLS_EXPORTTIFF             32884
+#define ID_FILE_BATCHPROCESS            32885
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        144
-#define _APS_NEXT_COMMAND_VALUE         32885
-#define _APS_NEXT_CONTROL_VALUE         1116
-#define _APS_NEXT_SYMED_VALUE           117
+#define _APS_NEXT_RESOURCE_VALUE        145
+#define _APS_NEXT_COMMAND_VALUE         32886
+#define _APS_NEXT_CONTROL_VALUE         1119
+#define _APS_NEXT_SYMED_VALUE           118
 #endif
 #endif

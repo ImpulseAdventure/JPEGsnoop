@@ -1,10 +1,12 @@
 // ==================================
-// Revision History
+// JPEGsnoop Revision History
+//   by Calvin Hass
 // ==================================
 
-1.4.3
+1.5.0
 	- *** Move to Open Source ***
 	  Initial license: GPLv2
+	- Added Batch Processing capability
 	- Added "Force SOI" to Export JPEG
 	- Fixed memory leak in ExportJpegDo()
 	- Code cleanup

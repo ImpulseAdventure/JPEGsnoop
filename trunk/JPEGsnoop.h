@@ -105,6 +105,7 @@ public:
 	afx_msg void OnUpdateScansegmentHistogram(CCmdUI *pCmdUI);
 	afx_msg void OnOptionsHideuknownexiftags();
 	afx_msg void OnUpdateOptionsHideuknownexiftags(CCmdUI *pCmdUI);
+	afx_msg void OnFileBatchprocess();
 };
 
 extern CJPEGsnoopApp theApp;
