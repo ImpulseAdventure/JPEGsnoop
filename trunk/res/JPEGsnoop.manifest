@@ -6,7 +6,7 @@
     name="Microsoft.Windows.JPEGsnoop"
     type="win32" 
 /> 
-<description>Your app description here</description> 
+<description>JPEGsnoop image decoder and analysis</description> 
 <dependency> 
     <dependentAssembly> 
         <assemblyIdentity 
