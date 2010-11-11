@@ -481,6 +481,10 @@ private:
 	CPoint		m_ptBrightMcu;
 	bool		m_bBrightValid;
 
+	// Average pixel intensity
+	long		m_nAvgY;
+	bool		m_bAvgYValid;
+
 
 	bool		m_bScanErrorsDisable;			// Disable scan errors reporting
 

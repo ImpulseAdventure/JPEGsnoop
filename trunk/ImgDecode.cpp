@@ -68,6 +68,9 @@ void CimgDecode::Reset()
 	m_ptBrightMcu.x = 0;
 	m_ptBrightMcu.y = 0;
 
+	m_bAvgYValid = false;
+	m_nAvgY = 0;
+
 	// No marker
 	m_bMarkBlock = false;
 	m_nMarkBlockX = 0;
@@ -3244,6 +3247,14 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 
 	// --------------------------------------
 
+	if (bDisplay && m_bAvgYValid) {
+		m_pLog->AddLine("  Average Pixel Luminance (Y):");
+		tmpStr.Format("    Y=[%3u] (range: 0..255)",
+			m_nAvgY);
+		m_pLog->AddLine(tmpStr);
+		m_pLog->AddLine("");
+	}
+
 	if (bDisplay && m_bBrightValid) {
 		m_pLog->AddLine("  Brightest Pixel Search:");
 		tmpStr.Format("    YCC=[%5d,%5d,%5d] RGB=[%3u,%3u,%3u] @ MCU[%3u,%3u]",
@@ -4058,7 +4069,9 @@ void CimgDecode::CalcChannelPreviewFull(CRect* pRectView,unsigned char* pTmp)
 	unsigned	nPixMapW = m_nBlkXMax*8;
 	unsigned	nPixmapInd;
 
-	unsigned	nRngX1,nRngX2,nRngY1,nRngY2;
+	unsigned		nRngX1,nRngX2,nRngY1,nRngY2;
+	unsigned		nSumY;
+	unsigned long	nNumPixels = 0;
 
 /*
 	// FIXME: Later on, need to be provided with proper rect!
@@ -4070,6 +4083,12 @@ void CimgDecode::CalcChannelPreviewFull(CRect* pRectView,unsigned char* pTmp)
 	// This will help YCC Adjust display react much faster. Only recalc
 	// visible portion of image, but then recalc entire one once Adjust
 	// dialog is closed.
+
+	// FIXME:
+	// Note, if we were to make these ranges a subset of the
+	// full image dimensions, then we'd have to determine the best
+	// way to handle the brightest pixel search & average luminance logic
+	// since those appear in the nRngX/Y loops. 
 */	
 	nRngX1 = 0;
 	nRngX2 = m_nImgSizeX;
@@ -4085,6 +4104,11 @@ void CimgDecode::CalcChannelPreviewFull(CRect* pRectView,unsigned char* pTmp)
 	m_nBrightCb = -32768;
 	m_nBrightCr = -32768;
 
+	// Average luminance calculation
+	m_bAvgYValid = false;
+	m_nAvgY = 0;
+	nSumY = 0;
+
 	// For IDCT RGB Printout:
 	bool		bRowStart = false;
 	CString		lineStr;
@@ -4099,6 +4123,9 @@ void CimgDecode::CalcChannelPreviewFull(CRect* pRectView,unsigned char* pTmp)
 		tmpStr.Format("    MCU [%3u,%3u]:",m_nDetailVlcX,m_nDetailVlcY);
 		m_pLog->AddLine(tmpStr);
 	}
+
+	// Determine pixel count
+	nNumPixels = (nRngY2-nRngY1+1) * (nRngX2-nRngX1+1);
 
 	for (unsigned nPixY=nRngY1;nPixY<nRngY2;nPixY++) {
 
@@ -4149,6 +4176,11 @@ void CimgDecode::CalcChannelPreviewFull(CRect* pRectView,unsigned char* pTmp)
 				ConvertYCCtoRGBFastFloat(src_pix);
 				//ConvertYCCtoRGBFastFixed(src_pix);
 			}
+
+			// Accumulate the luminance value for this pixel
+			// after we have converted it to the range 0..255
+			nSumY += src_pix.y;
+
 
 			// If we want a detailed decode of RGB, print it out
 			// now if we are on the correct MCU.
@@ -4205,6 +4237,12 @@ void CimgDecode::CalcChannelPreviewFull(CRect* pRectView,unsigned char* pTmp)
 	m_nBrightR = src_pix.r;
 	m_nBrightG = src_pix.g;
 	m_nBrightB = src_pix.b;
+
+	// Now perform average luminance calculation
+	// NOTE: This will result in a value in the range 0..255
+	ASSERT(nNumPixels > 0);
+	m_nAvgY = nSumY / nNumPixels;
+	m_bAvgYValid = true;
 
 	// Now that we've recalculated the tmp image,
 	// set the flag to mark the new result
