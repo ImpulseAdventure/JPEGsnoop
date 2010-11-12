@@ -848,19 +848,17 @@ bool CJPEGsnoopDoc::recurseBatch(HANDLE hSearchedFile,CString szPathName,bool bS
 // process recurseBatch().
 void CJPEGsnoopDoc::recurseBatchSingle(CString fName)
 {
-	CString		fNameLower;
 	CString		fNameExt;
 	bool		bDoSubmit = false;
 	unsigned	ind;
-	CString fNameOnly;
+	CString		fNameOnly;
+	CString		fNameLog;
 
 	// Extract the filename (without extension) from the full pathname
 	fNameOnly = fName.Mid(fName.ReverseFind('\\')+1);
 	ind = fNameOnly.ReverseFind('.');
 	fNameOnly = fNameOnly.Mid(0,ind);
 
-	fNameLower = fName;
-	fNameLower.MakeLower();
 
 	// Extract the file extension
 	ind = fName.ReverseFind('.');
@@ -878,13 +876,46 @@ void CJPEGsnoopDoc::recurseBatchSingle(CString fName)
 		// Now that we have completed processing, optionally create
 		// a log file with the report results. Note that this call
 		// automatically overwrites the previous log filename.
-		fName = fName.Left(ind);
-		fName.Append(".txt");
-		DoDirectSave(fName);
+		//
+		// TODO: Add an option in the batch dialog to specify
+		//       action to take if logfile already exists.
+		//
+		// ==== WARNING! WARNING! WARNING! ====
+		//   It is *essential* that this Append function work properly
+		//   as it is used to generate the log filename from the
+		//   image filename. Since we may be automatically overwriting
+		//   the logfile, it is imperative that we ensure that there is
+		//   no chance that the log filename happens to be the original
+		//   JPEG filename!
+		//
+		//   This is perhaps being a bit paranoid, but I feel it is
+		//   worth adding some additional code here to ensure that 
+		//   this doesn't happen.
+		// ==== WARNING! WARNING! WARNING! ====
+
+		fNameLog = fName;
+		fNameLog.Append(".txt");
+
+		// Now perform the paranoid checks as described above!
+		// - Is the last 4 characters of the fName ".txt"?
+		if (fNameLog.Right(4) != ".txt") {
+			// Report error message and skip logfile save
+			AfxMessageBox("ERROR: Internal error #10100");
+			return;
+		}
+		// - Is the fNameLog different from the input filename (fName)?
+		if (fNameLog == fName) {
+			// Report error message and skip logfile save
+			AfxMessageBox("ERROR: Internal error #10101");
+			return;
+		}
+
+		// Guess the filename is safe, proceed with save
+		DoDirectSave(fNameLog);
 
 		// Now submit entry to database!
 #ifdef BATCH_DO_DBSUBMIT
-		m_pJfifDec->m_strFileName = fNameOnly;
+		m_pJfifDec->m_strFileName = fNameOnly; // BUG? Should this be "fName"?
 		bDoSubmit = m_pJfifDec->CompareSignature(true);
 		if (bDoSubmit) {
 			m_pJfifDec->PrepareSendSubmit(m_pJfifDec->m_strImgQualExif,m_pJfifDec->m_nDbReqSuggest,"","BATCH");

@@ -100,10 +100,26 @@ END_MESSAGE_MAP()
 // ======================================
 // Command Line option support
 // ======================================
+//
+// JPEGsnoop.exe <parameters>
+//
+// One of the following input parameters:
+//   -i <fname_in>    : [Mandatory] Defines input JPEG filename
+//   -b <directory>   : [Mandatory] UNSUPPORTED: Batch mode operation
+// Zero or more of the following input parameters:
+//   -o <fname_log>   : [Optional]  Defines output log filename
+//   -nogui           : [Optional]  Disables GUI interface
+//   -scan            : [Optional]  Enables Scan Segment decode
+//   -maker           : [Optional]  Enables Makernote decode
+//   -scandump        : [Optional]  Enables Scan Segment dumping
+//   -histo_y         : [Optional]  Enables luminance histogram
+//   -dht_exp         : [Optional]  Enables DHT table expansion into huffman bitstrings
+//   -exif_hide_unk   : [Optional]  Disables decoding of unknown makernotes
+
 
 class CMyCommandParser : public CCommandLineInfo
 {
- 	typedef enum	{cla_idle,cla_input,cla_output,cla_err} cla_e;
+ 	typedef enum	{cla_idle,cla_input,cla_output,cla_err,cla_batchdir} cla_e;
 	int				index;
 	cla_e			next_arg;
 	CSnoopConfig*	m_pCfg;
@@ -127,6 +143,9 @@ public:
 				}
 				else if (bFlag && !strcmp(pszParam,"o")) {
 					next_arg = cla_output;
+				}
+				else if (bFlag && !strcmp(pszParam,"b")) {
+					next_arg = cla_batchdir;
 				}
 				else if (bFlag && !strcmp(pszParam,"nogui")) {
 					m_pCfg->cmdline_gui = false;
@@ -182,6 +201,28 @@ public:
 
 				m_nShellCommand = FileOpen;
 				m_strFileName = pszParam;
+
+				next_arg = cla_idle;
+				break;
+
+			// TODO: Batch processing
+			case cla_batchdir:
+				msg = "BatchDir=[";
+				msg += pszParam;
+				msg += "]";
+
+				// TODO:
+				//   Need to create a member variable to store
+				//   the batch directory name.
+				//m_pCfg->cmdline_batch = true;
+				//m_pCfg->cmdline_batch_dirname = pszParam;
+
+				//   Also set the ShellCommand so that the InitProcess()
+				//   call can determine which action to take. We should
+				//   probably define a new value for the ShellCommand
+				//   specific to batch processing.
+				//m_nShellCommand = FileOpen;
+				//m_strFileName = pszParam;
 
 				next_arg = cla_idle;
 				break;
@@ -379,6 +420,11 @@ BOOL CJPEGsnoopApp::InitInstance()
 		default:
 			bResult = FALSE;
 			break;
+
+		//CAL! TODO:
+		//  Here is where I should probably add in a handler for
+		//  the batch processing invoked from the command line.
+		//  Ideally, I'd like to call JPEGsnoopDoc::batchProcess()!
 	}
 	if (!bResult)
 		return FALSE;
