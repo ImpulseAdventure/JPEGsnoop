@@ -609,6 +609,19 @@ BEGIN
     LTEXT           "Directory:",IDC_STATIC,6,6,42,8
 END
 
+IDD_OPERATIONDLG DIALOGEX 0, 0, 186, 73
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "Operation Progress"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "Abort",ID_BTN_ABORT,66,48,50,14
+    CONTROL         "",IDC_PROGRESS_BAR,"msctls_progress32",WS_BORDER,6,6,
+                    174,14
+    CTEXT           "Progress: ddd of ddd",IDC_STATIC_PROGRESS,6,24,174,12,
+                    SS_SUNKEN
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -775,6 +788,14 @@ BEGIN
         RIGHTMARGIN, 179
         TOPMARGIN, 7
         BOTTOMMARGIN, 71
+    END
+
+    IDD_OPERATIONDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 66
     END
 END
 #endif    // APSTUDIO_INVOKED

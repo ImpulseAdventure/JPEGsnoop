@@ -1480,10 +1480,18 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 
 	CString ifdTagStr;
 
+	// =========== EXIF IFD Header (Start) ===========
+	// - Defined in Exif 2.2 Standard (JEITA CP-3451) section 4.6.2 
+	// - Contents (2 bytes total)
+	//   - Number of fields (2 bytes)
+
 	ifdDirLen = ReadSwap2(m_nPos);
 	m_nPos+=2;
 	tmpStr.Format(_T("    Dir Length = 0x%04X"),ifdDirLen);
 	m_pLog->AddLine(tmpStr);
+
+	// =========== EXIF IFD Header (End) ===========
+
 
 	// Start of IFD processing
 	// Step through each IFD entry and determine the type and
@@ -1499,6 +1507,14 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 		tmpStr.Format(_T("    Entry #%02u:"),ifdEntryInd);
 		DbgAddLine(tmpStr);
 
+		// =========== EXIF IFD Interoperability entry (Start) ===========
+		// - Defined in Exif 2.2 Standard (JEITA CP-3451) section 4.6.2 
+		// - Contents (12 bytes total)
+		//   - Tag (2 bytes)
+		//   - Type (2 bytes)
+		//   - Count (4 bytes)
+		//   - Value Offset (4 bytes)
+
 		// Read Tag #
 		ifdTagVal = ReadSwap2(m_nPos);
 		m_nPos+=2;
@@ -1507,7 +1523,7 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 		tmpStr.Format(_T("      Tag # = 0x%04X = [%s]"),ifdTagVal,ifdTagStr);
 		DbgAddLine(tmpStr);
 
-		// Read Format
+		// Read Format (or Type)
 		ifdFormat = ReadSwap2(m_nPos);
 		m_nPos+=2;
 		tmpStr.Format(_T("      Format # = 0x%04X"),ifdFormat);
@@ -1544,6 +1560,8 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 		nIfdOffset = ReadSwap4(m_nPos);
 		tmpStr.Format(_T("      # Val/Offset = 0x%08X"),nIfdOffset);
 		DbgAddLine(tmpStr);
+
+		// =========== EXIF IFD Interoperability entry (End) ===========
 
 /*
 		// FIXME
@@ -1916,11 +1934,12 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 			for (unsigned ind=0;ind<ifdNumComps;ind++)
 			{
 				if (ind!=0)	{ valStr += ", "; }
-
-				valStr1 = DecodeValFraction(pos_exif_start+nIfdOffset+(ind*8));
-				bRet = DecodeValRational(pos_exif_start+nIfdOffset+(ind*8),val_real);
-				faValues[ind] = val_real;
-				valStr += valStr1;
+				if (ind<MAX_naValues) {
+					valStr1 = DecodeValFraction(pos_exif_start+nIfdOffset+(ind*8));
+					bRet = DecodeValRational(pos_exif_start+nIfdOffset+(ind*8),val_real);
+					faValues[ind] = val_real;
+					valStr += valStr1;
+				}
 			}
 			fullStr += valStr;
 			fullStr += "]";
@@ -2254,19 +2273,21 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 				for (unsigned nY=0;nY<nVertRepeat;nY++) {
 					sLine.Format(_T("     %-36s  = [ "  ),"");
 					for (unsigned nX=0;nX<nHorzRepeat;nX++) {
-						nVal = naValues[nInd++];
-						nCfaVal[nY][nX] = nVal;
-						switch(nVal) {
-							case 0: sCol = "Red";break;
-							case 1: sCol = "Grn";break;
-							case 2: sCol = "Blu";break;
-							case 3: sCol = "Cya";break;
-							case 4: sCol = "Mgn";break;
-							case 5: sCol = "Yel";break;
-							case 6: sCol = "Wht";break;
-							default: sCol.Format(_T("x%02X"),nVal);break;
+						if (nInd<MAX_naValues) {
+							nVal = naValues[nInd++];
+							nCfaVal[nY][nX] = nVal;
+							switch(nVal) {
+								case 0: sCol = "Red";break;
+								case 1: sCol = "Grn";break;
+								case 2: sCol = "Blu";break;
+								case 3: sCol = "Cya";break;
+								case 4: sCol = "Mgn";break;
+								case 5: sCol = "Yel";break;
+								case 6: sCol = "Wht";break;
+								default: sCol.Format(_T("x%02X"),nVal);break;
+							}
+							sLine.AppendFormat(_T("%s "),sCol);
 						}
-						sLine.AppendFormat(_T("%s "),sCol);
 					}
 					sLine.Append(_T("]"));
 					m_pLog->AddLine(sLine);
@@ -2299,8 +2320,9 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 					// Assume it is a maker field with subentries!
 
 					for (unsigned ind=0;ind<ifdNumComps;ind++) {
-						//CAL! Limit the number of entries!
-						if (ind < 300) {
+						// Limit the number of entries (in case there was a decode error
+						// or simply too many to report)
+						if (ind<MAX_naValues) {
 							valStr.Format(_T("#%u=%u "),ind,naValues[ind]);
 							retval = LookupMakerCanonTag(ifdTagVal,ind,naValues[ind]);
 							makerStr = retval.tag;
@@ -2308,7 +2330,7 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 							if ((!m_pAppConfig->bExifHideUnknown) || (!retval.bUnknown)) {
 								m_pLog->AddLine(valStr1);
 							}
-						} else if (ind == 300) {
+						} else if (ind == MAX_naValues) {
 							m_pLog->AddLine(_T("      [... etc ...]"));
 						} else {
 							// Don't print!
@@ -2477,6 +2499,11 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 		DbgAddLine(_T(""));
 
 	} // for ifdEntryInd
+
+	// =========== EXIF IFD (End) ===========
+	// - Defined in Exif 2.2 Standard (JEITA CP-3451) section 4.6.2 
+	// - Is completed by 4-byte offset to next IFD, which is
+	//   read in next iteration.
 
 	m_pLog->Enable();
 	return 0;
@@ -3573,6 +3600,13 @@ unsigned CjfifDecode::DecodeMarker()
 
 			pos_exif_start = m_nPos; // Save m_nPos @ start of EXIF used for all IFD offsets
 
+			// =========== EXIF TIFF Header (Start) ===========
+			// - Defined in Exif 2.2 Standard (JEITA CP-3451) section 4.5.2 
+			// - Contents (8 bytes total)
+			//   - Byte order (2 bytes)
+			//   - 0x002A (2 bytes)
+			//   - Offset of 0th IFD (4 bytes)
+
 			unsigned char identifier_tiff[9];
 			fullStr = "";
 			tmpStr = "";
@@ -3620,6 +3654,24 @@ unsigned CjfifDecode::DecodeMarker()
 
 			offset_ifd1 = ByteSwap4(identifier_tiff[4],identifier_tiff[5],
 				identifier_tiff[6],identifier_tiff[7]);
+
+			// =========== EXIF TIFF Header (End) ===========
+
+			// =========== EXIF IFD 0 ===========
+			// Do we start the 0th IFD for the "Primary Image Data"?
+			// Even though the offset_ifd1 pointer should indicate to
+			// us where the IFD should start (0x0008 if immediately after
+			// EXIF TIFF Header), I have observed JPEG files that
+			// do not contain the IFD. Therefore, we must check for this
+			// condition by comparing against the APP marker length.
+			// Example file: http://img9.imageshack.us/img9/194/90114543.jpg
+
+			if ((nPosSaved + length) <= (pos_exif_start+offset_ifd1)) {
+				// We've run out of space for any IFD, so cancel now
+				exif_done = true;
+				m_pLog->AddLine(_T("  NOTE: No IFD entries"));
+			}
+
 
 			ifd_count = 0;
 			while (!exif_done) {

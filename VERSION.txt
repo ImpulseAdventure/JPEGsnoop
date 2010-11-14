@@ -3,12 +3,14 @@
 //   by Calvin Hass
 // ==================================
 
-1.5.1		(11/11/10)
+1.5.1		(11/14/10)
+	- Improved robustness of batch mode operation
 	- Added average luminance report
-	- Minor improvement to batch mode robustness
-	- Changed batch mode log files to preserve original image file
-	  extension (eg. "IMG_2014.JPG" -> "IMG_2014.JPG.TXT" instead of
-	  "IMG_2014.TXT").
+	- Changed batch mode log files to preserve original image file extension
+	  (eg. "IMG_2014.JPG" -> "IMG_2014.JPG.TXT" instead of "IMG_2014.TXT").
+	- Fixed crash with files that had APP1 EXIF segment but no IFDs
+	- Added extra error checking in DecodeExifIfd()
+	- Prevented Canon Makernote decoding from excessive range
 	- Added initial framework for batch mode support from commandline
 	  (not completed)
 

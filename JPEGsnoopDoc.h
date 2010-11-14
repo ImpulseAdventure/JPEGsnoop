@@ -73,8 +73,9 @@ public:
 
 	CStatusBar* GetStatusBar();
 
-	void	recurseBatchSingle(CString szFileName);
-	bool	recurseBatch(HANDLE hSearchedFile,CString szPathName,bool bSubdirs);
+	void	recurseBatch(CString szPathName,bool bSubdirs);
+	void	doBatchSingle(CString szFileName);
+
 
 	BOOL ReadLine(CString& strLine, int nLength, LONG lOffset = -1L);
 	BOOL AnalyzeOpen();

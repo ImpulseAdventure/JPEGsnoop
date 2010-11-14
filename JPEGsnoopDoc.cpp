@@ -36,6 +36,8 @@
 #include "DecodeDetailDlg.h"
 #include "ExportTiffDlg.h"
 
+//#include "OperationDlg.h"
+
 #include "General.h"
 
 #include "FileTiff.h"
@@ -729,6 +731,8 @@ BOOL CJPEGsnoopDoc::ReadLine(CString& strLine,
 // --------------------------------------------------------------------
 
 
+
+
 // The root of the batch recursion. It simply jumps into the
 // recursion loop but initializes the search to start with an
 // empty search result.
@@ -752,9 +756,33 @@ void CJPEGsnoopDoc::batchProcess()
 		myBatchDlg.m_strDir = strDir;
 		if (myBatchDlg.DoModal() == IDOK) {
 
-			// Fetch the settings from the dialog and start the batch operation
+			// Fetch the settings from the dialog
 			bSubdirs = myBatchDlg.m_bProcessSubdir;
-			recurseBatch(NULL,strDir,bSubdirs);
+
+			// Indicate long operation ahead!
+			CWaitCursor wc;
+
+			// TODO:
+			// - What is the best way to provide a "Cancel Dialog" for a
+			//   recursive operation? I can easily create the cancel / progress
+			//   dialog with operations that have can be single-stepped, but
+			//   not ones that require accumulation on the stack.
+			// - For now, just leave as-is.
+
+			// Example code that I can use for single-stepping the operation:
+			//
+			// // === START
+			// COperationDlg LengthyOp(this);
+			// LengthyOp.SetFunctions( PrepareOperation, NextIteration, GetProgress );
+			//
+			// // Until-done based
+			// BOOL bOk = LengthyOp.RunUntilDone( true );
+			// // === END
+
+
+			// Start the batch operation
+			recurseBatch(strDir,bSubdirs);
+			
 
 			// TODO: Clean up after last log output
 
@@ -765,88 +793,61 @@ void CJPEGsnoopDoc::batchProcess()
 }
 
 
+
 // Recursive routine that searches for files and folders
 // Used in batch file processing mode
-// INPUT:  hSearchedFile = File handle from previous file search (or NULL if first call)
 // INPUT:  szPathName    = Directory path for current search
-bool CJPEGsnoopDoc::recurseBatch(HANDLE hSearchedFile,CString szPathName,bool bSubdirs)
+// INPUT:  bSubdirs      = Are we recursing down into subdirectories?
+void CJPEGsnoopDoc::recurseBatch(CString szPathName,bool bSubdirs)
 {
-    WIN32_FIND_DATA stFindData;
-	CString szCurFilename;
-	CString szCurPathname;
+	// The following code snippet is based on MSDN code:
+	// http://msdn.microsoft.com/en-us/library/scx99850%28VS.80%29.aspx
 
-	szCurFilename = szPathName;
-	szCurPathname = szPathName;
+	CFileFind finder;
 
-	// Attempt to find the next file or folder that matches the current path
-    if((hSearchedFile == NULL)||(hSearchedFile ==INVALID_HANDLE_VALUE))
-    {
-		szCurFilename = "";
-		szCurFilename.Format("%s\\*.*",szPathName);
+	// build a string with wildcards
+	CString	strWildcard(szPathName);
+	strWildcard	+= _T("\\*.*");
 
-		hSearchedFile = FindFirstFile(szCurFilename,&stFindData);
-		if(hSearchedFile == INVALID_HANDLE_VALUE)
-			return 0;
-    }
-    else
-    {
-		// If our search didn't return any more hits, then we close the
-		// search handle and terminate this branch of the recursion. This
-		// is the only place where we end the recursion loop.
-        if(!FindNextFile(hSearchedFile,&stFindData))
-        {
-            FindClose(hSearchedFile);
-            return 0;
-        }
-    }
+	// start working for files
+	BOOL bWorking =	finder.FindFile(strWildcard);
 
-	// Update the filename to include the found file or folder
-	szCurPathname += "\\";
-	szCurPathname += stFindData.cFileName;
+	while (bWorking)
+	{
+		bWorking = finder.FindNextFile();
 
-	// Descend into directories if folder recursion is enabled
-	if (bSubdirs) {
-		if(stFindData.dwFileAttributes&FILE_ATTRIBUTE_DIRECTORY)
+		// skip	. and .. files;	otherwise, we'd
+		// recur infinitely!
+
+		if (finder.IsDots())
+			continue;
+
+		CString	strPath	= finder.GetFilePath();
+
+		// if it's a directory,	recursively	search it
+		if (finder.IsDirectory())
 		{
-			// The found entry is a folder
-
-			// If the folder is not one of the special
-			// DOS current & parent directory references,
-			// enter into it.
-			if((!stricmp(stFindData.cFileName,"."))||
-				(!stricmp(stFindData.cFileName,".."))||
-				(!stricmp(stFindData.cFileName,"")))
-			{
-				// Descend into folder recursively
-				return recurseBatch(hSearchedFile,szPathName,bSubdirs);
+			if (bSubdirs) {
+				recurseBatch(strPath,bSubdirs);
 			}
-	        
-			// Since the entry was one of the special folders,
-			// process it here.
-			//CAL! FIXME: Perhaps I should be skipping this?
-			// TODO: Need to debug and check this flow
+		} else {
+			// GetFilePath() includes both the path	& filename
+			// when	called on a	file entry,	so there is	no need
+			// to specifically call	GetFileName()
+			//		 CString strFname =	finder.GetFileName();
 
-			recurseBatchSingle(szCurPathname);
-
-			recurseBatch(NULL,szCurPathname,bSubdirs);
+			// Perform the actual processing on the file
+			doBatchSingle(strPath);
 		}
 	}
 
-	// If we have reached here, then the search above must
-	// have located a file. Otherwise, the above code would
-	// have entered recursion within the found subdirectory
-
-
-    // Perform the batch operations on a single file
-	recurseBatchSingle(szCurPathname);
-
-    // Continue with the recursion
-    return recurseBatch(hSearchedFile,szPathName,bSubdirs);
+	finder.Close();
 }
 
 // Perform processing on file selected by the batch recursion
 // process recurseBatch().
-void CJPEGsnoopDoc::recurseBatchSingle(CString fName)
+// PRECONDITION: fName is a file (ie. not directory)
+void CJPEGsnoopDoc::doBatchSingle(CString fName)
 {
 	CString		fNameExt;
 	bool		bDoSubmit = false;
@@ -866,7 +867,7 @@ void CJPEGsnoopDoc::recurseBatchSingle(CString fName)
 	fNameExt.MakeLower();
 
 	// Only process files that have an extension that implies JPEG
-	//CAL! TODO: Should enable the user to provide a list of extensions
+	// TODO: Should enable the user to provide a list of extensions
 	// or even disable check altogether.
 	if ((fNameExt == ".jpg") || (fNameExt == ".jpeg")) {
 

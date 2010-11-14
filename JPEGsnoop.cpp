@@ -26,7 +26,6 @@
 
 #include "JPEGsnoopDoc.h"
 #include "JPEGsnoopView.h"
-//#include "jpegsnoopViewImg.h"
 
 #include "snoop.h"
 
@@ -323,12 +322,10 @@ BOOL CJPEGsnoopApp::InitInstance()
 	// of your final executable, you should remove from the following
 	// the specific initialization routines you do not need
 	// Change the registry key under which our settings are stored
-	// TODO: You should modify this string to be something appropriate
-	// such as the name of your company or organization
 
-	//CAL! It appears that this call seems to pull "JPEGsnoop" out of somewhere
-	// to create the full key path "Software/ImpulseAdventure/JPEGsnoop/Recent File List"
-	// Perhaps it comes from the DocTemplate?
+	// This call actually concatenates CWinApp::m_pszAppName ("JPEGsnoop")
+	// with the "REG_COMPANY_NAME" to create the full
+	// key path "Software/ImpulseAdventure/JPEGsnoop/Recent File List"
 	SetRegistryKey(_T(REG_COMPANY_NAME));
 	LoadStdProfileSettings(4);  // Load standard INI file options (including MRU)
 

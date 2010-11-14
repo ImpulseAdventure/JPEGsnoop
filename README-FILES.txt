@@ -43,7 +43,6 @@ Global Definitions
 
 Application
 -----------
-  CmdLine.*				- Command-line processing
   CntrItem.*			- OLE container / RichEdit class
   DbSigs.*				- Compression signature database class
 ! Dib.*					- DIB (Bitmap) class
@@ -56,14 +55,18 @@ Application
   JPEGsnoop.*
 ! Md5.*					- MD5 hash routines, used for compression signature
 ! Registry.*			- Windows Registry class 
-  SnoopConfig.*			- 
+  SnoopConfig.*			- Application configuration class
   stdafx.*				- Windows precompiled headers (auto-created)
 ! UrlString.*			- URL En/Decoding class
   WindowBuf.*			- File buffer / cache routines
 
+UNUSED:
+! CmdLine.*				- Command-line processing
+! OperationDlg.*		- Progress dialog with cancel
 
-NOTE: Files marked with "!" denote classes reused from other authors. Please
-      see the acknowledgements section.
+
+NOTE: Files marked with "!" denote classes that have reused code from 
+      other authors. Please see the acknowledgements section.
       
 
 Supporting Dialog Boxes
@@ -90,6 +93,7 @@ Supporting Dialog Boxes
 						  user of runtime messages or warnings.
   OffsetDlg.*			- File offset dialog. Provides the user with the ability to
 						  specify a starting file offset for parsing/decoding.
+  OperationDlg.*		- Progress dialog for lengthy operations.
   OverlayBufDlg.*		- File overlay dialog. This dialog presents the user with
 						  the current hex values at a specific position within the file
 						  and provides the user with the ability to overwrite one or
@@ -118,10 +122,11 @@ Compression Signature Database
 2) ACKNOWLEDGEMENTS
 -------------------
 
-I am very grateful to the following authors whose classes I have reused in
+I am very grateful to the following authors whose classes or concepts I have reused in
 the development of JPEGsnoop.
 
   CmdLine.cpp
+  - *** NOT USED CURRENTLY
   - SmallerAnimals
 
   FolderDlg.cpp
@@ -136,6 +141,11 @@ the development of JPEGsnoop.
 
   MD5.cpp
   - By RSA
+
+  OperationDlg.cpp
+  - *** NOT USED CURRENTLY
+  - http://www.codeproject.com/KB/threads/TemplatedLengthyOperation.aspx
+  - Mike O'Neill
 
   Registry.cpp
   - http://www.codeproject.com/KB/system/registryvars.aspx
