@@ -156,3 +156,7 @@ the development of JPEGsnoop.
   - Stephane Erhardt
   - http://www.codeguru.com/cpp/cpp/cpp_mfc/comments.php/c4029/?thread=9533
 
+I also would like to give a special mention to Phil Harvey, the author of the
+comprehensive ExifTool (http://www.sno.phy.queensu.ca/~phil/exiftool/). His work
+in collating and documenting the vast set of EXIF tags has been incredibly helpful.
+
