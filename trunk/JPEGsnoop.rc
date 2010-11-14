@@ -311,11 +311,9 @@ BEGIN
     LTEXT           "JPEGsnoop",IDC_STATIC,42,6,39,8,SS_NOPREFIX
     LTEXT           "Copyright © 2010 Calvin Hass",IDC_STATIC,42,18,124,8
     DEFPUSHBUTTON   "OK",IDOK,185,7,50,16,WS_GROUP
-    LTEXT           "www.impulseadventure.com/photo/",IDC_URL,24,72,117,8
+    LTEXT           "www.impulseadventure.com/photo/",IDC_URL,24,66,117,8
     LTEXT           "Documentation and Updates for JPEGsnoop",IDC_URL_DOC,24,
                     48,169,8
-    LTEXT           "Comments, suggestions: jpegsnoop@impulseadventure.com",
-                    IDC_STATIC,24,60,202,8
     LTEXT           "Version",IDC_VER_NUM,96,6,86,10
     GROUPBOX        "",IDC_STATIC,12,36,222,54
 END

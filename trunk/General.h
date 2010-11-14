@@ -1,5 +1,6 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
 // Copyright (C) 2010 - Calvin Hass
+// http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
