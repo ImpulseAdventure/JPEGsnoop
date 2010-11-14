@@ -132,9 +132,6 @@
 				RelativePath=".\BatchDlg.cpp">
 			</File>
 			<File
-				RelativePath=".\CmdLine.cpp">
-			</File>
-			<File
 				RelativePath=".\CntrItem.cpp">
 			</File>
 			<File
@@ -258,9 +255,6 @@
 			</File>
 			<File
 				RelativePath=".\BatchDlg.h">
-			</File>
-			<File
-				RelativePath=".\CmdLine.h">
 			</File>
 			<File
 				RelativePath=".\CntrItem.h">

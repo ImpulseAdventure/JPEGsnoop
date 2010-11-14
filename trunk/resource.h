@@ -35,6 +35,7 @@
 #define IDS_CAL_FILESAVE                138
 #define ID_INDICATOR_MCU                139
 #define ID_INDICATOR_FILEPOS            140
+#define IDD_OPERATIONDLG                145
 #define IDC_DB_DIR                      1000
 #define IDC_URL                         1001
 #define IDC_DB_DIR_BROWSE               1001
@@ -104,6 +105,10 @@
 #define IDC_RAD_RGB8                    1115
 #define IDC_CHECK_SUBDIRS               1117
 #define IDC_EDIT_DIR                    1118
+#define ID_BTN_ABORT                    1119
+#define IDC_PROGRESS                    1120
+#define IDC_PROGRESS_BAR                1120
+#define IDC_STATIC_PROGRESS             1121
 #define ID_CANCEL_EDIT_CNTR             32768
 #define ID_TOOLS_DECODE                 32771
 #define ID_FILE_OFFSET                  32772
@@ -185,9 +190,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        145
+#define _APS_NEXT_RESOURCE_VALUE        146
 #define _APS_NEXT_COMMAND_VALUE         32886
-#define _APS_NEXT_CONTROL_VALUE         1119
+#define _APS_NEXT_CONTROL_VALUE         1122
 #define _APS_NEXT_SYMED_VALUE           118
 #endif
 #endif
