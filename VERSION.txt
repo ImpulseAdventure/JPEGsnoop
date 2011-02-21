@@ -3,6 +3,12 @@
 //   by Calvin Hass
 // ==================================
 
+1.5.2		(02/20/11)
+	- Fixed YCC/RGB clipping statistics
+	- Disabled MCU marker array if image too large (eg. 40+ megapixel images).
+	  [Added m_bMarkedMcuMapEn. The proper solution would be to update
+	  m_abMarkedMcuMap to use a list of selected coordinates.]
+	
 1.5.1		(11/14/10)
 	- Improved robustness of batch mode operation
 	- Added average luminance report
