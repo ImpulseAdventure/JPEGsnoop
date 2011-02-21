@@ -92,7 +92,11 @@
 // Allocate enough space for 40 megapixel image
 // Note that we pre-allocate space because we don't want to 
 // lose the markers between re-process events!
-#define MARKMCUMAP_SIZE		(40000000/64)
+// TODO: This is a VERY wasteful way of capturing the list of MCUs that
+//       we want to mark. Instead, an array of selected coordinates would
+//       be far more appropriate, but slightly slower in processing later
+//       (due to the linear search).
+#define MARKMCUMAP_SIZE		(40000000/(8*8))
 
 
 typedef struct {
@@ -365,6 +369,9 @@ public:
 
 
 	// Array that indicates whether or not an MCU has been marked
+	// NOTE: This feature is disabled if the image is too large (and
+	//       is marked by a NULL pointer).
+	bool		m_bMarkedMcuMapEn; // Is Marked MCU map enabled?
 	bool *		m_abMarkedMcuMap;
 	unsigned	m_nMarkedMcuLastXY;
 
@@ -547,7 +554,9 @@ private:
 	bool				m_bHistEn;		// Histograms enabled? (by AppConfig)
 	bool				m_bStatClipEn;	// UNUSED *** Enable scan clipping stats?
 	unsigned			m_nNumPixels;
-	PixelCcHisto		m_sHisto;
+	PixelCcHisto		m_sHisto;		// YCC/RGB histogram (min/max/avg)
+	PixelCcClip			m_sStatClip;	// YCC/RGB clipping stats
+
 	unsigned			m_pCC_histo_r[HISTO_BINS];
 	unsigned			m_pCC_histo_g[HISTO_BINS];
 	unsigned			m_pCC_histo_b[HISTO_BINS];
@@ -556,8 +565,6 @@ private:
 	unsigned			m_histo_y_full[FULL_HISTO_BINS];
 	unsigned			m_histo_y_subset[FULL_HISTO_BINS];
 
-public: // FIXME for ImgMod
-	static const BYTE		m_anMaskByte[];
 private:
 
 	// For View management

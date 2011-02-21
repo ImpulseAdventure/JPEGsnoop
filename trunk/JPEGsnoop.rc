@@ -631,8 +631,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,5,1,0
- PRODUCTVERSION 1,5,1,0
+ FILEVERSION 1,5,2,0
+ PRODUCTVERSION 1,5,2,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -649,12 +649,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "ImpulseAdventure"
             VALUE "FileDescription", "JPEGsnoop"
-            VALUE "FileVersion", "1.5.1.0"
+            VALUE "FileVersion", "1.5.2.0"
             VALUE "InternalName", "JPEGsnoop.exe"
-            VALUE "LegalCopyright", "(c) 2010 Calvin Hass.  All rights reserved."
+            VALUE "LegalCopyright", "(c) 2011 Calvin Hass.  All rights reserved."
             VALUE "OriginalFilename", "JPEGsnoop.exe"
             VALUE "ProductName", "JPEGsnoop"
-            VALUE "ProductVersion", "1.5.1.0"
+            VALUE "ProductVersion", "1.5.2.0"
         END
     END
     BLOCK "VarFileInfo"

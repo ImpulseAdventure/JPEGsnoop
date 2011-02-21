@@ -198,11 +198,17 @@ CimgDecode::CimgDecode(CDocLog* pLog, CwindowBuf* pWBuf)
 
 	HuffMaskLookupGen();
 
+	m_bMarkedMcuMapEn = false;
+
 	// Allocate Marker MCU map
 	m_abMarkedMcuMap = new bool[MARKMCUMAP_SIZE];
 	if (!m_abMarkedMcuMap) {
 		AfxMessageBox("ERROR: Not enough memory for Image Decoder MCU Marker Map");
+		m_bMarkedMcuMapEn = false;
+		// Don't make this a fatal error, just skip feature
 		//exit(1);
+	} else {
+		m_bMarkedMcuMapEn = true;
 	}
 
 
@@ -264,6 +270,7 @@ CimgDecode::~CimgDecode()
 	if (m_abMarkedMcuMap) {
 		delete m_abMarkedMcuMap;
 		m_abMarkedMcuMap = NULL;
+		m_bMarkedMcuMapEn = false; 
 	}
 
 }
@@ -289,7 +296,7 @@ void CimgDecode::ResetNewFile()
 {
 
 	// Reset the markers
-	if (m_abMarkedMcuMap) {
+	if (m_bMarkedMcuMapEn && m_abMarkedMcuMap) {
 		memset(m_abMarkedMcuMap, 0, (MARKMCUMAP_SIZE*sizeof(bool)) );
 	}
 	m_nMarkedMcuLastXY = 0;
@@ -2504,21 +2511,18 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 	// Assume that Marked MCU map is already allocated (in Constructor)
 	// Double-check that it is large enough for our use
 	if (!m_abMarkedMcuMap) {
-		AfxMessageBox("ERROR: Not enough memory for Image Decoder MCU Marker Map");
-		exit(1);
+		//AfxMessageBox("ERROR: Not enough memory for Image Decoder MCU Marker Map");
+		// We would have already reported that we didn't have sufficient memory
+		// Don't make this a fatal error, just skip feature
+		//exit(1);
 	}
-	if (m_nMcuYMax*m_nMcuXMax > MARKMCUMAP_SIZE) {
-		AfxMessageBox("ERROR: Not enough Marker MCU Map memory for current image size.");
-		exit(1);
+	if (m_bMarkedMcuMapEn & (m_nMcuYMax*m_nMcuXMax > MARKMCUMAP_SIZE)) {
+		AfxMessageBox("NOTE: Not enough Marker MCU Map memory for current image size. Disabling feature.");
+		m_bMarkedMcuMapEn = false;
+		// Don't make this a fatal error, just skip feature
+		//exit(1);
 	}
-/*
-	m_abMarkedMcuMap = new bool[m_nMcuYMax*m_nMcuXMax];
-	if (!m_abMarkedMcuMap) {
-		AfxMessageBox("ERROR: Not enough memory for Image Decoder MCU Marker Map");
-		exit(1);
-	}
-	memset(m_abMarkedMcuMap, 0, (m_nMcuYMax*m_nMcuXMax*sizeof(bool)) );
-*/
+
 
 	// Allocate the 8x8 Block DC Map
 	m_pBlkValY  = new short[m_nBlkYMax*m_nBlkXMax];
@@ -2691,14 +2695,12 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 	//CAL! Should add a check to make sure that we only process
 	//     files that have m_nImgSofCompNum == 1 or 3
 
-	// Temporary pixel value for color conversion
-	PixelCcClip	my_pix_clip;
 
 	m_nNumPixels = 0;
 
 	if (bDisplay) {
 		// Clear CC clipping stats
-		memset(&my_pix_clip,0,sizeof(my_pix_clip));
+		memset(&m_sStatClip,0,sizeof(m_sStatClip));
 		memset(&m_sHisto,0,sizeof(m_sHisto));
 
 
@@ -3037,11 +3039,11 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 		if (CC_CLIP_YCC_EN) {
 			tmpStr.Format(_T("  YCC clipping in DC:"));
 			m_pLog->AddLine(tmpStr);
-			tmpStr.Format(_T("    Y  component: [<0=%5u] [>255=%5u]"),my_pix_clip.y_under,my_pix_clip.y_over);
+			tmpStr.Format(_T("    Y  component: [<0=%5u] [>255=%5u]"),m_sStatClip.y_under,m_sStatClip.y_over);
 			m_pLog->AddLine(tmpStr);
-			tmpStr.Format(_T("    Cb component: [<0=%5u] [>255=%5u]"),my_pix_clip.cb_under,my_pix_clip.cb_over);
+			tmpStr.Format(_T("    Cb component: [<0=%5u] [>255=%5u]"),m_sStatClip.cb_under,m_sStatClip.cb_over);
 			m_pLog->AddLine(tmpStr);
-			tmpStr.Format(_T("    Cr component: [<0=%5u] [>255=%5u]"),my_pix_clip.cr_under,my_pix_clip.cr_over);
+			tmpStr.Format(_T("    Cr component: [<0=%5u] [>255=%5u]"),m_sStatClip.cr_under,m_sStatClip.cr_over);
 			m_pLog->AddLine(tmpStr);
 			m_pLog->AddLine("");
 		}
@@ -3091,14 +3093,14 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 
 		tmpStr.Format(_T("  RGB clipping in DC:"));
 		m_pLog->AddLine(tmpStr);
-		tmpStr.Format(_T("    R  component: [<0=%5u] [>255=%5u]"),my_pix_clip.r_under,my_pix_clip.r_over);
+		tmpStr.Format(_T("    R  component: [<0=%5u] [>255=%5u]"),m_sStatClip.r_under,m_sStatClip.r_over);
 		m_pLog->AddLine(tmpStr);
-		tmpStr.Format(_T("    G  component: [<0=%5u] [>255=%5u]"),my_pix_clip.g_under,my_pix_clip.g_over);
+		tmpStr.Format(_T("    G  component: [<0=%5u] [>255=%5u]"),m_sStatClip.g_under,m_sStatClip.g_over);
 		m_pLog->AddLine(tmpStr);
-		tmpStr.Format(_T("    B  component: [<0=%5u] [>255=%5u]"),my_pix_clip.b_under,my_pix_clip.b_over);
+		tmpStr.Format(_T("    B  component: [<0=%5u] [>255=%5u]"),m_sStatClip.b_under,m_sStatClip.b_over);
 		m_pLog->AddLine(tmpStr);
 		/*
-		tmpStr.Format(_T("    White Highlight:         [>255=%5u]"),my_pix_clip.white_over);
+		tmpStr.Format(_T("    White Highlight:         [>255=%5u]"),m_sStatClip.white_over);
 		m_pLog->AddLine(tmpStr);
 		*/
 		m_pLog->AddLine("");
@@ -3844,6 +3846,7 @@ void CimgDecode::CapYccRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 					nMcuX,nMcuY,cur_y,cur_cb,cur_cr,GetScanBufPos());
 				m_pLog->AddLineWarn(tmpStr);
 				m_nWarnYccClipNum++;
+				m_sStatClip.y_over++;
 				if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
 					tmpStr.Format(_T("    Only reported first %u instances of this message..."),YCC_CLIP_REPORT_MAX);
 					m_pLog->AddLineWarn(tmpStr);
@@ -3859,6 +3862,7 @@ void CimgDecode::CapYccRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 					nMcuX,nMcuY,cur_y,cur_cb,cur_cr,GetScanBufPos());
 				m_pLog->AddLineWarn(tmpStr);
 				m_nWarnYccClipNum++;
+				m_sStatClip.y_under++;
 				if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
 					tmpStr.Format(_T("    Only reported first %u instances of this message..."),YCC_CLIP_REPORT_MAX);
 					m_pLog->AddLineWarn(tmpStr);
@@ -3874,6 +3878,7 @@ void CimgDecode::CapYccRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 					nMcuX,nMcuY,cur_y,cur_cb,cur_cr,GetScanBufPos());
 				m_pLog->AddLineWarn(tmpStr);
 				m_nWarnYccClipNum++;
+				m_sStatClip.cb_over++;
 				if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
 					tmpStr.Format(_T("    Only reported first %u instances of this message..."),YCC_CLIP_REPORT_MAX);
 					m_pLog->AddLineWarn(tmpStr);
@@ -3889,6 +3894,7 @@ void CimgDecode::CapYccRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 					nMcuX,nMcuY,cur_y,cur_cb,cur_cr,GetScanBufPos());
 				m_pLog->AddLineWarn(tmpStr);
 				m_nWarnYccClipNum++;
+				m_sStatClip.cb_under++;
 				if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
 					tmpStr.Format(_T("    Only reported first %u instances of this message..."),YCC_CLIP_REPORT_MAX);
 					m_pLog->AddLineWarn(tmpStr);
@@ -3904,6 +3910,7 @@ void CimgDecode::CapYccRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 					nMcuX,nMcuY,cur_y,cur_cb,cur_cr,GetScanBufPos());
 				m_pLog->AddLineWarn(tmpStr);
 				m_nWarnYccClipNum++;
+				m_sStatClip.cr_over++;
 				if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
 					tmpStr.Format(_T("    Only reported first %u instances of this message..."),YCC_CLIP_REPORT_MAX);
 					m_pLog->AddLineWarn(tmpStr);
@@ -3919,6 +3926,7 @@ void CimgDecode::CapYccRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 					nMcuX,nMcuY,cur_y,cur_cb,cur_cr,GetScanBufPos());
 				m_pLog->AddLineWarn(tmpStr);
 				m_nWarnYccClipNum++;
+				m_sStatClip.cr_under++;
 				if (m_nWarnYccClipNum == YCC_CLIP_REPORT_MAX) {
 					tmpStr.Format(_T("    Only reported first %u instances of this message..."),YCC_CLIP_REPORT_MAX);
 					m_pLog->AddLineWarn(tmpStr);
@@ -3973,6 +3981,7 @@ void CimgDecode::CapRgbRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 			m_pLog->AddLineWarn(tmpStr);
 		}
 		rPix.clip |= CC_CLIP_R_UNDER;
+		m_sStatClip.r_under++;
 		r_lim = 0;
 	}
 	if (g_lim < 0) {
@@ -3983,6 +3992,7 @@ void CimgDecode::CapRgbRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 			m_pLog->AddLineWarn(tmpStr);
 		}
 		rPix.clip |= CC_CLIP_G_UNDER;
+		m_sStatClip.g_under++;
 		g_lim = 0;
 	}
 	if (b_lim < 0) {
@@ -3993,6 +4003,7 @@ void CimgDecode::CapRgbRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 			m_pLog->AddLineWarn(tmpStr);
 		}
 		rPix.clip |= CC_CLIP_B_UNDER;
+		m_sStatClip.b_under++;
 		b_lim = 0;
 	}
 	if (r_lim > 255) {
@@ -4003,6 +4014,7 @@ void CimgDecode::CapRgbRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 			m_pLog->AddLineWarn(tmpStr);
 		}
 		rPix.clip |= CC_CLIP_R_OVER;
+		m_sStatClip.r_over++;
 		r_lim = 255;
 	}
 	if (g_lim > 255) {
@@ -4013,6 +4025,7 @@ void CimgDecode::CapRgbRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 			m_pLog->AddLineWarn(tmpStr);
 		}
 		rPix.clip |= CC_CLIP_G_OVER;
+		m_sStatClip.g_over++;
 		g_lim = 255;
 	}
 	if (b_lim > 255) {
@@ -4023,6 +4036,7 @@ void CimgDecode::CapRgbRange(unsigned nMcuX,unsigned nMcuY,PixelCc &rPix)
 			m_pLog->AddLineWarn(tmpStr);
 		}
 		rPix.clip |= CC_CLIP_B_OVER;
+		m_sStatClip.b_over++;
 		b_lim = 255;
 	}
 
@@ -4418,7 +4432,7 @@ void CimgDecode::SetMarker(unsigned blk_x,unsigned blk_y)
 
 void CimgDecode::SetMarkerMcu(unsigned nMcuX,unsigned nMcuY,unsigned nState)
 {
-	if (m_abMarkedMcuMap) {
+	if (m_bMarkedMcuMapEn && m_abMarkedMcuMap) {
 		unsigned nXYCur = nMcuY*m_nMcuXMax + nMcuX;
 		bool	bCur = m_abMarkedMcuMap[nXYCur];
 		if (nState == 0) {
@@ -4438,7 +4452,7 @@ void CimgDecode::SetMarkerMcu(unsigned nMcuX,unsigned nMcuY,unsigned nState)
 // Shift key was held down so set a run
 void CimgDecode::SetMarkerMcuTo(unsigned nMcuX,unsigned nMcuY,unsigned nState)
 {
-	if (m_abMarkedMcuMap) {
+	if (m_bMarkedMcuMapEn && m_abMarkedMcuMap) {
 		unsigned nXYCur = nMcuY*m_nMcuXMax + nMcuX;
 		bool	bCur = m_abMarkedMcuMap[nXYCur];
 		if (nState == 0) {
@@ -4932,7 +4946,7 @@ void CimgDecode::ViewMcuMarkedOverlay(CDC* pDC)
 	for (unsigned nMcuY=0;nMcuY<m_nMcuYMax;nMcuY++) {
 		for (unsigned nMcuX=0;nMcuX<m_nMcuXMax;nMcuX++) {
 			unsigned nXY = nMcuY*m_nMcuXMax + nMcuX;
-			if (m_abMarkedMcuMap && m_abMarkedMcuMap[nXY]) {
+			if (m_bMarkedMcuMapEn && m_abMarkedMcuMap && m_abMarkedMcuMap[nXY]) {
 				unsigned nXZoomed = (unsigned)(nMcuX*m_nMcuWidth*m_nZoom);
 				unsigned nYZoomed = (unsigned)(nMcuY*m_nMcuHeight*m_nZoom);
 
@@ -5027,8 +5041,6 @@ CString CimgDecode::GetStatusFilePosText()
 
 
 
-
-const BYTE CimgDecode::m_anMaskByte[] = { 0x80,0xC0,0xE0,0xF0,0xF8,0xFC,0xFE,0xFF };
 
 
 // FIXME would like to share this with CjfifDecode!
