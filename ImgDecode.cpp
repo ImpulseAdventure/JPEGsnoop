@@ -683,6 +683,7 @@ inline void CimgDecode::ScanBuffAdd(unsigned nNewByte,unsigned nPtr)
 	m_nScanBuff_vacant -= 8;
 
 	ASSERT(m_nScanBuffPtr_num<4);
+	if (m_nScanBuffPtr_num>=4) { return; } // Unexpected by design
 	m_nScanBuffPtr_err[m_nScanBuffPtr_num]   = SCANBUF_OK;
 	m_nScanBuffPtr_pos[m_nScanBuffPtr_num++] = nPtr;
 
@@ -1245,7 +1246,7 @@ unsigned CimgDecode::BuffAddByte()
 #define IDCT_COEF_THRESH 4
 
 // FIXME Consider adding checks for DHT table like in ReadScanVal()
-unsigned CimgDecode::DecodeScanComp(unsigned nTbl,unsigned nMcuX,unsigned nMcuY)
+unsigned CimgDecode::DecodeScanComp(unsigned nTblDht,unsigned nTblDqt,unsigned nMcuX,unsigned nMcuY)
 {
 	unsigned	ok;
 	unsigned	zrl;
@@ -1278,9 +1279,9 @@ unsigned CimgDecode::DecodeScanComp(unsigned nTbl,unsigned nMcuX,unsigned nMcuY)
 		//  1 - EOB
 		//  2 - Overread error
 		//  3 - No huffman code found, but restart marker seen
-		// Assume nTbl just points to DC tables, adjust for AC
-		// e.g. nTbl = 0,2,4
-		ok = ReadScanVal(bDC?0:1,nTbl,zrl,val);
+		// Assume nTblDht just points to DC tables, adjust for AC
+		// e.g. nTblDht = 0,2,4
+		ok = ReadScanVal(bDC?0:1,nTblDht,zrl,val);
 
 		// Handle Restart marker first.
 		if (ok == 3) {
@@ -1316,7 +1317,7 @@ unsigned CimgDecode::DecodeScanComp(unsigned nTbl,unsigned nMcuX,unsigned nMcuY)
 			// Step 6
 			// ASSERT is because we assume that we don't get 2 restart
 			// markers in a row!
-			ok = ReadScanVal(bDC?0:1,nTbl,zrl,val);
+			ok = ReadScanVal(bDC?0:1,nTblDht,zrl,val);
 			ASSERT(ok != 3);
 
 		}
@@ -1351,7 +1352,7 @@ unsigned CimgDecode::DecodeScanComp(unsigned nTbl,unsigned nMcuX,unsigned nMcuY)
 		if (ok == 0) {
 			// DC entry is always one value only
 			if (bDC) {
-				DecodeIdctSet(nTbl,num_coeffs,zrl,val); //CALZ
+				DecodeIdctSet(nTblDqt,num_coeffs,zrl,val); //CALZ
 				bDC = false;			// Now we will be on AC comps
 			} else {
 				// We're on AC entry, so keep looping until
@@ -1360,12 +1361,12 @@ unsigned CimgDecode::DecodeScanComp(unsigned nTbl,unsigned nMcuX,unsigned nMcuY)
 				// PERFORMANCE:
 				//   No noticeable difference if following is skipped
 				if (m_bDecodeScanAc) {
-					DecodeIdctSet(nTbl,num_coeffs,zrl,val);
+					DecodeIdctSet(nTblDqt,num_coeffs,zrl,val);
 				}
 			}
 		} else if (ok == 1) {
 			if (bDC) {
-				DecodeIdctSet(nTbl,num_coeffs,zrl,val); //CALZ
+				DecodeIdctSet(nTblDqt,num_coeffs,zrl,val); //CALZ
 				bDC = false;			// Now we will be on AC comps
 			} else {
 				done = true;
@@ -1469,7 +1470,7 @@ unsigned CimgDecode::DecodeScanComp(unsigned nTbl,unsigned nMcuX,unsigned nMcuY)
 // we can afford to be slower.
 // FIXME need to fix like DecodeScanComp() (ordering of exit conditions, etc.)
 // FIXME Consider adding checks for DHT table like in ReadScanVal()
-unsigned CimgDecode::DecodeScanCompPrint(unsigned nTbl,unsigned nMcuX,unsigned nMcuY)
+unsigned CimgDecode::DecodeScanCompPrint(unsigned nTblDht,unsigned nTblDqt,unsigned nMcuX,unsigned nMcuY)
 {
 	bool bPrint = true;
 	unsigned ok;
@@ -1484,7 +1485,7 @@ unsigned CimgDecode::DecodeScanCompPrint(unsigned nTbl,unsigned nMcuX,unsigned n
 	bool bDC = true;	// Start with DC component
 
 	if (bPrint) {
-		switch(nTbl) {
+		switch(nTblDqt) {
 			case 0:
 				tblStr = "Lum";
 				break;
@@ -1498,7 +1499,7 @@ unsigned CimgDecode::DecodeScanCompPrint(unsigned nTbl,unsigned nMcuX,unsigned n
 				tblStr = "???";
 				break;
 		}
-		tmpStr.Format(_T("    %s (Tbl #%u), MCU=[%u,%u]"),tblStr,nTbl,nMcuX,nMcuY);
+		tmpStr.Format(_T("    %s (Tbl #%u), MCU=[%u,%u]"),tblStr,nTblDqt,nMcuX,nMcuY);
 		m_pLog->AddLine(tmpStr);
 	}
 
@@ -1526,9 +1527,9 @@ unsigned CimgDecode::DecodeScanCompPrint(unsigned nTbl,unsigned nMcuX,unsigned n
 		//  1 - EOB
 		//  2 - Overread error
 		//  3 - No huffman code found, but restart marker seen
-		// Assume nTbl just points to DC tables, adjust for AC
-		// e.g. nTbl = 0,2,4
-		ok = ReadScanVal(bDC?0:1,nTbl,zrl,val);
+		// Assume nTblDht just points to DC tables, adjust for AC
+		// e.g. nTblDht = 0,2,4
+		ok = ReadScanVal(bDC?0:1,nTblDht,zrl,val);
 
 		// Handle Restart marker first.
 		if (ok == 3) {
@@ -1564,7 +1565,7 @@ unsigned CimgDecode::DecodeScanCompPrint(unsigned nTbl,unsigned nMcuX,unsigned n
 			// Step 6
 			// ASSERT is because we assume that we don't get 2 restart
 			// markers in a row!
-			ok = ReadScanVal(bDC?0:1,nTbl,zrl,val);
+			ok = ReadScanVal(bDC?0:1,nTblDht,zrl,val);
 			ASSERT(ok != 3);
 
 		}
@@ -1604,19 +1605,19 @@ unsigned CimgDecode::DecodeScanCompPrint(unsigned nTbl,unsigned nMcuX,unsigned n
 		if (ok == 0) {
 			specialStr = "";
 			// DC entry is always one value only
-			// FIXME: Do I need nTbl == 4 as well?
+			// FIXME: Do I need nTblDqt == 4 as well?
 			if (bDC) {
-				DecodeIdctSet(nTbl,num_coeffs,zrl,val);
+				DecodeIdctSet(nTblDqt,num_coeffs,zrl,val);
 				bDC = false;			// Now we will be on AC comps
 			} else {
 				// We're on AC entry, so keep looping until
 				// we have finished up to 63 entries
 				// Set entry in table
-				DecodeIdctSet(nTbl,num_coeffs,zrl,val);
+				DecodeIdctSet(nTblDqt,num_coeffs,zrl,val);
 			}
 		} else if (ok == 1) {
 			if (bDC) {
-				DecodeIdctSet(nTbl,num_coeffs,zrl,val);
+				DecodeIdctSet(nTblDqt,num_coeffs,zrl,val);
 				bDC = false;			// Now we will be on AC comps
 			} else {
 				done = true;
@@ -1679,6 +1680,8 @@ unsigned CimgDecode::DecodeScanCompPrint(unsigned nTbl,unsigned nMcuX,unsigned n
 			m_nScanCurErr = true;
 			m_bScanBad = true;
 			done = true;
+
+			num_coeffs = 64;	// Just to ensure we don't use an overrun value anywhere
 		}
 
 		if (bPrint) {
@@ -1695,7 +1698,8 @@ unsigned CimgDecode::DecodeScanCompPrint(unsigned nTbl,unsigned nMcuX,unsigned n
 #ifdef IDCT_FIXEDPT
 	DecodeIdctCalcFixedpt();
 #else
-	DecodeIdctCalcFloat(num_coeffs);
+//	DecodeIdctCalcFloat(num_coeffs);
+	DecodeIdctCalcFloat(64);
 #endif
 
 	// Now report the coefficient matrix (after zigzag reordering)
@@ -1707,179 +1711,6 @@ unsigned CimgDecode::DecodeScanCompPrint(unsigned nTbl,unsigned nMcuX,unsigned n
 }
 
 
-#if 0
-
-// **** The following is the original DecodeScanCompPrint() code
-//      It has a bug in that it doesn't handle restart markers properly
-//
-// As this routine is called for every MCU, it is important
-// for it to be efficient. However, we are in print mode, so
-// we can afford to be slower.
-// FIXME need to fix like DecodeScanComp() (ordering of exit conditions, etc.)
-// FIXME Consider adding checks for DHT table like in ReadScanVal()
-unsigned CimgDecode::DecodeScanCompPrint(unsigned nTbl,unsigned nMcuX,unsigned nMcuY)
-{
-	bool bPrint = true;
-	unsigned ok;
-	CString tmpStr;
-	CString tblStr;
-	CString specialStr;
-	CString strPos;
-	unsigned zrl;
-	signed val;
-	bool done = false;
-
-	bool bDC = true;	// Start with DC component
-
-	if (bPrint) {
-		switch(nTbl) {
-			case 0:
-				tblStr = "Lum";
-				break;
-			case 1:
-				tblStr = "Chr(0)"; // Usually Cb
-				break;
-			case 2:
-				tblStr = "Chr(1)"; // Usually Cr
-				break;
-			default:
-				tblStr = "???";
-				break;
-		}
-		tmpStr.Format(_T("    %s (Tbl #%u), MCU=[%u,%u]"),tblStr,nTbl,nMcuX,nMcuY);
-		m_pLog->AddLine(tmpStr);
-	}
-
-	unsigned num_coeffs = 0;
-	unsigned saved_buf_pos = 0;
-	unsigned saved_buf_align = 0;
-
-	DecodeIdctClear();
-
-	while (!done) {
-		BuffTopup();
-
-		// Note that once we perform ReadScanVal(), then GetScanBufPos() will be
-		// after the decoded VLC
-
-		// Save old file position info in case we want accurate error positioning
-		saved_buf_pos   = m_nScanBuffPtr_pos[0];
-		saved_buf_align = m_nScanBuffPtr_align;
-		//strPos = GetScanBufPos();
-
-		// Assume nTbl just points to DC tables, adjust for AC
-		// e.g. nTbl = 0,2,4
-		ok = ReadScanVal(bDC?0:1,nTbl,zrl,val);
-
-		unsigned nCoeffStart = num_coeffs;
-		unsigned nCoeffEnd   = num_coeffs+zrl;
-
-		if (ok == 0) {
-			specialStr = "";
-			// DC entry is always one value only
-			// FIXME: Do I need nTbl == 4 as well?
-			if (bDC) {
-				DecodeIdctSet(nTbl,num_coeffs,zrl,val);
-				bDC = false;			// Now we will be on AC comps
-			} else {
-				// We're on AC entry, so keep looping until
-				// we have finished up to 63 entries
-				// Set entry in table
-				DecodeIdctSet(nTbl,num_coeffs,zrl,val);
-			}
-		} else if (ok == 1) {
-			if (bDC) {
-				DecodeIdctSet(nTbl,num_coeffs,zrl,val);
-				bDC = false;			// Now we will be on AC comps
-			} else {
-				done = true;
-			}
-			specialStr = "EOB";
-		} else if (ok == 2) {
-
-			if (m_nWarnBadScanNum < m_nScanErrMax) {
-				specialStr = "ERROR";
-				strPos = GetScanBufPos(saved_buf_pos,saved_buf_align);
-
-				tmpStr.Format(_T("*** ERROR: Bad huffman code @ %s"),strPos);
-				m_pLog->AddLineErr(tmpStr);
-
-				m_nWarnBadScanNum++;
-				if (m_nWarnBadScanNum >= m_nScanErrMax) {
-					tmpStr.Format(_T("    Only reported first %u instances of this message..."),m_nScanErrMax);
-					m_pLog->AddLineErr(tmpStr);
-				}
-			}
-
-			m_nScanCurErr = true;
-			done = true;
-
-			// Print out before we leave
-			if (bPrint) {
-				ReportVlc(saved_buf_pos,saved_buf_align,zrl,val,
-					nCoeffStart,nCoeffEnd,specialStr);
-			}
-
-
-			return 0;
-		}
-
-		// Increment the number of coefficients
-		num_coeffs += 1+zrl;
-		// If we have filled out an entire 64 entries, then we move to
-		// the next block without an EOB
-		// NOTE: This is only 63 entries because we assume that we
-		//       are doing the AC (DC was already done in a different pass)
-		if (num_coeffs == 64) {
-			specialStr = "EOB64";
-			done = true;
-		} else if (num_coeffs > 64) {
-			// ERROR
-
-			if (m_nWarnBadScanNum < m_nScanErrMax) {
-				CString tmpStr;
-				CString strPos = GetScanBufPos(saved_buf_pos,saved_buf_align);
-				tmpStr.Format(_T("*** ERROR: @ %s, num_coeffs>64 [%u]"),strPos,num_coeffs);
-				m_pLog->AddLineErr(tmpStr);
-
-				m_nWarnBadScanNum++;
-				if (m_nWarnBadScanNum >= m_nScanErrMax) {
-					tmpStr.Format(_T("    Only reported first %u instances of this message..."),m_nScanErrMax);
-					m_pLog->AddLineErr(tmpStr);
-				}
-			}
-
-			m_nScanCurErr = true;
-			m_bScanBad = true;
-			done = true;
-		}
-
-		if (bPrint) {
-			ReportVlc(saved_buf_pos,saved_buf_align,zrl,val,
-				nCoeffStart,nCoeffEnd,specialStr);
-		}
-
-	}
-
-	// We finished the MCU component
-
-
-	// Now calc the IDCT matrix
-#ifdef IDCT_FIXEDPT
-	DecodeIdctCalcFixedpt();
-#else
-	DecodeIdctCalcFloat(num_coeffs);
-#endif
-
-	// Now report the coefficient matrix (after zigzag reordering)
-	if (bPrint) {
-		ReportDctMatrix();
-	}
-
-	return 1;
-}
-
-#endif
 
 
 
@@ -2228,7 +2059,7 @@ void CimgDecode::DecodeIdctCalcFixedpt()
 
 void CimgDecode::ClrFullRes()
 {
-	memset(m_anImgFullres,  0, (4*(2*8)*(2*8)*sizeof(unsigned)) );
+	memset(m_anImgFullres,  0, (16*(2*8)*(2*8)*sizeof(unsigned)) );
 }
 
 
@@ -2265,13 +2096,14 @@ void CimgDecode::SetFullRes(unsigned nMcuX,unsigned nMcuY,unsigned nChan,unsigne
 			nVal = ((int)(fVal*8) + nDcOffset);
 #endif
 
-			// Store in big array
+			// NOTE: These range checks were already done in DecodeScanImg()	
 			ASSERT(nChan<3);
-			ASSERT(nCssXInd<2);
-			ASSERT(nCssYInd<2);
+			ASSERT(nCssXInd<4);
+			ASSERT(nCssYInd<4);
 			ASSERT(nY<8);
 			ASSERT(nX<8);
 
+			// Store in big array
 			m_anImgFullres[nChan][(nCssYInd*8)+nY][(nCssXInd*8)+nX] = nVal;
 
 			// We are given a PixMap starting offset (index offset to top-left corner
@@ -2411,10 +2243,9 @@ void CimgDecode::PrintDcCumVal(unsigned nMcuX,unsigned nMcuY,int nVal)
 void CimgDecode::DecodeRestartDcState()
 {
 	nDcLum = 0;
-	nDcLumCss[0] = 0;
-	nDcLumCss[1] = 0;
-	nDcLumCss[2] = 0;
-	nDcLumCss[3] = 0;
+	for (unsigned i=0;i<16;i++) {
+		nDcLumCss[i] = 0;
+	}
 	nDcChrCb = 0;
 	nDcChrCr = 0;
 }
@@ -2423,6 +2254,8 @@ void CimgDecode::DecodeRestartDcState()
 // Supports chroma subsampling
 void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopConfig* pAppConfig)
 {
+	CString tmpStr;
+
 
 	unsigned	nRet;	// General purpose return value
 	bool		bDieOnFirstErr = false; // FIXME - do we want this? It makes it less useful for corrupt jpegs
@@ -2460,6 +2293,23 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 		m_pLog->AddLineErr(_T("*** ERROR: Decoding image before Image components defined ***"));
 		return;
 	}
+
+	// Perform additional range checks
+	if ((m_nCssX>4) || (m_nCssY>4)) {
+		tmpStr.Format("  NOTE: Degree of chroma subsampling not supported [X=%u, Y=%u]",m_nCssX,m_nCssY);
+		m_pLog->AddLineWarn(tmpStr);
+		return;
+	}
+	if (m_nNumSosComps>8) {
+		tmpStr.Format("  NOTE: Number of SOS components not supported [%u]",m_nNumSosComps);
+		m_pLog->AddLineWarn(tmpStr);
+		return;
+	}
+
+
+
+
+
 
 	m_nMcuWidth  = m_nCssX*8;
 	m_nMcuHeight = m_nCssY*8;
@@ -2581,7 +2431,6 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 	// -------------------------------------
 
 
-	CString tmpStr;
 	CString picStr;
 
 	DecodeRestartDcState();
@@ -2637,7 +2486,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 	// Now check DHT tables
 
 	bool bDhtReady = true;
-	unsigned nDhtTbl0,nDhtTbl1,nDhtTbl2,nDhtTbl3;
+	unsigned nDhtTblY,nDhtTblCb,nDhtTblCr;
 	for (unsigned nClass=0;nClass<2;nClass++) {
 		for (unsigned ind=0;ind<m_nNumSosComps;ind++) {
 			if (m_anDhtTblSel[nClass][ind]<0) bDhtReady = false;
@@ -2669,10 +2518,9 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 		// FIXME Don't like the way I'm having separate table for DC & AC!
 		// Note: Doesn't matter if I am assinging some that don't exist
 		// because previous check ensure that all ones I plan to use do exist.
-		nDhtTbl0 = m_anDhtTblSel[0][0];
-		nDhtTbl1 = m_anDhtTblSel[0][1];
-		nDhtTbl2 = m_anDhtTblSel[0][2];
-		nDhtTbl3 = m_anDhtTblSel[0][3];
+		nDhtTblY = m_anDhtTblSel[0][0];
+		nDhtTblCb = m_anDhtTblSel[0][1];
+		nDhtTblCr = m_anDhtTblSel[0][2];
 	}
 
 	// Done checks
@@ -2834,7 +2682,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 			// Luminance
 			// If there is chroma subsampling, then this block will have
 			//    (css_x * css_y) luminance blocks to process
-			// We store them all in an array nDcLumCss[3:0]
+			// We store them all in an array nDcLumCss[15:0]
 
 			// Give separator line between MCUs
 			if (bVlcDump) {
@@ -2851,11 +2699,11 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 			for (nCssIndV=0;nCssIndV<m_nCssY;nCssIndV++) {
 				for (nCssIndH=0;nCssIndH<m_nCssX;nCssIndH++) {
 					if (!bVlcDump) {
-						nRet = DecodeScanComp(nDhtTbl0,mcu_x,mcu_y);// Lum DC+AC
+						nRet = DecodeScanComp(nDhtTblY,nDqtTblY,mcu_x,mcu_y);// Lum DC+AC
 					} else {
-						nRet = DecodeScanCompPrint(nDhtTbl0,mcu_x,mcu_y);// Lum DC+AC
+						nRet = DecodeScanCompPrint(nDhtTblY,nDqtTblY,mcu_x,mcu_y);// Lum DC+AC
 					}
-					if (m_nScanCurErr) CheckScanErrors(mcu_x,mcu_y,nDhtTbl0,nCssIndV*2+nCssIndH);
+					if (m_nScanCurErr) CheckScanErrors(mcu_x,mcu_y,nDhtTblY,nCssIndV*2+nCssIndH);
 					if (!nRet && bDieOnFirstErr) return;
 
 					// The DCT Block matrix has already been dezigzagged
@@ -2869,7 +2717,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 					}
 
 					// Now take a snapshot of the current cumulative DC value
-					nDcLumCss[nCssIndV*2+nCssIndH] = nDcLum;
+					nDcLumCss[nCssIndV*4+nCssIndH] = nDcLum;
 
 					// At this point we have one of the luminance comps
 					// fully decoded (with IDCT if enabled). The result is
@@ -2904,11 +2752,11 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 
 				// Chrominance Cb
 				if (!bVlcDump) {
-					nRet = DecodeScanComp(nDhtTbl1,mcu_x,mcu_y);// Chr Cb DC+AC
+					nRet = DecodeScanComp(nDhtTblCb,nDqtTblCb,mcu_x,mcu_y);// Chr Cb DC+AC
 				} else {
-					nRet = DecodeScanCompPrint(nDhtTbl1,mcu_x,mcu_y);// Chr Cb DC+AC
+					nRet = DecodeScanCompPrint(nDhtTblCb,nDqtTblCb,mcu_x,mcu_y);// Chr Cb DC+AC
 				}
-				if (m_nScanCurErr) CheckScanErrors(mcu_x,mcu_y,nDhtTbl1,0);
+				if (m_nScanCurErr) CheckScanErrors(mcu_x,mcu_y,nDhtTblCb,0);
 				if (!nRet && bDieOnFirstErr) return;
 
 				nDcChrCb += m_anDctBlock[0];
@@ -2925,11 +2773,11 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 
 				// Chrominance Cr
 				if (!bVlcDump) {
-					nRet = DecodeScanComp(nDhtTbl2,mcu_x,mcu_y);// Chr Cr DC+AC
+					nRet = DecodeScanComp(nDhtTblCr,nDqtTblCr,mcu_x,mcu_y);// Chr Cr DC+AC
 				} else {
-					nRet = DecodeScanCompPrint(nDhtTbl2,mcu_x,mcu_y);// Chr Cr DC+AC
+					nRet = DecodeScanCompPrint(nDhtTblCr,nDqtTblCr,mcu_x,mcu_y);// Chr Cr DC+AC
 				}
-				if (m_nScanCurErr) CheckScanErrors(mcu_x,mcu_y,nDhtTbl2,1);
+				if (m_nScanCurErr) CheckScanErrors(mcu_x,mcu_y,nDhtTblCr,1);
 				if (!nRet && bDieOnFirstErr) return;
 
 				nDcChrCr += m_anDctBlock[0];
@@ -2954,7 +2802,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet,CSnoopC
 				for (nCssIndH=0;nCssIndH<m_nCssX;nCssIndH++) {
 					// Calculate upper-left Blk index
 					unsigned nBlkXY = (mcu_y*m_nCssY+nCssIndV)*m_nBlkXMax + (mcu_x*m_nCssX+nCssIndH);
-					m_pBlkValY [nBlkXY] = nDcLumCss[nCssIndV*2+nCssIndH];
+					m_pBlkValY [nBlkXY] = nDcLumCss[nCssIndV*4+nCssIndH];
 					m_pBlkValCb[nBlkXY] = nDcChrCb;
 					m_pBlkValCr[nBlkXY] = nDcChrCr;
 				}
@@ -3435,10 +3283,9 @@ void CimgDecode::DecodeScanImgQuick(unsigned nStart,bool bDisplay,bool bQuiet,CS
 	unsigned nDqtTblY  =0;
 	unsigned nDqtTblCr =0;
 	unsigned nDqtTblCb =0;
-	unsigned nDhtTbl0  =0;
-	unsigned nDhtTbl1  =0;
-	unsigned nDhtTbl2  =0;
-	unsigned nDhtTbl3  =0;
+	unsigned nDhtTblY  =0;
+	unsigned nDhtTblCb =0;
+	unsigned nDhtTblCr =0;
 
 	// Check DQT tables
 
@@ -3450,10 +3297,9 @@ void CimgDecode::DecodeScanImgQuick(unsigned nStart,bool bDisplay,bool bQuiet,CS
 		// FIXME Don't like the way I'm having separate table for DC & AC!
 		// Note: Doesn't matter if I am assinging some that don't exist
 		// because previous check ensure that all ones I plan to use do exist.
-		nDhtTbl0 = m_anDhtTblSel[0][0];
-		nDhtTbl1 = m_anDhtTblSel[0][1];
-		nDhtTbl2 = m_anDhtTblSel[0][2];
-		nDhtTbl3 = m_anDhtTblSel[0][3];
+		nDhtTblY  = m_anDhtTblSel[0][0];
+		nDhtTblCb = m_anDhtTblSel[0][1];
+		nDhtTblCr = m_anDhtTblSel[0][2];
 
 	// Done checks
 
@@ -3497,14 +3343,14 @@ void CimgDecode::DecodeScanImgQuick(unsigned nStart,bool bDisplay,bool bQuiet,CS
 
 			for (nCssIndV=0;nCssIndV<m_nCssY;nCssIndV++) {
 				for (nCssIndH=0;nCssIndH<m_nCssX;nCssIndH++) {
-					nRet = DecodeScanComp(nDhtTbl0,mcu_x,mcu_y);// Lum DC+AC
+					nRet = DecodeScanComp(nDhtTblY,nDqtTblY,mcu_x,mcu_y);// Lum DC+AC
 
 					// The DCT Block matrix has already been dezigzagged
 					// and multiplied against quantization table entry
 					nDcLum += m_anDctBlock[0];
 
 					// Now take a snapshot of the current cumulative DC value
-					nDcLumCss[nCssIndV*2+nCssIndH] = nDcLum;
+					nDcLumCss[nCssIndV*4+nCssIndH] = nDcLum;
 
 					// Store fullres value
 					//SetFullRes(mcu_x,mcu_y,0,nCssIndH,nCssIndV,nDcLum);
@@ -3521,7 +3367,7 @@ void CimgDecode::DecodeScanImgQuick(unsigned nStart,bool bDisplay,bool bQuiet,CS
 			if (m_nNumSofComps == 3) {
 
 				// Chrominance Cb
-				nRet = DecodeScanComp(nDhtTbl1,mcu_x,mcu_y);// Chr Cb DC+AC
+				nRet = DecodeScanComp(nDhtTblCb,nDqtTblCb,mcu_x,mcu_y);// Chr Cb DC+AC
 
 				nDcChrCb += m_anDctBlock[0];
 
@@ -3529,7 +3375,7 @@ void CimgDecode::DecodeScanImgQuick(unsigned nStart,bool bDisplay,bool bQuiet,CS
 				//SetFullRes(mcu_x,mcu_y,1,0,0,nDcChrCb);
 
 				// Chrominance Cr
-				nRet = DecodeScanComp(nDhtTbl2,mcu_x,mcu_y);// Chr Cr DC+AC
+				nRet = DecodeScanComp(nDhtTblCr,nDqtTblCr,mcu_x,mcu_y);// Chr Cr DC+AC
 
 				nDcChrCr += m_anDctBlock[0];
 
@@ -3546,7 +3392,7 @@ void CimgDecode::DecodeScanImgQuick(unsigned nStart,bool bDisplay,bool bQuiet,CS
 				for (nCssIndH=0;nCssIndH<m_nCssX;nCssIndH++) {
 					// Calculate upper-left Blk index
 					unsigned nBlkXY = (mcu_y*m_nCssY+nCssIndV)*m_nBlkXMax + (mcu_x*m_nCssX+nCssIndH);
-					m_pBlkValY [nBlkXY] = nDcLumCss[nCssIndV*2+nCssIndH];
+					m_pBlkValY [nBlkXY] = nDcLumCss[nCssIndV*4+nCssIndH];
 					m_pBlkValCb[nBlkXY] = nDcChrCb;
 					m_pBlkValCr[nBlkXY] = nDcChrCr;
 				}
@@ -4256,6 +4102,8 @@ void CimgDecode::CalcChannelPreviewFull(CRect* pRectView,unsigned char* pTmp)
 	// Now perform average luminance calculation
 	// NOTE: This will result in a value in the range 0..255
 	ASSERT(nNumPixels > 0);
+	// Avoid divide by zero
+	if (nNumPixels == 0) { nNumPixels = 1; }
 	m_nAvgY = nSumY / nNumPixels;
 	m_bAvgYValid = true;
 
@@ -4819,6 +4667,7 @@ void CimgDecode::ViewOnDraw(CDC* pDC,CRect rectClient,CPoint ScrolledPos,
 		m_nPreviewSizeX = m_rectImgReal.Width();
 		m_nPreviewSizeY = m_rectImgReal.Height();
 
+		// m_nPageWidth is already hardcoded above
 		ASSERT(m_nPageWidth>=0);
 		m_nPageWidth = max((unsigned)m_nPageWidth, m_nPreviewPosX + m_nPreviewSizeX);
 
