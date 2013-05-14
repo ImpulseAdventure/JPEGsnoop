@@ -462,7 +462,7 @@ bool CDbSigs::SearchCom(CString strCom)
 		if (ind >= m_sXComSwListNum) {
 			done = true;
 		} else {
-			if (strCom.Find(m_sXComSwList[ind]) == -1) {
+			if (strCom.Find(m_sXComSwList[ind]) != -1) {
 				found = true;
 				done = true;
 			}
