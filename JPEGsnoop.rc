@@ -309,7 +309,7 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,12,6,20,20
     LTEXT           "JPEGsnoop",IDC_STATIC,42,6,39,8,SS_NOPREFIX
-    LTEXT           "Copyright © 2010 Calvin Hass",IDC_STATIC,42,18,124,8
+    LTEXT           "Copyright © 2012 Calvin Hass",IDC_STATIC,42,18,124,8
     DEFPUSHBUTTON   "OK",IDOK,185,7,50,16,WS_GROUP
     LTEXT           "www.impulseadventure.com/photo/",IDC_URL,24,66,117,8
     LTEXT           "Documentation and Updates for JPEGsnoop",IDC_URL_DOC,24,
@@ -550,6 +550,8 @@ BEGIN
                     BS_AUTOCHECKBOX | WS_TABSTOP,12,90,96,10
     CONTROL         "Missing SOI: Force SOI",IDC_FORCE_SOI,"Button",
                     BS_AUTOCHECKBOX | WS_TABSTOP,12,66,150,10
+    CONTROL         "Extract All JPEGs",IDC_EXT_ALL,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,138,36,78,10
 END
 
 IDD_DECODEDETAILDLG DIALOGEX 0, 0, 262, 121
@@ -631,8 +633,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,5,2,0
- PRODUCTVERSION 1,5,2,0
+ FILEVERSION 1,6,1,0
+ PRODUCTVERSION 1,6,1,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -649,12 +651,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "ImpulseAdventure"
             VALUE "FileDescription", "JPEGsnoop"
-            VALUE "FileVersion", "1.5.2.0"
+            VALUE "FileVersion", "1.6.1.0"
             VALUE "InternalName", "JPEGsnoop.exe"
-            VALUE "LegalCopyright", "(c) 2011 Calvin Hass.  All rights reserved."
+            VALUE "LegalCopyright", "(c) 2012 Calvin Hass.  All rights reserved."
             VALUE "OriginalFilename", "JPEGsnoop.exe"
             VALUE "ProductName", "JPEGsnoop"
-            VALUE "ProductVersion", "1.5.2.0"
+            VALUE "ProductVersion", "1.6.1.0"
         END
     END
     BLOCK "VarFileInfo"

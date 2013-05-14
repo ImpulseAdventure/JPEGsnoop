@@ -22,6 +22,7 @@
 #include "stdafx.h"
 #include "JPEGsnoop.h"
 #include "ExportDlg.h"
+#include ".\exportdlg.h"
 
 
 // CExportDlg dialog
@@ -35,6 +36,7 @@ CExportDlg::CExportDlg(CWnd* pParent /*=NULL*/)
 	, m_bForceEoi(FALSE)
 	, m_bIgnoreEoi(FALSE)
 	, m_bForceSoi(FALSE)
+	, m_bExtractAllEn(FALSE)
 {
 }
 
@@ -51,6 +53,7 @@ void CExportDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Check(pDX, IDC_FORCE_EOI, m_bForceEoi);
 	DDX_Check(pDX, IDC_IGNORE_EOI, m_bIgnoreEoi);
 	DDX_Check(pDX, IDC_FORCE_SOI, m_bForceSoi);
+	DDX_Check(pDX, IDC_EXT_ALL, m_bExtractAllEn);
 }
 
 
@@ -58,4 +61,3 @@ BEGIN_MESSAGE_MAP(CExportDlg, CDialog)
 END_MESSAGE_MAP()
 
 
-// CExportDlg message handlers
