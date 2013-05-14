@@ -457,7 +457,10 @@ CStatusBar* CJPEGsnoopDoc::GetStatusBar()
 BOOL CJPEGsnoopDoc::AnalyzeOpen()
 {
 	ASSERT(m_strPathName != "");
-	if (m_strPathName == "") { AfxMessageBox("ERROR: AnalyzeOpen() but m_strPathName empty"); }
+	if (m_strPathName == "") {
+		AfxMessageBox("ERROR: AnalyzeOpen() but m_strPathName empty");
+		return false;
+	}
 
 	// Clean up if a file is already open
 	if (m_pFile != NULL)
@@ -912,7 +915,7 @@ void CJPEGsnoopDoc::doBatchSingle(CString fName)
 			return;
 		}
 
-		// Guess the filename is safe, proceed with save
+		// Now that we've confirmed the filename is safe, proceed with save
 		DoDirectSave(fNameLog);
 
 		// Now submit entry to database!
@@ -1364,7 +1367,10 @@ void CJPEGsnoopDoc::OnToolsSearchexecutablefordqt()
 
 
 	ASSERT(sFileName != "");
-	if (sFileName == "") { AfxMessageBox("ERROR: SearchExe() but sFileName empty"); }
+	if (sFileName == "") {
+		AfxMessageBox(_T("ERROR: SearchExe() but sFileName empty"));
+		return;
+	}
 
 	try
 	{
@@ -1401,7 +1407,7 @@ void CJPEGsnoopDoc::OnToolsSearchexecutablefordqt()
 
 	ASSERT(pExeBuf);
 	if (!pExeBuf) {
-		AfxMessageBox("ERROR: Not enough memory for EXE Search");
+		AfxMessageBox(_T("ERROR: Not enough memory for EXE Search"));
 		return;
 	}
 
@@ -1632,6 +1638,192 @@ unsigned short CJPEGsnoopDoc::Swap16(unsigned short nVal)
 void CJPEGsnoopDoc::OnToolsExtractembeddedjpeg()
 {
 
+	CExportDlg	exportDlg;
+	CString		tmpStr;
+	unsigned int nFileSize = 0;
+
+	tmpStr.Format("0x%08X",m_pJfifDec->m_nPosEmbedStart);
+
+	exportDlg.m_bOverlayEn = false;	// Changed default on 08/22/2011
+	exportDlg.m_bForceEoi = false;
+	exportDlg.m_bIgnoreEoi = false;
+	exportDlg.m_bExtractAllEn = false;
+	exportDlg.m_bDhtAviInsert = m_pJfifDec->m_bAviMjpeg;
+	exportDlg.m_strOffsetStart = tmpStr;
+
+	if (exportDlg.DoModal() == IDOK) {
+		bool	bRet;
+
+		// For export, we need to call AnalyzeOpen()
+		AnalyzeOpen();
+
+       
+		// If we are not in "extract all" mode, then check now to see if
+		// the current file position looks OK to extract a valid JPEG.
+		// If we are in "extract all" mode, skip this step as we will
+		// instead start with the search forward.
+
+		if (!exportDlg.m_bExtractAllEn) {
+			// Is the currently-decoded file in a suitable
+			// state for JPEG extraction (ie. have we seen all
+			// the necessary markers?)
+			bRet = m_pJfifDec->ExportJpegPrepare(m_strPathName,exportDlg.m_bForceSoi,exportDlg.m_bForceEoi,exportDlg.m_bIgnoreEoi);
+			if (!bRet) {
+				return;
+			}
+		}
+
+		// Ask the user for the output file
+
+		// ----------------------------
+
+		CString		strEmbedFileName;
+		CString		strPathName;
+		BOOL		bRTF;
+
+		// Preserve
+		strPathName = m_strPathName;
+		bRTF = m_bRTF;
+
+		m_bRTF = false;
+		m_strPathName = m_strPathName + ".export.jpg";
+
+		bool status = 0;
+		char strFilter[] =
+			"JPEG Image (*.jpg)|*.jpg|"\
+			"All Files (*.*)|*.*||";
+
+		// CAL! BUG #1008	
+		CFileDialog FileDlg(FALSE, ".jpg", m_strPathName, OFN_OVERWRITEPROMPT, strFilter);
+
+		CString title;
+		//VERIFY(title.LoadString(IDS_CAL_FILESAVE));
+		title = "Save Exported JPEG file as";
+		FileDlg.m_ofn.lpstrTitle = title;
+		
+		if( FileDlg.DoModal() == IDOK )
+		{
+			strEmbedFileName = FileDlg.GetPathName();
+		} else {
+			// User wanted to abort
+			tmpStr.Format("  User cancelled");
+			m_pLog->AddLineErr(tmpStr);
+
+			// Revert
+			m_strPathName = strPathName;
+			m_bRTF = bRTF;
+			return;
+		}
+
+		// Revert
+		m_strPathName = strPathName;
+		m_bRTF = bRTF;
+
+		// ----------------------------
+
+		if (!exportDlg.m_bExtractAllEn) {
+			// Perform the actual extraction
+			nFileSize = m_lFileSize;	// TODO: How to handle bit truncation?
+			bRet = m_pJfifDec->ExportJpegDo(m_strPathName,strEmbedFileName,nFileSize,exportDlg.m_bOverlayEn,exportDlg.m_bDhtAviInsert,exportDlg.m_bForceSoi,exportDlg.m_bForceEoi);
+
+			// For export, we need to call AnalyzeClose()
+			AnalyzeClose();
+		} else {
+			// Perform batch extraction of all embedded JPEGs
+
+			// Start closed
+			AnalyzeClose();
+
+			bool		bDoneBatch = false;
+			unsigned	nExportCnt = 1;
+
+			unsigned		start_pos = 0;
+			bool			search_result = false;
+			unsigned long	search_pos = 0;
+			bool			bSkipFrame = false;
+
+
+			// Determine the root filename
+			// Filename selected by user: strEmbedFileName
+			CString		strRootFileName;
+			int			nExtInd;
+			
+			nExtInd = strEmbedFileName.ReverseFind('.');
+			ASSERT(nExtInd != -1);
+			if (nExtInd == -1) {
+				AfxMessageBox("ERROR: Invalid filename");
+				return;
+			}
+
+			strRootFileName = strEmbedFileName.Left(nExtInd);
+
+			while (!bDoneBatch) {
+
+				bSkipFrame = false;
+
+				// Assumption is that we are already on first frame because of
+				// the ExportJpegPrepare() call above
+
+				// Create filename
+				// 6 digits of numbering will support videos at 60 fps for over 4.5hrs.
+				strEmbedFileName.Format("%s.%06u.jpg",strRootFileName,nExportCnt);
+
+				AnalyzeOpen();
+
+				// Is the currently-decoded file in a suitable
+				// state for JPEG extraction (ie. have we seen all
+				// the necessary markers?)
+				bRet = m_pJfifDec->ExportJpegPrepare(m_strPathName,exportDlg.m_bForceSoi,exportDlg.m_bForceEoi,exportDlg.m_bIgnoreEoi);
+				if (!bRet) {
+					// Skip this particular frame
+					bSkipFrame = true;
+				}
+
+				if (!bSkipFrame) {
+					nFileSize = m_lFileSize;	// TODO: How to handle bit truncation?
+					
+					bRet = m_pJfifDec->ExportJpegDo(m_strPathName,strEmbedFileName,nFileSize,exportDlg.m_bOverlayEn,exportDlg.m_bDhtAviInsert,exportDlg.m_bForceSoi,exportDlg.m_bForceEoi);
+
+					nExportCnt++;
+				}
+
+				// See if we can find the next embedded JPEG (file must still be open for this)
+				start_pos = theApp.m_pAppConfig->nPosStart;
+				m_pJfifDec->ImgSrcChanged();
+
+				search_result = m_pWBuf->BufSearch(start_pos,0xFFD8FF,3,true,search_pos);
+				if (search_result) {
+					theApp.m_pAppConfig->nPosStart = search_pos;
+					Reprocess();
+				} else {
+					// No SOI Marker found in Forward search -> Stop batch
+					bDoneBatch = true;
+				}
+
+				// For export, we need to call AnalyzeClose()
+				AnalyzeClose();
+
+			} // bDoneBatch
+
+			// Close the file in case we aborted above
+			AnalyzeClose();
+
+		}
+
+
+
+	} else {
+	}
+
+
+
+}
+
+
+/*
+void CJPEGsnoopDoc::OnToolsExtractembeddedjpeg()
+{
+
 
 	CExportDlg	exportDlg;
 	CString		tmpStr;
@@ -1719,7 +1911,7 @@ void CJPEGsnoopDoc::OnToolsExtractembeddedjpeg()
 
 
 }
-
+*/
 
 
 
@@ -2106,9 +2298,17 @@ void CJPEGsnoopDoc::OnToolsExporttiff()
 	if (bMode16b) {
 		pBitmapSel16 = new unsigned short[nSizeX*nSizeY*3];
 		ASSERT(pBitmapSel16);
+		if (!pBitmapSel16) {
+			AfxMessageBox(_T("ERROR: Insufficient memory for export"));
+			return;
+		}
 	} else {
 		pBitmapSel8 = new unsigned char[nSizeX*nSizeY*3];
 		ASSERT(pBitmapSel8);
+		if (!pBitmapSel8) {
+			AfxMessageBox(_T("ERROR: Insufficient memory for export"));
+			return;
+		}
 	}
 	if (!bModeYcc) {
 		// RGB mode
@@ -2172,6 +2372,7 @@ void CJPEGsnoopDoc::OnToolsExporttiff()
 				} else {
 					ASSERT(false);
 					// YCC-16b not defined!
+					// Note that this error is trapped earlier
 				}
 			}
 		}
