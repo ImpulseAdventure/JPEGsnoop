@@ -846,9 +846,9 @@ CString CjfifDecode::LookupExifTag(CString sect,unsigned tag,bool &bUnknown)
 			case 0x0003: return _T("GPSLongitudeRef");break;
 			case 0x0004: return _T("GPSLongitude");break;
 			case 0x0005: return _T("GPSAltitudeRef");break;
-			case 0x0006: return _T("GPSTimeStamp");break;
-			case 0x0007: return _T("GPSSatellites");break;
-			case 0x0008: return _T("GPSAltitude");break;
+			case 0x0006: return _T("GPSAltitude");break;
+			case 0x0007: return _T("GPSTimeStamp");break;
+			case 0x0008: return _T("GPSSatellites");break;
 			case 0x0009: return _T("GPSStatus");break;
 			case 0x000A: return _T("GPSMeasureMode");break;
 			case 0x000B: return _T("GPSDOP");break;
@@ -1261,8 +1261,12 @@ bool CjfifDecode::PrintValGPS(unsigned nCount, float fCoord1, float fCoord2, flo
 	if (nCount == 3) {
 		nCoordDeg = unsigned(fCoord1);
 		nCoordMin = unsigned(fCoord2);
-		fTemp = fCoord2 - (float)nCoordMin;
-		fCoordSec = fTemp * (float)60.0;
+		if (fCoord3 == 0) {
+			fTemp = fCoord2 - (float)nCoordMin;
+			fCoordSec = fTemp * (float)60.0;
+		} else {
+			fCoordSec = fCoord3;
+		}
 
 		strCoord.Format(_T("%u deg %u' %.3f\""),nCoordDeg,nCoordMin,fCoordSec);
 		return true;
@@ -2015,6 +2019,16 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 				case 0 : valStr = "Measurement without differential correction"; break;
 				case 1 : valStr = "Differential correction applied"; break;
 			}
+		} else if (ifdTagStr == "GPSAltitude") {
+			valStr.Format(_T("%.3f m"),faValues[0]);
+		} else if (ifdTagStr == "GPSSpeed") {
+			valStr.Format(_T("%.3f"),faValues[0]);
+		} else if (ifdTagStr == "GPSTimeStamp") {
+			valStr.Format(_T("%.0f:%.0f:%.2f"),faValues[0],faValues[1],faValues[2]);
+		} else if (ifdTagStr == "GPSTrack") {
+			valStr.Format(_T("%.2f"),faValues[0]);
+		} else if (ifdTagStr == "GPSDOP") {
+			valStr.Format(_T("%.4f"),faValues[0]);
 		}
 
 
@@ -2051,14 +2065,14 @@ unsigned CjfifDecode::DecodeExifIfd(CString ifdStr,unsigned pos_exif_start,unsig
 			}
 		} else if (ifdTagStr == "Orientation") {
 			switch (naValues[0]) {
-				case 1 : valStr = "Row 0: top, Col 0: left"; break;
-				case 2 : valStr = "Row 0: top, Col 0: right"; break;
-				case 3 : valStr = "Row 0: bottom, Col 0: right"; break;
-				case 4 : valStr = "Row 0: bottom, Col 0: left"; break;
-				case 5 : valStr = "Row 0: left, Col 0: top"; break;
-				case 6 : valStr = "Row 0: right, Col 0 top"; break;
-				case 7 : valStr = "Row 0: right, Col 0: bottom"; break;
-				case 8 : valStr = "Row 0: left, Col 0: bottom"; break;
+				case 1 : valStr = "1 = Row 0: top, Col 0: left"; break;
+				case 2 : valStr = "2 = Row 0: top, Col 0: right"; break;
+				case 3 : valStr = "3 = Row 0: bottom, Col 0: right"; break;
+				case 4 : valStr = "4 = Row 0: bottom, Col 0: left"; break;
+				case 5 : valStr = "5 = Row 0: left, Col 0: top"; break;
+				case 6 : valStr = "6 = Row 0: right, Col 0: top"; break;
+				case 7 : valStr = "7 = Row 0: right, Col 0: bottom"; break;
+				case 8 : valStr = "8 = Row 0: left, Col 0: bottom"; break;
 			}
 		} else if (ifdTagStr == "PlanarConfiguration") {
 			switch (naValues[0]) {
@@ -3345,8 +3359,13 @@ void CjfifDecode::DecodeDHT(bool bInject)
 						}
 						binstr[binstr_len] = '\0';
 						fullStr.Format(_T("      %s = %02X"),binstr,dht_code_list[dht_ind]);
-						if (dht_code_list[dht_ind] == 0x00) { fullStr += " (EOB)"; }
-						if (dht_code_list[dht_ind] == 0xF0) { fullStr += " (ZRL)"; }
+
+						// The following are only valid for AC components
+						// Bug [3442132]
+						if (dht_class != 0) {
+							if (dht_code_list[dht_ind] == 0x00) { fullStr += " (EOB)"; }
+							if (dht_code_list[dht_ind] == 0xF0) { fullStr += " (ZRL)"; }
+						}
 
 						tmpStr.Format("%-40s (Total Len = %2u)",fullStr,bit_len + (dht_code_list[dht_ind] & 0xF));
 
@@ -4446,10 +4465,13 @@ unsigned CjfifDecode::DecodeMarker()
 			fullStr.Format(_T("    Component[%u]: "),i);
 			comp_sel = Buf(m_nPos++);
 			tbl_sel = Buf(m_nPos++);
-			tmpStr.Format(_T("selector=0x%02X, table=0x%02X"),comp_sel,tbl_sel);
+			unsigned tbl_sel_dc,tbl_sel_ac;
+			tbl_sel_dc = (tbl_sel & 0xf0)>>4;
+			tbl_sel_ac = (tbl_sel & 0x0f);
+			tmpStr.Format(_T("selector=0x%02X, table=%u(DC),%u(AC)"),comp_sel,tbl_sel_dc,tbl_sel_ac);
 			fullStr += tmpStr;
 			m_pLog->AddLine(fullStr);
-			bRet = m_pImgDec->SetDhtTables(i-1,(tbl_sel & 0xf0)>>4,(tbl_sel & 0x0f));
+			bRet = m_pImgDec->SetDhtTables(i-1,tbl_sel_dc,tbl_sel_ac);
 			DecodeErrCheck(bRet);
 		}
 
@@ -5996,14 +6018,19 @@ void CjfifDecode::DecodeEmbeddedThumb()
 							tmpStr.Format(_T("    Precision=%u bits"),dqt_precision);
 							m_pLog->AddLine(tmpStr);
 							tmpStr.Format(_T("    Destination ID=%u"),dqt_dest_id);
+							// NOTE: The mapping between destination IDs and the actual
+							// usage is defined in the SOF marker which is often later.
+							// In 99% of images, the following is true. However, I have
+							// seen some test images that set Tbl 3 = Lum, Tbl 0=Chr,
+							// Tbl1=Chr, and Tbl2 undefined
 							if (dqt_dest_id == 0) {
-								tmpStr += " (Luminance)";
+								tmpStr += " (Luminance, typically)";
 							}
 							else if (dqt_dest_id == 1) {
-								tmpStr += " (Chrominance)";
+								tmpStr += " (Chrominance, typically)";
 							}
 							else if (dqt_dest_id == 2) {
-								tmpStr += " (Chrominance)";
+								tmpStr += " (Chrominance, typically)";
 							}
 							else {
 								tmpStr += " (???)";
