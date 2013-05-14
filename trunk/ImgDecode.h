@@ -271,8 +271,8 @@ private:
 	void		HuffMaskLookupGen();
 	unsigned	ExtractBits(unsigned nWord,unsigned nBits);
 	unsigned	ReadScanVal(unsigned nClass,unsigned nTbl,unsigned &rZrl,signed &rVal);
-	unsigned	DecodeScanComp(unsigned nTbl,unsigned nMcuX,unsigned nMcuY);
-	unsigned	DecodeScanCompPrint(unsigned nTbl,unsigned nMcuX,unsigned nMcuY);
+	unsigned	DecodeScanComp(unsigned nTblDht,unsigned nTblDqt,unsigned nMcuX,unsigned nMcuY);
+	unsigned	DecodeScanCompPrint(unsigned nTblDht,unsigned nTblDqt,unsigned nMcuX,unsigned nMcuY);
 	signed		HuffmanDc2Signed(unsigned nVal,unsigned nBits);
 	void		CheckScanErrors(unsigned nMcuX,unsigned nMcuY,unsigned nTbl,unsigned nInd);
 
@@ -294,7 +294,7 @@ private:
 
 	// Decoder DC state
 	signed		nDcLum;
-	signed		nDcLumCss[4];
+	signed		nDcLumCss[16]; // Need to support 4x2 at least. To be safe, leave room for 4x4
 	signed		nDcChrCb;
 	signed		nDcChrCr;
 
@@ -502,7 +502,7 @@ private:
 	int			m_anDctBlock[64];
 	float		m_afIdctBlock[64];
 	int			m_anIdctBlock[64];		// fixed pt version
-	int			m_anImgFullres[4][2*8][2*8];	// Lum/Chr for 16x16 pixel region (2x2 MCUs)
+	int			m_anImgFullres[16][2*8][2*8];	// Lum/Chr for 32x32 pixel region (4x4 MCUs)
 
 	static const unsigned	m_sZigZag[];
 	static const unsigned	m_sUnZigZag[];
