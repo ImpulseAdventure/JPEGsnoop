@@ -789,7 +789,19 @@ void CJPEGsnoopApp::MyOnFileOpen()
 	CString sFileName;
 	VERIFY(title.LoadString(IDS_CAL_FILEOPEN));
 	FileDlg.m_ofn.lpstrTitle = title;
-	
+
+	// Extend the maximum filename length
+	// Default is 64 for filename, 260 for path
+	// Some users have requested support for longer filenames
+	char*	spFilePath;
+	spFilePath = new char[501];
+	spFilePath[0] = char(0);
+	FileDlg.m_pOFN->lpstrFile = spFilePath;
+	FileDlg.m_pOFN->nMaxFile = 500;
+	FileDlg.m_pOFN->nMaxFileTitle = 300;
+
+	// TODO: Should trap the following for exception (CommDlgExtendedError = FNERR_BUFFERTOOSMALL)
+	// For reference, see: http://msdn.microsoft.com/en-us/library/windows/desktop/ms646960%28v=vs.85%29.aspx
 	if( FileDlg.DoModal() == IDOK )
 	{
 		sFileName = FileDlg.GetFileName();
@@ -797,6 +809,7 @@ void CJPEGsnoopApp::MyOnFileOpen()
 		// if returns NULL, the user has already been alerted
 	}
 
+	if (spFilePath) { delete[] spFilePath; }
 
 }
 
