@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2012 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -25,7 +25,7 @@
 // - Note that when the version number is incremented, I need
 //   to also update the corresponding version numbers in the
 //   JPEGsnoop.rc resource under "Version.VS_VERSION_INFO".
-#define VERSION_STR "1.5.2"
+#define VERSION_STR "1.6.1"
 
 // Version number for the database signatures
 // - This version number has been provided in case I decide
