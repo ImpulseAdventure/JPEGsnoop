@@ -106,9 +106,9 @@
 #define IDC_CHECK_SUBDIRS               1117
 #define IDC_EDIT_DIR                    1118
 #define ID_BTN_ABORT                    1119
-#define IDC_PROGRESS                    1120
 #define IDC_PROGRESS_BAR                1120
 #define IDC_STATIC_PROGRESS             1121
+#define IDC_EXT_ALL                     1122
 #define ID_CANCEL_EDIT_CNTR             32768
 #define ID_TOOLS_DECODE                 32771
 #define ID_FILE_OFFSET                  32772
@@ -192,7 +192,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        146
 #define _APS_NEXT_COMMAND_VALUE         32886
-#define _APS_NEXT_CONTROL_VALUE         1122
+#define _APS_NEXT_CONTROL_VALUE         1123
 #define _APS_NEXT_SYMED_VALUE           118
 #endif
 #endif
