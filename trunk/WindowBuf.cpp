@@ -235,7 +235,9 @@ bool CwindowBuf::BufSearchX(unsigned long start_pos, BYTE* search_val, unsigned 
 	}
 
 
-	found_pos = cur_pos;
+	if (found) {
+		found_pos = match_start_pos;
+	}
 	return found;
 
 }
