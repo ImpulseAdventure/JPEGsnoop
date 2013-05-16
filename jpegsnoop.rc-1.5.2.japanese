@@ -1,0 +1,1079 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_JAPANESE, SUBLANG_NEUTRAL
+#pragma code_page(932)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "//CAL! #define _AFX_NO_SPLITTER_RESOURCES\r\n"
+    "#define _AFX_NO_OLE_RESOURCES\r\n"
+    "#define _AFX_NO_TRACKER_RESOURCES\r\n"
+    "#define _AFX_NO_PROPERTY_RESOURCES\r\n"
+    "\r\n"
+    "#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)\r\n"
+    "LANGUAGE 9, 1\r\n"
+    "#pragma code_page(1252)\r\n"
+    "#include ""res\\JPEGsnoop.rc2""  // non-Microsoft Visual C++ edited resources\r\n"
+    "#include ""afxres.rc""         // Standard components\r\n"
+    "#include ""afxprint.rc""       // printing/print preview resources\r\n"
+    "#include ""afxolecl.rc""       // OLE container resources\r\n"
+    "#endif\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDR_MAINFRAME           ICON                    "res\\jpegsnoop-prog-icon1-novista.ico"
+IDR_JPEGsnoopTYPE       ICON                    "res\\JPEGsnoopDoc.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Bitmap
+//
+
+IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Toolbar
+//
+
+IDR_MAINFRAME TOOLBAR  16, 15
+BEGIN
+    BUTTON      ID_FILE_NEW
+    BUTTON      ID_FILE_OPEN
+    BUTTON      ID_FILE_SAVE_AS
+    SEPARATOR
+    BUTTON      ID_EDIT_CUT
+    BUTTON      ID_EDIT_COPY
+    BUTTON      ID_EDIT_PASTE
+    SEPARATOR
+    BUTTON      ID_FILE_PRINT
+    BUTTON      ID_APP_ABOUT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MAINFRAME MENU 
+BEGIN
+    POPUP "ファイル(&F)"
+    BEGIN
+        MENUITEM "イメージを開く...(&O)\tCtrl+O",      ID_FILE_OPEN
+        MENUITEM "ログの保存...(&S)\tCtrl+S",        ID_FILE_SAVE_AS
+        MENUITEM "ファイルを再処理\tCtrl+R",      ID_FILE_REPROCESS
+        MENUITEM "バッチ処理...",            ID_FILE_BATCHPROCESS
+        MENUITEM SEPARATOR
+        MENUITEM "オフセット...",                   ID_FILE_OFFSET
+        MENUITEM SEPARATOR
+        MENUITEM "印刷...(&P)\tCtrl+P",           ID_FILE_PRINT
+        MENUITEM "印刷プレビュー(&V)",              ID_FILE_PRINT_PREVIEW
+        MENUITEM "印刷の設定(&R)...",             ID_FILE_PRINT_SETUP
+        MENUITEM SEPARATOR
+        MENUITEM "最近使用したファイル",                 ID_FILE_MRU_FILE1, GRAYED
+        MENUITEM SEPARATOR
+        MENUITEM "終了(&X)",                       ID_APP_EXIT
+    END
+    POPUP "編集(&E)"
+    BEGIN
+        MENUITEM "元に戻す(&U)\tCtrl+Z",               ID_EDIT_UNDO
+        MENUITEM SEPARATOR
+        MENUITEM "コピー(&C)\tCtrl+C",               ID_EDIT_COPY
+        MENUITEM "すべて選択(&L)\tCtrl+A",         ID_EDIT_SELECT_ALL
+        MENUITEM SEPARATOR
+        MENUITEM "検索...(&F)\tCtrl+F",            ID_EDIT_FIND
+        MENUITEM "次を検索(&I)\tF3",              ID_EDIT_REPEAT
+    END
+    POPUP "表示(&V)"
+    BEGIN
+        POPUP "画像のチャンネル"
+        BEGIN
+            MENUITEM "RGB\tAlt+1",                  ID_PREVIEW_RGB
+            MENUITEM "YCC\tAlt+2",                  ID_PREVIEW_YCC
+            MENUITEM SEPARATOR
+            MENUITEM "R\tAlt+3",                    ID_PREVIEW_R
+            MENUITEM "G\tAlt+4",                    ID_PREVIEW_G
+            MENUITEM "B\tAlt+5",                    ID_PREVIEW_B
+            MENUITEM SEPARATOR
+            MENUITEM "Y (グレースケール)\tAlt+6",        ID_PREVIEW_Y
+            MENUITEM "Cb\tAlt+7",                   ID_PREVIEW_CB
+            MENUITEM "Cr\tAlt+8",                   ID_PREVIEW_CR
+        END
+        POPUP "イメージのズーム"
+        BEGIN
+            MENUITEM "拡大\tCtrl++",             ID_IMAGEZOOM_ZOOMIN
+            MENUITEM "縮小\tCtrl+-",            ID_IMAGEZOOM_ZOOMOUT
+            MENUITEM SEPARATOR
+            MENUITEM "12.5 %",                      ID_IMAGEZOOM_12
+            MENUITEM "25 %",                        ID_IMAGEZOOM_25
+            MENUITEM "50 %",                        ID_IMAGEZOOM_50
+            MENUITEM "100 %",                       ID_IMAGEZOOM_100
+            MENUITEM "150 %",                       ID_IMAGEZOOM_150
+            MENUITEM "200 %",                       ID_IMAGEZOOM_200
+            MENUITEM "300 %",                       ID_IMAGEZOOM_300
+            MENUITEM "400 %",                       ID_IMAGEZOOM_400
+            MENUITEM "800 %",                       ID_IMAGEZOOM_800
+        END
+        POPUP "オーバーレイ"
+        BEGIN
+            MENUITEM "MCU グリッド\tCtrl+G",            ID_OVERLAYS_MCUGRID
+        END
+        MENUITEM "調節...",                   ID_VIEW_ADJUST
+        MENUITEM SEPARATOR
+        MENUITEM "ツール バー(&T)",                    ID_VIEW_TOOLBAR
+        MENUITEM "ステータス バー(&S)",                 ID_VIEW_STATUS_BAR
+    END
+    POPUP "ツール(&T)"
+    BEGIN
+        MENUITEM "画像の前方検索\tCtrl+2",    ID_TOOLS_SEARCHFORWARD
+        MENUITEM "画像の後方検索\tCtrl+1",    ID_TOOLS_SEARCHREVERSE
+        MENUITEM SEPARATOR
+        MENUITEM "MCU オフセットの検索...",        ID_TOOLS_LOOKUPMCUOFFSET
+        MENUITEM "ファイル オーバーレイ...",             ID_TOOLS_FILEOVERLAY
+        MENUITEM "DQT の検索実行可能ファイル...", 
+                                                ID_TOOLS_SEARCHEXECUTABLEFORDQT
+
+        MENUITEM "JPEG のエクスポート...",              ID_TOOLS_EXTRACTEMBEDDEDJPEG
+        MENUITEM "TIFF にエクスポート...",              ID_TOOLS_EXPORTTIFF
+        MENUITEM SEPARATOR
+        MENUITEM "DB にカメラ/SW の追加...\tAlt+S", ID_TOOLS_ADDCAMERATODB
+        MENUITEM "ローカル DB の管理...",          ID_TOOLS_MANAGELOCALDB
+    END
+    POPUP "オプション(&O)"
+    BEGIN
+        MENUITEM "DHT 拡張",                  ID_OPTIONS_DHTEXPAND
+        MENUITEM "不明な EXIF タグを非表示",      ID_OPTIONS_HIDEUKNOWNEXIFTAGS
+
+        MENUITEM "メーカー ノート",                 ID_OPTIONS_MAKERNOTES
+        MENUITEM "シグネチャの検索",            ID_OPTIONS_SIGNATURESEARCH
+        MENUITEM SEPARATOR
+        POPUP "セグメントのスキャン"
+        BEGIN
+            MENUITEM "イメージの解読",                ID_SCANSEGMENT_DECODEIMAGE
+
+            MENUITEM SEPARATOR
+            MENUITEM "完全 IDCT (AC+DC - 遅い)",    ID_SCANSEGMENT_FULLIDCT
+            MENUITEM "IDCT なし (DC のみ - 速い)",    ID_SCANSEGMENT_NOIDCT
+            MENUITEM SEPARATOR
+            MENUITEM "RGB ヒストグラム",               ID_SCANSEGMENT_HISTOGRAM
+            MENUITEM "Y ヒストグラム",                 ID_SCANSEGMENT_HISTOGRAMY
+
+            MENUITEM SEPARATOR
+            MENUITEM "ダンプ",                        ID_SCANSEGMENT_DUMP
+            MENUITEM "詳細解読...",          ID_SCANSEGMENT_DETAILEDDECODE
+
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "設定...",            ID_OPTIONS_CONFIGURATION
+        MENUITEM "更新の確認...",        ID_OPTIONS_CHECKFORUPDATES
+    END
+    POPUP "ヘルプ(&H)"
+    BEGIN
+        MENUITEM "JPEGsnoop について(&A)...",         ID_APP_ABOUT
+    END
+END
+
+IDR_CNTR_INPLACE MENU 
+BEGIN
+    POPUP "ファイル(&F)"
+    BEGIN
+        MENUITEM "新規(&N)\tCtrl+N",                ID_FILE_NEW
+        MENUITEM "開く...(&O)\tCtrl+O",            ID_FILE_OPEN
+        MENUITEM "保存(&S)\tCtrl+S",               ID_FILE_SAVE
+        MENUITEM "名前を付けて保存(&A)...",                 ID_FILE_SAVE_AS
+        MENUITEM SEPARATOR
+        MENUITEM "印刷...(&P)\tCtrl+P",           ID_FILE_PRINT
+        MENUITEM "印刷プレビュー(&V)",              ID_FILE_PRINT_PREVIEW
+        MENUITEM "印刷の設定(&R)...",             ID_FILE_PRINT_SETUP
+        MENUITEM SEPARATOR
+        MENUITEM "最近使用したファイル",                 ID_FILE_MRU_FILE1, GRAYED
+        MENUITEM SEPARATOR
+        MENUITEM "終了(&X)",                       ID_APP_EXIT
+    END
+    MENUITEM SEPARATOR
+    MENUITEM SEPARATOR
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_MAINFRAME ACCELERATORS 
+BEGIN
+    VK_ESCAPE,      ID_CANCEL_EDIT_CNTR,    VIRTKEY, NOINVERT
+    "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
+    VK_INSERT,      ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
+    VK_DELETE,      ID_EDIT_CUT,            VIRTKEY, SHIFT, NOINVERT
+    "X",            ID_EDIT_CUT,            VIRTKEY, CONTROL, NOINVERT
+    "F",            ID_EDIT_FIND,           VIRTKEY, CONTROL, NOINVERT
+    "V",            ID_EDIT_PASTE,          VIRTKEY, CONTROL, NOINVERT
+    VK_INSERT,      ID_EDIT_PASTE,          VIRTKEY, SHIFT, NOINVERT
+    VK_F3,          ID_EDIT_REPEAT,         VIRTKEY, NOINVERT
+    "H",            ID_EDIT_REPLACE,        VIRTKEY, CONTROL, NOINVERT
+    "A",            ID_EDIT_SELECT_ALL,     VIRTKEY, CONTROL, NOINVERT
+    VK_BACK,        ID_EDIT_UNDO,           VIRTKEY, ALT, NOINVERT
+    "Z",            ID_EDIT_UNDO,           VIRTKEY, CONTROL, NOINVERT
+    "N",            ID_FILE_NEW,            VIRTKEY, CONTROL, NOINVERT
+    "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL, NOINVERT
+    "P",            ID_FILE_PRINT,          VIRTKEY, CONTROL, NOINVERT
+    "R",            ID_FILE_REPROCESS,      VIRTKEY, CONTROL, NOINVERT
+    "S",            ID_FILE_SAVE_AS,        VIRTKEY, CONTROL, NOINVERT
+    VK_OEM_PLUS,    ID_IMAGEZOOM_ZOOMIN,    VIRTKEY, CONTROL, NOINVERT
+    VK_OEM_MINUS,   ID_IMAGEZOOM_ZOOMOUT,   VIRTKEY, CONTROL, NOINVERT
+    VK_F6,          ID_NEXT_PANE,           VIRTKEY, NOINVERT
+    VK_RETURN,      ID_OLE_EDIT_PROPERTIES, VIRTKEY, ALT, NOINVERT
+    "G",            ID_OVERLAYS_MCUGRID,    VIRTKEY, CONTROL, NOINVERT
+    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT, NOINVERT
+    "5",            ID_PREVIEW_B,           VIRTKEY, ALT, NOINVERT
+    "7",            ID_PREVIEW_CB,          VIRTKEY, ALT, NOINVERT
+    "8",            ID_PREVIEW_CR,          VIRTKEY, ALT, NOINVERT
+    "4",            ID_PREVIEW_G,           VIRTKEY, ALT, NOINVERT
+    "3",            ID_PREVIEW_R,           VIRTKEY, ALT, NOINVERT
+    "1",            ID_PREVIEW_RGB,         VIRTKEY, ALT, NOINVERT
+    "6",            ID_PREVIEW_Y,           VIRTKEY, ALT, NOINVERT
+    "2",            ID_PREVIEW_YCC,         VIRTKEY, ALT, NOINVERT
+    "2",            ID_TOOLS_SEARCHFORWARD, VIRTKEY, CONTROL, NOINVERT
+    "1",            ID_TOOLS_SEARCHREVERSE, VIRTKEY, CONTROL, NOINVERT
+END
+
+IDR_CNTR_INPLACE ACCELERATORS 
+BEGIN
+    "N",            ID_FILE_NEW,            VIRTKEY, CONTROL
+    "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL
+    "S",            ID_FILE_SAVE,           VIRTKEY, CONTROL
+    "P",            ID_FILE_PRINT,          VIRTKEY, CONTROL
+    VK_F6,          ID_NEXT_PANE,           VIRTKEY 
+    VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT
+    VK_ESCAPE,      ID_CANCEL_EDIT_CNTR,    VIRTKEY, NOINVERT
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_ABOUTBOX DIALOGEX 0, 0, 242, 94
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "JPEGsnoop について"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    ICON            IDR_MAINFRAME,IDC_STATIC,12,6,20,20
+    LTEXT           "JPEGsnoop",IDC_STATIC,42,6,39,8,SS_NOPREFIX
+    LTEXT           "Copyright c 2010 Calvin Hass",IDC_STATIC,42,18,124,8
+    DEFPUSHBUTTON   "OK",IDOK,185,7,50,16,WS_GROUP
+    LTEXT           "www.impulseadventure.com/photo/",IDC_URL,24,66,117,8
+    LTEXT           "JPEGsnoop のドキュメントと更新",IDC_URL_DOC,24,
+                    48,169,8
+    LTEXT           "バージョン",IDC_VER_NUM,96,6,86,10
+    GROUPBOX        "",IDC_STATIC,12,36,222,54
+END
+
+IDD_DBSUBMITDLG DIALOGEX 0, 0, 397, 180
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "データベースへ圧縮シグネチャを提出"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,340,7,50,16
+    PUSHBUTTON      "キャンセル",IDCANCEL,340,26,50,16
+    EDITTEXT        IDC_QUAL,258,12,66,14,ES_AUTOHSCROLL
+    CONTROL         "カメラから直接",IDC_RADIO_CAM,"Button",
+                    BS_AUTORADIOBUTTON | WS_GROUP,228,84,76,10
+    CONTROL         "ソフトウェアによって編集 / 処理されている",IDC_RADIO_SW,"Button",
+                    BS_AUTORADIOBUTTON,228,96,116,10
+    EDITTEXT        IDC_USER_SOFTWARE,276,108,108,14,ES_AUTOHSCROLL
+    CONTROL         "どこから取得したからわからない",
+                    IDC_RADIO_UNKNOWN,"Button",BS_AUTORADIOBUTTON,228,126,
+                    138,10
+    EDITTEXT        IDC_NOTES,126,150,138,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_MAKE,78,12,96,14,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_MODEL,78,30,96,14,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_SOFTWARE,78,48,96,14,ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        IDC_SIG,48,72,150,14,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "例. スーパーファイン, 標準, 70, 10, ハイ, など。ソフトウェアの場合保存品質の設定。",
+                    IDC_STATIC,198,30,125,17
+    LTEXT           "カメラ / ソフトウェアの品質設定:",IDC_STATIC,186,12,
+                    66,18
+    LTEXT           "ノート: OK をクリックすると圧縮シグネチャはローカル ユーザー データベース ファイルと JPEGsnoop の新しいデジタル カメラの証明に使われる ImpulseAdventure データベースに送信されます。",
+                    IDC_STATIC,6,96,186,42
+    LTEXT           "EXIF 作成:",IDC_STATIC,6,12,38,8
+    LTEXT           "EXIF モデル:",IDC_STATIC,6,30,40,8
+    LTEXT           "シグネチャ:",IDC_STATIC,6,72,42,8
+    LTEXT           "EXIF ソフトウェア:",IDC_STATIC,6,48,48,8
+    LTEXT           "ソフトウェア:",IDC_STATIC,240,108,31,8
+    GROUPBOX        "このファイルは:",IDC_STATIC,216,72,174,71
+    LTEXT           "ファイルについて何か他の覚え書き:",IDC_STATIC,18,150,96,
+                    8
+END
+
+IDD_OVERLAYBUFDLG DIALOGEX 0, 0, 376, 138
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "ファイル オーバーレイのテスト"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,318,6,50,16
+    PUSHBUTTON      "キャンセル",IDCANCEL,318,25,50,16
+    EDITTEXT        IDC_OVRPOS,84,30,78,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_OVRNEW,42,102,178,14,ES_AUTOHSCROLL
+    LTEXT           "現在地",IDC_OVRCUR,42,60,318,8
+    PUSHBUTTON      "オリジナルの読み込み",IDC_OVR_LOAD,172,30,50,14
+    LTEXT           "ファイル オフセット:",IDC_STATIC,18,30,53,8
+    LTEXT           "(16進数):",IDC_STATIC,18,60,24,8
+    LTEXT           "(16進数):",IDC_STATIC,18,102,24,8
+    EDITTEXT        IDC_OVRLEN,318,102,40,14,ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "長さ (バイト)",IDC_STATIC,270,102,42,8
+    CONTROL         "オーバーレイを有効化?",IDC_OVREN,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,6,12,72,10
+    LTEXT           "現在地",IDC_OVRCURBIN,42,73,318,8
+    LTEXT           "(バイナリ):",IDC_STATIC,18,73,24,8
+    GROUPBOX        "オーバーレイ領域の元のデータ",IDC_STATIC,6,48,360,36
+    GROUPBOX        "オーバーレイ領域の新しい値",IDC_STATIC,6,90,360,36
+    PUSHBUTTON      "適用",IDC_APPLY,264,6,50,14
+END
+
+IDD_LOOKUP DIALOGEX 0, 0, 247, 78
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "MCU のファイル オフセットを検索"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,190,7,50,14
+    PUSHBUTTON      "キャンセル",IDCANCEL,190,24,50,14
+    EDITTEXT        IDC_X,27,27,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_Y,89,27,40,14,ES_AUTOHSCROLL
+    LTEXT           "X=",IDC_STATIC,15,27,10,8
+    LTEXT           "Y=",IDC_STATIC,77,27,10,8
+    LTEXT           "ピクセル",IDC_STATIC,135,27,19,8
+    LTEXT           "ファイル オフセット:",IDC_STATIC,15,49,37,8
+    PUSHBUTTON      "再計算",IDC_BTN_CALC,126,49,50,14
+    LTEXT           "範囲",IDC_RNGX,27,14,41,8
+    LTEXT           "範囲",IDC_RNGY,89,14,41,8
+    RTEXT           "未計算",IDC_OFFSET,55,49,61,11,SS_SUNKEN
+END
+
+IDD_OFFSETDLG DIALOGEX 0, 0, 263, 54
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "ファイルの開始オフセット"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,206,7,50,14
+    PUSHBUTTON      "キャンセル",IDCANCEL,206,24,50,14
+    LTEXT           "オフセット (バイト):",IDC_STATIC,14,15,50,8
+    CONTROL         "16進数",IDC_BASEH,"Button",BS_AUTORADIOBUTTON | WS_GROUP | 
+                    WS_TABSTOP,69,14,29,10
+    CONTROL         "10進数",IDC_BASED,"Button",BS_AUTORADIOBUTTON,69,28,40,
+                    10
+    EDITTEXT        IDC_OFFSETVAL,117,17,82,14,ES_AUTOHSCROLL
+END
+
+IDD_SETTINGSDLG DIALOGEX 0, 0, 316, 217
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "JPEGsnoop の設定"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    EDITTEXT        IDC_DB_DIR,30,20,126,14,ES_AUTOHSCROLL
+    CONTROL         "自動的に更新を確認",IDC_UPDATE_CHK,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,12,66,126,10
+    EDITTEXT        IDC_UPDATE_CHK_DAYS,168,66,24,14,ES_AUTOHSCROLL
+    CONTROL         "オプションの変更時に自動的に再処理する",
+                    IDC_REPROCESS_AUTO,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    12,102,209,10
+    CONTROL         "ユーザー提出時にオンライン DB にシグネチャを提出",
+                    IDC_DBSUBMIT_NET,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
+                    12,114,210,10
+    EDITTEXT        IDC_RPTERRMAX_SCANDECODE,150,150,40,12,ES_AUTOHSCROLL
+    LTEXT           "指導メッセージの再有効化:",IDC_STATIC,12,186,
+                    125,8
+    PUSHBUTTON      "リセット",IDC_COACH_RESET,132,180,50,14
+    DEFPUSHBUTTON   "保存",IDOK,258,6,50,16
+    PUSHBUTTON      "キャンセル",IDCANCEL,258,25,50,16
+    LTEXT           "解読スキャンに報告する最大エラー数",IDC_STATIC,12,
+                    150,138,8
+    PUSHBUTTON      "参照",IDC_DB_DIR_BROWSE,159,17,50,10
+    PUSHBUTTON      "標準",IDC_DB_DIR_DEFAULT,159,28,50,10
+    GROUPBOX        "ユーザー データベースのディレクトリ",IDC_STATIC,6,6,228,42
+    GROUPBOX        "ソフトウェアの更新",IDC_STATIC,6,54,228,30
+    LTEXT           "... 毎",IDC_STATIC,138,66,26,8
+    LTEXT           "日",IDC_STATIC,198,66,16,8
+    GROUPBOX        "処理のオプション",IDC_STATIC,6,90,228,42
+    GROUPBOX        "ヘルプ",IDC_STATIC,6,174,228,30
+    GROUPBOX        "報告の設定",IDC_STATIC,6,138,228,30
+END
+
+IDD_TERMSDLG DIALOGEX 0, 0, 348, 220
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "JPEGsnoop のライセンス契約"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,291,7,50,16
+    PUSHBUTTON      "終了",IDCANCEL,291,26,50,16
+    EDITTEXT        IDC_EULA,25,55,252,78,ES_MULTILINE | ES_READONLY | 
+                    WS_VSCROLL
+    CONTROL         "ライセンスを読み、上記の条件に同意します",IDC_EULA_OK,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,25,137,165,10
+    CONTROL         "自動的に更新を確認",IDC_UPDATE_AUTO,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,25,175,168,10
+    LTEXT           "設定画面で後からこの選択を変更できます",
+                    IDC_STATIC,37,186,181,8
+    CTEXT           "ようこそ JPEGsnoop へ!",IDC_STATIC,95,17,118,12,
+                    SS_CENTERIMAGE | SS_SUNKEN
+    GROUPBOX        "ソフトウェアの更新:",IDC_STATIC,15,162,270,41
+    GROUPBOX        "ソフトウェアの契約:",IDC_STATIC,15,44,270,109
+END
+
+IDD_UPDATEAVAILDLG DIALOGEX 0, 0, 314, 99
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "新しい更新が利用可能です!"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,257,7,50,16
+    PUSHBUTTON      "キャンセル",IDCANCEL,257,26,50,16
+    LTEXT           "新しいバージョンの JEPGsnoop がダウンロード可能です!",
+                    IDC_STATIC,6,12,191,8
+    LTEXT           "現在のバージョン:",IDC_STATIC,18,29,51,8
+    LTEXT           "最新のバージョン:",IDC_STATIC,18,48,48,8
+    LTEXT           "cur",IDC_VER_CUR,78,29,60,8
+    LTEXT           "latest",IDC_VER_LATEST,78,48,60,8
+    PUSHBUTTON      "ダウンロード ページ",IDC_BUTTON1,151,49,84,14
+    CONTROL         "今後も新しい更新を確認し続ける",
+                    IDC_UPDATE_AUTO_STILL,"Button",BS_AUTOCHECKBOX | 
+                    WS_TABSTOP,39,73,174,10
+    LTEXT           "リリース日:",IDC_STATIC,18,58,46,8
+    LTEXT           "date",IDC_DATE_LATEST,78,58,55,8
+END
+
+IDD_MODELESSDLG DIALOGEX 0, 100, 259, 43
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_VISIBLE | 
+    WS_CAPTION | WS_SYSMENU
+CAPTION "更新の確認中"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    LTEXT           "ImpulseAdventure.com に JPEGsnoop の更新を確認中...",
+                    IDC_STATIC,29,16,198,8
+END
+
+IDD_NOTEDLG DIALOGEX 0, 0, 369, 73
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "JPEGsnoop - ノート"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,312,7,50,16
+    LTEXT           "msg",IDC_MSG,6,6,285,27,SS_SUNKEN
+    CONTROL         "次からこのメッセージを表示しない",IDC_COACH_OFF,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,18,42,151,10
+    LTEXT           "ノート: 設定でこの指導メッセージを再び有効にできます",
+                    IDC_STATIC,30,54,225,8
+END
+
+IDD_DBMANAGEDLG DIALOGEX 0, 0, 405, 132
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "ユーザー データベースの管理"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,348,7,50,16
+    PUSHBUTTON      "キャンセル",IDCANCEL,348,26,50,16
+    LISTBOX         IDC_LIST,6,6,332,96,LBS_USETABSTOPS | 
+                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    PUSHBUTTON      "削除",IDC_REMOVE,6,108,50,14
+    PUSHBUTTON      "すべて削除",IDC_REMOVEALL,66,108,50,14
+END
+
+IDD_EXPORTDLG DIALOGEX 0, 0, 290, 126
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "JPEG のエクスポート設定"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,233,7,50,16
+    PUSHBUTTON      "キャンセル",IDCANCEL,233,26,50,16
+    CONTROL         "オーバーレイを有効 (遅い)",IDC_OVERLAY,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,12,36,120,10
+    CONTROL         "MJPEG DHT の挿入 (AVI フレーム エクスポートのため)",IDC_DHTAVI,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,54,150,10
+    LTEXT           "元ファイルの開始オフセット:",IDC_STATIC,12,6,84,8
+    LTEXT           "オフセット",IDC_OFFSET_START,102,6,48,8
+    CONTROL         "EOI の欠落: EOI の強制",IDC_FORCE_EOI,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,12,78,150,10
+    GROUPBOX        "設定",IDC_STATIC,6,24,216,90
+    CONTROL         "EOI の欠落: 無視",IDC_IGNORE_EOI,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,12,90,96,10
+    CONTROL         "SOI の欠落: SOI の強制",IDC_FORCE_SOI,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,12,66,150,10
+END
+
+IDD_DECODEDETAILDLG DIALOGEX 0, 0, 262, 121
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "詳細な解読スキャンのオプション"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,204,6,50,16
+    PUSHBUTTON      "キャンセル",IDCANCEL,204,25,50,16
+    EDITTEXT        IDC_EDIT1,54,18,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT2,138,18,40,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT3,54,60,40,14,ES_AUTOHSCROLL
+    RTEXT           "MCU X =",IDC_STATIC,18,18,30,8
+    RTEXT           "MCU Y =",IDC_STATIC,102,18,30,8
+    RTEXT           "# MCUs =",IDC_STATIC,18,60,33,8
+    GROUPBOX        "解読の開始 MCU",IDC_STATIC,6,6,186,36
+    GROUPBOX        "解読の長さ",IDC_STATIC,6,48,186,36
+    CONTROL         "詳細な解読スキャンを有効化?",IDC_CHECK1,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,6,90,114,10
+    LTEXT           "詳細な解読スキャンは次回の解読操作時に報告されます",
+                    IDC_STATIC,18,102,228,8
+    PUSHBUTTON      "座標の読み込み",IDC_BTN_LOAD,204,72,50,14
+    LTEXT           "最終 2 クリックから X/Y/Len を読み込み:",IDC_STATIC,198,48,54,
+                    18
+END
+
+IDD_EXPORTTIFFDLG DIALOGEX 0, 0, 256, 108
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "TIFF 形式でエクスポート"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,198,6,50,16
+    PUSHBUTTON      "キャンセル",IDCANCEL,198,25,50,16
+    CONTROL         "RGB (8 ビット)",IDC_RAD_RGB8,"Button",BS_AUTORADIOBUTTON | 
+                    WS_GROUP,24,54,72,10
+    CONTROL         "RGB (16 ビット)",IDC_RAD_RGB16,"Button",BS_AUTORADIOBUTTON,
+                    24,66,72,10
+    CONTROL         "YCC (8 ビット)",IDC_RAD_YCC8,"Button",BS_AUTORADIOBUTTON,
+                    24,79,72,10
+    GROUPBOX        "出力形式",IDC_STATIC,12,36,90,60
+    LTEXT           "保存ファイル名:",IDC_STATIC,12,12,54,8
+    EDITTEXT        IDC_EDIT_FNAME,66,12,120,14,ES_AUTOHSCROLL | ES_READONLY
+END
+
+IDD_BATCHDLG DIALOGEX 0, 0, 232, 108
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "バッチ処理"
+FONT 8, "MS Sans Serif", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "OK",IDOK,162,66,50,16
+    PUSHBUTTON      "キャンセル",IDCANCEL,162,84,50,16
+    CONTROL         "サブディレクトリも処理しますか?",IDC_CHECK_SUBDIRS,"Button",
+                    BS_AUTOCHECKBOX | WS_TABSTOP,30,73,98,10
+    EDITTEXT        IDC_EDIT_DIR,30,49,180,14,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "ディレクトリ:",IDC_STATIC,24,36,42,8
+    LTEXT           "注意 1: バックアップしたファイルにのみに使用することを推奨します",
+                    IDC_STATIC,6,6,186,8
+    LTEXT           "注意 2: 処理の高速化のために、""イメージのデコード"" を無効化して下さい",
+                    IDC_STATIC,6,18,210,8
+END
+
+IDD_OPERATIONDLG DIALOGEX 0, 0, 186, 73
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
+    WS_SYSMENU
+CAPTION "操作の進行"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "中断",ID_BTN_ABORT,66,48,50,14
+    CONTROL         "",IDC_PROGRESS_BAR,"msctls_progress32",WS_BORDER,6,6,
+                    174,14
+    CTEXT           "進行: ddd / ddd",IDC_STATIC_PROGRESS,6,24,174,12,
+                    SS_SUNKEN
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,5,2,0
+ PRODUCTVERSION 1,5,2,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "001103a4"
+        BEGIN
+            VALUE "CompanyName", "ImpulseAdventure"
+            VALUE "FileDescription", "JPEGsnoop"
+            VALUE "FileVersion", "1.5.2.0"
+            VALUE "InternalName", "JPEGsnoop.exe"
+            VALUE "LegalCopyright", "(c) 2011 Calvin Hass.  All rights reserved."
+            VALUE "OriginalFilename", "JPEGsnoop.exe"
+            VALUE "ProductName", "JPEGsnoop"
+            VALUE "ProductVersion", "1.5.2.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0011, 932
+    END
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_ABOUTBOX, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 235
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 87
+    END
+
+    IDD_DBSUBMITDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 390
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 173
+    END
+
+    IDD_OVERLAYBUFDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 369
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 131
+    END
+
+    IDD_LOOKUP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 240
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 71
+    END
+
+    IDD_OFFSETDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 256
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 47
+    END
+
+    IDD_SETTINGSDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 309
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 210
+    END
+
+    IDD_TERMSDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 341
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 213
+    END
+
+    IDD_UPDATEAVAILDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 307
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 92
+    END
+
+    IDD_MODELESSDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 252
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 36
+    END
+
+    IDD_NOTEDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 362
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 66
+    END
+
+    IDD_DBMANAGEDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 398
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 125
+    END
+
+    IDD_EXPORTDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 283
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 119
+    END
+
+    IDD_DECODEDETAILDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 255
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 114
+    END
+
+    IDD_EXPORTTIFFDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 249
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 101
+    END
+
+    IDD_BATCHDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 225
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 101
+    END
+
+    IDD_OPERATIONDLG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 179
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 66
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// String Table
+//
+
+STRINGTABLE 
+BEGIN
+    IDR_MAINFRAME           "JPEGsnoop\nUntitled\nJPEGsnoop\nJPEG Image/Video (*.jpg;*.jpeg;*.avi;*.mov)\n.jpg;.jpeg;.avi;.mov\nJPEGsnoop.Document\nJPEGsnoop.Document"
+    IDR_MAINFRAME_BAK       "JPEGsnoop\n\nJPEGsnoop\n\n\nJPEGsnoop.Document\nJPEGsnoop.Document"
+    IDR_TEST1TYPE           "Test1\test1 File\nTest1 Files(*.ts1)\n.ts1\nts1\nTest1"
+    IDR_TEST2TYPE           "Test2\test2 File\nTest2 Files(*.ts2)\n.ts2\nts2\nTest2"
+    IDR_MAINFRAME2          "JPEGsnoop\nUntitled\nJPEGsnoop\nJPEG Files (*.jpg)\n.jpg\nJPEGsnoop.Document\nJPEGsnoop.Document"
+    IDR_MAINFRAME3          "JPEGsnoop\nUntitled\nJPEGsnoop\nJPEG Image (*.jpg;*.jpeg)\n.jpg;.jpeg\nJPEGsnoop.Document\nJPEGsnoop.Document"
+    IDR_MAINFRAME_AVI       "JPEGsnoop\nUntitled\nJPEGsnoop\nAVI Movie (*.avi)\n.avi\nJPEGsnoop.Document\nJPEGsnoop.Document"
+    IDR_MAINFRAME_ALL       "JPEGsnoop\nUntitled\nJPEGsnoop\nJPEG Image (*.jpg;*.jpeg)\n.jpg;.jpeg\nJPEGsnoop.Document\nJPEGsnoop.Document"
+    ID_INDICATOR_YCC        "YCC DC=[00000,00000,00000]"
+    IDS_CAL_FILEOPEN        "イメージ / ビデオ ファイルを開く"
+    IDS_CAL_FILESAVE        "JPEGSnoop ログ ファイルを保存"
+    ID_INDICATOR_MCU        "MCU [0000,0000]"
+    ID_INDICATOR_FILEPOS    "File: 0x00000000:0"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_APP_TITLE       "JPEGsnoop"
+    AFX_IDS_IDLEMESSAGE     "準備完了"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_INDICATOR_EXT        "EXT"
+    ID_INDICATOR_CAPS       "CAP"
+    ID_INDICATOR_NUM        "NUM"
+    ID_INDICATOR_SCRL       "SCRL"
+    ID_INDICATOR_OVR        "OVR"
+    ID_INDICATOR_REC        "REC"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_NEW             "新しいドキュメントの作成\n新規"
+    ID_FILE_OPEN            "既存のドキュメントを開く\n開く"
+    ID_FILE_CLOSE           "現在のドキュメントを閉じる\n閉じる"
+    ID_FILE_SAVE            "現在のドキュメントを保存\n保存"
+    ID_FILE_SAVE_AS         "記録出力の保存\n記録の保存"
+    ID_FILE_PAGE_SETUP      "印刷オプションの変更\nページ設定"
+    ID_FILE_PRINT_SETUP     "プリンタと印刷のオプションを変更\n印刷設定"
+    ID_FILE_PRINT           "現在の記録を印刷\n印刷"
+    ID_FILE_PRINT_PREVIEW   "すべてのページを表示\n印刷プレビュー"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_APP_ABOUT            "JPEGsnoop について\nバージョン情報"
+    ID_APP_EXIT             "JPEGsnoop の終了\n終了"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_FILE_MRU_FILE1       "このファイルを開く"
+    ID_FILE_MRU_FILE2       "このドキュメントを開く"
+    ID_FILE_MRU_FILE3       "このドキュメントを開く"
+    ID_FILE_MRU_FILE4       "このドキュメントを開く"
+    ID_FILE_MRU_FILE5       "このドキュメントを開く"
+    ID_FILE_MRU_FILE6       "このドキュメントを開く"
+    ID_FILE_MRU_FILE7       "このドキュメントを開く"
+    ID_FILE_MRU_FILE8       "このドキュメントを開く"
+    ID_FILE_MRU_FILE9       "このドキュメントを開く"
+    ID_FILE_MRU_FILE10      "このドキュメントを開く"
+    ID_FILE_MRU_FILE11      "このドキュメントを開く"
+    ID_FILE_MRU_FILE12      "このドキュメントを開く"
+    ID_FILE_MRU_FILE13      "このドキュメントを開く"
+    ID_FILE_MRU_FILE14      "このドキュメントを開く"
+    ID_FILE_MRU_FILE15      "このドキュメントを開く"
+    ID_FILE_MRU_FILE16      "このドキュメントを開く"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_NEXT_PANE            "次のウィンドウ ペインに切り替え\n次のペイン"
+    ID_PREV_PANE            "前のウィンドウ ペインに切り替え\n前のペイン"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_WINDOW_SPLIT         "現在のウィンドウをペインに分割\n分割"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_EDIT_CLEAR           "選択の消去\n消去"
+    ID_EDIT_CLEAR_ALL       "すべて消去\nすべて消去"
+    ID_EDIT_COPY            "選択をクリップボードにコピー\nコピー"
+    ID_EDIT_CUT             "選択を切り取ってクリップボードにコピー\n切り取り"
+    ID_EDIT_FIND            "指定されたテキストを検索\n検索"
+    ID_EDIT_PASTE           "クリップボードの内容を挿入\n貼り付け"
+    ID_EDIT_PASTE_LINK      "クリップボードの内容を挿入してリソースにリンク\nリンクを貼り付け"
+    ID_EDIT_PASTE_SPECIAL   "クリップボードの内容をオプション付きで挿入\n特殊貼り付け"
+    ID_EDIT_REPEAT          "最後の操作を繰り返す\n繰り返し"
+    ID_EDIT_REPLACE         "指定のテキストを別のテキストに置換\n置換"
+    ID_EDIT_SELECT_ALL      "ドキュメント全体を選択\nすべて選択"
+    ID_EDIT_UNDO            "最後の動作を元に戻す\n元に戻す"
+    ID_EDIT_REDO            "前回の元に戻す操作をやり直し\nやり直し"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_VIEW_TOOLBAR         "ツール バーの表示または非表示\nツールバーの表示切り替え"
+    ID_VIEW_STATUS_BAR      "ステータス バーを表示または非表示\nステータス バーの表示切り替え"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_OLE_INSERT_NEW       "新しい埋め込みオブジェクトを挿入\n新しいオブジェクト"
+    ID_OLE_EDIT_LINKS       "リンクされたオブジェクトを編集\nリンクを編集"
+    ID_OLE_EDIT_CONVERT     "オブジェクトを別の種類に変換\nオブジェクトを変換"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_OLE_VERB_FIRST       "埋め込まれたまたはリンクされたオブジェクトを有効化"
+    57873                   "埋め込まれたまたはリンクされたオブジェクトを有効化"
+    57874                   "埋め込まれたまたはリンクされたオブジェクトを有効化"
+    57875                   "埋め込まれたまたはリンクされたオブジェクトを有効化"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCSIZE          "ウインドウのサイズを変更"
+    AFX_IDS_SCMOVE          "ウインドウの位置を変更"
+    AFX_IDS_SCMINIMIZE      "ウィンドウを最小化します"
+    AFX_IDS_SCMAXIMIZE      "ウィンドウを最大化します"
+    AFX_IDS_SCNEXTWINDOW    "次のドキュメント ウィンドウに切り替えます"
+    AFX_IDS_SCPREVWINDOW    "前のウィンドウに切り替えます"
+    AFX_IDS_SCCLOSE         "ドキュメントの保存を確認して作業中のウィンドウを閉じます"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SCRESTORE       "ウインドウを標準のサイズに復元"
+    AFX_IDS_SCTASKLIST      "タスク リストをアクティブ化"
+END
+
+STRINGTABLE 
+BEGIN
+    AFX_IDS_SAVEFILECOPY    "記録ファイルの保存..."
+    AFX_IDS_PREVIEW_CLOSE   "印刷プレビュー モードを閉じる\nプレビューのキャンセル"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_TOOLS_DECODE         "解読のテスト"
+    ID_FILE_OFFSET          "オフセットで処理を開始\nオフセット"
+    32773                   "次のイメージを検索\n前方検索"
+    32774                   "前のイメージを検索\n後方検索"
+    32775                   "MCU のファイル オフセットの計算\nMCU の検索"
+    32776                   "オーバーレイでファイルの変更をテスト\nオーバーレイ"
+    32777                   "セグメントのスキャンの詳細解読\n詳細スキャン"
+    32778                   "圧縮シグネチャでデータベースの更新\nシグネチャの追加"
+    ID_OPTIONS_DHTEXPAND    "拡張 DHT テーブルをダンプ\nDHT 拡張"
+    ID_OPTIONS_MAKERNOTES   "メーカー ノートをダンプ\nメーカー ノート"
+    ID_OPTIONS_SCANDUMP     "データ スキャンの16進数ダンプ\nスキャンのダンプ"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_CAL_EXE_OPEN        "検索用の実行可能ファイルを開く"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_OPTIONS_HISTOYDUMP   "輝度のヒストグラムを表示\nY ヒストグラム"
+    ID_FILE_REPROCESS       "現在のファイルを再処理\n再処理"
+    ID_OPTIONS_DECODESCAN   "セグ面のスキャン処理, イメージの表示\nイメージのスキャン"
+    ID_OPTIONS_CONFIGURATION "設定オプションの変更\n設定"
+    ID_OPTIONS_CHECKFORUPDATES "インターネットで更新の確認\n更新"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_TOOLS_SEARCHEXECUTABLEFORDQT "実行可能ファイルで DQT テーブルを検索\nDQT の検索"
+    ID_TOOLS_MANAGELOCALDB  "ローカル ユーザー シグネチャの管理\nシグネチャの管理"
+    ID_OPTIONS_SIGNATURESEARCH 
+                            "一致する圧縮シグネチャの検索\nシグネチャの検索"
+    ID_OPTIONS_DECODEAC     "解読スキャンで AC (IDCT) を有効化"
+    ID_SCANSEGMENT_DECODEIMAGE "イメージのスキャンで解読を有効化\nスキャン デコード"
+    ID_SCANSEGMENT_FULLIDCT "完全 IDCT イメージを有効化 (DC + AC コンポーネント)\nFull Res"
+    ID_SCANSEGMENT_HISTOGRAMY 
+                            "輝度のヒストグラム (Y) の計算と表示\nY ヒストグラム"
+    ID_SCANSEGMENT_DUMP     "セグメント スキャンの開始16進数をダンプ\nスキャン ダンプ"
+END
+
+STRINGTABLE 
+BEGIN
+    32800                   "RGB チャンネルの表示\nRGB"
+    32801                   "YCC チャンネルの表示\nYCC"
+    32802                   "赤チャンネルの表示\n赤"
+    32803                   "緑チャンネルの表示\n緑"
+    32804                   "青チャンネルの表示\n青"
+    32805                   "輝度チャンネルの表示\nY"
+    32806                   "クロミナンス チャンネル (Cb)の表示\nCb"
+    32807                   "クロミナンス チャンネル (Cr) の表示\nCr"
+    32808                   "イメージ ビューの拡大\n拡大"
+    32809                   "イメージ ビューの縮小\n縮小"
+    32810                   "イメージ ビューのズームを 100% に設定\n100%"
+    32811                   "イメージ ビューのズームを 150% に設定\n150%"
+    32812                   "イメージ ビューのズームを 200% に設定\n200%"
+    32813                   "イメージ ビューのズームを 300% に設定\n300%"
+    32814                   "イメージ ビューのズームを 400% に設定\n400%"
+    32815                   "イメージ ビューのズームを 800% に設定\n800%"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_SCANSEGMENT_NOIDCT   "解読しない (DC コンポーネントのみ)\nLow Res"
+    ID_OVERLAYS_MCUGRID     "MCU の境界グリッドの表示\nMCU グリッド"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_IMAGEZOOM_ZOOMIN     "拡大\n拡大"
+    ID_IMAGEZOOM_ZOOMOUT    "縮小\n縮小"
+    ID_IMAGEZOOM_12         "12.5% ズーム\n12.5% ズーム"
+    ID_IMAGEZOOM_25         "25% ズーム\n25% ズーム"
+    ID_IMAGEZOOM_50         "50% ズーム\n50% ズーム"
+    ID_IMAGEZOOM_100        "100% ズーム\n100% ズーム"
+    ID_IMAGEZOOM_150        "150% ズーム\n150% ズーム"
+    ID_IMAGEZOOM_200        "200% ズーム\n200% ズーム"
+    ID_IMAGEZOOM_300        "300% ズーム\n300% ズーム"
+    ID_IMAGEZOOM_400        "400% ズーム\n400% ズーム"
+    ID_IMAGEZOOM_800        "800% ズーム\n800% ズーム"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_TOOLS_DETAILEDSCANDECODE "VLC デコードの詳細報告\n詳細スキャン"
+    ID_SCANSEGMENT_DETAILEDDECODE 
+                            "スキャン データの詳細デコード\n詳細デコード"
+    ID_SCANSEGMENT_HISTOGRAM "RGB ヒストグラムの計算と表示\nRGB ヒストグラム"
+END
+
+STRINGTABLE 
+BEGIN
+    ID_OPTIONS_HIDEUKNOWNEXIFTAGS "不明な EXIF タグを非表示\nEXIF タグ"
+    ID_FILE_BATCHPROCESS    "バッチ処理を開始"
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+//CAL! #define _AFX_NO_SPLITTER_RESOURCES
+#define _AFX_NO_OLE_RESOURCES
+#define _AFX_NO_TRACKER_RESOURCES
+#define _AFX_NO_PROPERTY_RESOURCES
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+LANGUAGE 17, 0
+#pragma code_page(932)
+#include "res\JPEGsnoop.rc2"  // non-Microsoft Visual C++ edited resources
+#include "afxres.rc"         // Standard components
+#include "afxprint.rc"       // printing/print preview resources
+#include "afxolecl.rc"       // OLE container resources
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
