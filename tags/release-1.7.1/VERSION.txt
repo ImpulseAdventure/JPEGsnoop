@@ -1,0 +1,129 @@
+// ==================================
+// JPEGsnoop Revision History
+//   by Calvin Hass
+// ==================================
+
+1.7.1		(09/14/14)
+	- Fixed Search Executable for DQT function
+	- Disabled warning dialogs in batch and command-line "-nogui" modes
+	- Fixes in batch command-line mode
+	- Fixed handling of long marker identifier strings [SF-bug-021]
+	- Fixed DHT/DQT indexing [SF-bug-022]
+	- Various fixes in 8BIM / IPTC decoding
+
+1.7.0		(08/24/14)
+	- Added parsing of Photoshop files (*.PSD)
+	- Added parsing of Photoshop APP13 IRB/8BIM
+
+1.6.7		(08/17/14)
+	> Fixed removal bug in Manage DB dialog
+	- Extended support for IPTC parsing (IIM v4)
+	- Extended reporting of Photoshop IRB/8BIM
+	- Fixed subsampling issues with single component scans
+	- Support for alternate destination directory in batch operations [SF-fea-040]
+	> Updated CimgDecode to use private variables
+	> Updated source code acknowledgements
+
+1.6.6		(06/18/14)
+	- Fixed subsampling decode issues [SF-bug-018]
+	- Updated JFIF decoder to use standard-based ranges and naming
+	- Fixed IFD/Makernote dumping of unsigned byte and unsigned long arrays [SF-bug-020]
+
+1.6.5		(06/14/14)
+	- Added Batch Extract All [SF-fea-039]
+	- Added command-line batch directory operation (-b, -br)
+	- Added command-line extract all JPEG operation (-ext_all, -ext_dht_avi)
+	> Fixed all code analysis warnings
+
+1.6.4		(06/11/14)
+	- Updated for unicode. Supports foreign language filenames. [SF-buf-002]
+	> Fixed all compiler warnings
+	- Error handling for 2GB+ files
+	- Command-line "nogui" mode will now run minimized [SF-bug-019]
+
+1.6.3		(05/25/14)
+	- Updated for VS 2012
+	- Fixed IPTC decoding
+	- Fixed handling of unusual DHT configuration [SF-bug-007]
+	- Fixed file open dialog compatibility
+	- Minimum version now Win XP SP1
+
+1.6.2		(02/24/13)
+	- Added Orientation flag indicator
+	- Fixed offset returned in DQT search
+
+1.6.1		(11/04/12)
+	- Added support for long filenames (>64 chars) in GUI [ID:3583822]
+	- Changed SOS component header table display format
+	- Fixed vulnerability in CSS range checks [ID:3583820]
+	- Fixed DHT expand labels for EOB [ID:3442132]
+	
+1.6.0		(06/07/12)
+	- Added batch extraction of JPEGs from file [ID: 3088849,3121081,3088818]
+	- Fixed incorrect DQT used for 2nd chroma channel [ID: 3508359]
+	- Fixed support for chroma subsampling over 2x2 (eg. 4x2) [ID: 3518288]
+	- Fixed image decode for some images during Detailed Decode
+	- Fixed GPS metadata display
+	- Fixed JFIF comment search for assessment [ID: 3466580]
+	- Improved handling of oversized files
+
+1.5.2		(02/20/11)
+	- Fixed YCC/RGB clipping statistics
+	- Disabled MCU marker array if image too large (eg. 40+ megapixel images).
+	  [Added m_bMarkedMcuMapEn. The proper solution would be to update
+	  m_abMarkedMcuMap to use a list of selected coordinates.]
+	
+1.5.1		(11/14/10)
+	- Improved robustness of batch mode operation
+	- Added average luminance report
+	- Changed batch mode log files to preserve original image file extension
+	  (eg. "IMG_2014.JPG" -> "IMG_2014.JPG.TXT" instead of "IMG_2014.TXT").
+	- Fixed crash with files that had APP1 EXIF segment but no IFDs
+	- Added extra error checking in DecodeExifIfd()
+	- Prevented Canon Makernote decoding from excessive range
+	- Added initial framework for batch mode support from commandline
+	  (not completed)
+	- Added note text to batch dialog
+
+1.5.0		(10/30/10)
+	- *** Move to Open Source ***
+	  Initial license: GPLv2
+	- Added Batch Processing capability
+	- Added "Force SOI" to Export JPEG
+	- Fixed memory leak in ExportJpegDo()
+	- Code cleanup
+	
+1.4.2		(10/13/09)
+	- Fixed bug #1002: Detailed scan decode + stuff bytes
+	- Added Detailed Decode "Load" feature (uses last 2 clicks)
+	- Fixed DRI bug #1143: don't expect RST if DRI value=0
+	- TIFF export (8b/16b RGB, 8b YCC)
+	- Increased size of MARKMCUMAP_SIZE to handle larger files (Bug Fix #1146)
+
+1.4.1		(05/28/09)
+	- Icon updated (no 256x256 Vista icon yet)
+	- License agreement updated to clarify commercial-use free
+	- Added check for data following EOI
+
+1.4.0		(04/30/09)
+	- Started adding "//CAL! BUG #xxxx" to known issues
+	- Added support for 12-bit lossy JPEGs (changed MAX_DHT_CODES 
+	  from 180 to 260, added m_nPrecision divider to bring down 
+	  to 8-bit precision)
+	- Started GPS decode
+	- Started work on rewriting EXIF parsing
+	- Fixed a number of bugs in EXIF parsing (esp. arrays, etc.)
+	- Fixed Canon makernote decode, added custom decodes
+	- Added custom decodes to EXIF
+	- Fixed unsigned byte array EXIF decode
+	- Added proper hex decodes to EXIF
+	- Limited EXIF decode (64 bytes) & makernote decodes (400 entries?)
+1.3.1 beta 1 (incl all above)
+	- Added more GPS fields
+	- Added EXIF Interoperability IFD
+	- Added "Hide Unknown EXIF tags" to disable display of unknown tags
+	- Started adding ICC decode (first marker only), and only header
+	- Added Windows XP EXIF tags (eg. XPComments)
+	- Reworked much of the EXIF displays
+	- EXIF strings displayed with quotes to end, ignore bad chars / nulls
+	- Added APP1 XMP output (Adobe metadata)
