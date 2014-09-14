@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,13 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - JPEGsnoop SDI document class
+//
+// ==========================================================================
+
 
 // JPEGsnoopDoc.h : interface of the CJPEGsnoopDoc class
 //
@@ -49,52 +56,47 @@ public:
 
 // Overrides
 	public:
-	virtual BOOL OnNewDocument();
-	virtual void Serialize(CArchive& ar);
+	virtual BOOL	OnNewDocument();
+	virtual void	Serialize(CArchive& ar);
 	virtual CRichEditCntrItem* CreateClientItem(REOBJECT* preo) const;
 
 // Implementation
 public:
 	virtual ~CJPEGsnoopDoc();
 #ifdef _DEBUG
-	virtual void AssertValid() const;
-	virtual void Dump(CDumpContext& dc) const;
+	virtual void	AssertValid() const;
+	virtual void	Dump(CDumpContext& dc) const;
 #endif
 
-	void	SetupView(CRichEditView* pView);
+	void			SetupView(CRichEditView* pView);
 
-	void	AddLine(CString strTxt);
-	void	AddLineHdr(CString strTxt);
-	void	AddLineHdrDesc(CString strTxt);
-	void	AddLineWarn(CString strTxt);
-	void	AddLineErr(CString strTxt);
-	void	AddLineGood(CString strTxt);
-	int		AppendToLog(CString str, COLORREF color);
-	int		InsertQuickLog();
+	void			AddLine(CString strTxt);
+	void			AddLineHdr(CString strTxt);
+	void			AddLineHdrDesc(CString strTxt);
+	void			AddLineWarn(CString strTxt);
+	void			AddLineErr(CString strTxt);
+	void			AddLineGood(CString strTxt);
+	int				AppendToLog(CString strTxt, COLORREF sColor);
+	int				InsertQuickLog();
 
-	CStatusBar* GetStatusBar();
+	void			DoMyLogSave(CString strLogName);
 
-	void	recurseBatch(CString szPathName,bool bSubdirs);
-	void	doBatchSingle(CString szFileName);
+	CStatusBar*		GetStatusBar();
 
-
-	BOOL ReadLine(CString& strLine, int nLength, LONG lOffset = -1L);
-	BOOL AnalyzeOpen();
-	void AnalyzeClose();
-	void AnalyzeFileDo();
-	BOOL AnalyzeFile();
-
-	void	Reset();
-	void	Reprocess();
+	void			DoBatchProcess(bool bAskSettings,CString strBatchDir,bool bRecSubdir,bool bExtractAll);
+	void			DoBatchRecurseLoop(CString strSrcRootName,CString strDstRootName,CString strPathName,bool bSubdirs,bool bExtractAll);
+	void			DoBatchRecurseSingle(CString strSrcRootName,CString strDstRootName,CString strPathName,bool bExtractAll);
 
 
-	// Misc helper
-//	CString Dec2Bin(unsigned nVal,unsigned nLen);
-	unsigned short	Swap16(unsigned short nVal);
+	BOOL			ReadLine(CString& strLine, int nLength, LONG lOffset = -1L);
+	BOOL			AnalyzeOpen();
+	void			AnalyzeClose();
+	void			AnalyzeFileDo();
+	BOOL			AnalyzeFile();
 
+	void			Reset();
+	void			Reprocess();
 
-public:
-	void	batchProcess();
 
 
 
@@ -103,87 +105,82 @@ protected:
 // Generated message map functions
 protected:
 	DECLARE_MESSAGE_MAP()
-public:
-	afx_msg void OnToolsDecode();
 
 
-public:
+private:
+
+	CSnoopConfig*	m_pAppConfig;		// Pointer to application config
+
 	// Input JPEG file
-	CFile*		m_pFile;
-	ULONGLONG	m_lFileSize;
+	CFile*			m_pFile;
+	ULONGLONG		m_lFileSize;
 
-	unsigned	m_nDisplayRows;
+	BOOL			m_bFileOpened;			// Have we opened up a file? (i.e. filename def'd)
 
 	// The following is a mirror of m_strPathName, but only set during Open
 	// This is used only during OnSaveDocument() to ensure that we are
 	// not overwriting our input file.
-	CString		m_strPathNameOpened;
-
-	// Output log file
-	BOOL		m_bFileOpened;		// Have we opened up a file? (i.e. filename def'd)
-
-	unsigned	m_nModeScanDetail;		// Scan detail mode: 0=off, 1=select pt1, 2=select pt2, 3=done
-
-
-private:
+	CString			m_strPathNameOpened;
 	
-	CRichEditView*	m_pView;		// Preserved reference to View
+	CRichEditView*	m_pView;				// Preserved reference to View
 
 	bool			m_bLogQuickMode;
 	CStringArray	m_saLogQuickTxt;
 	CUIntArray		m_naLogQuickCol;
 
-
-
-
-public:
-	//CAL! Made public temporarily so that I can access from CJPEGsnoopViewImg
-	CjfifDecode*	m_pJfifDec;
 	CDocLog*		m_pLog;
 	CwindowBuf*		m_pWBuf;
-	CimgDecode*		m_pImgDec;
+
 
 public:
-	afx_msg void OnFileOffset();
-	afx_msg void OnToolsAddcameratodb();
-	afx_msg void OnUpdateToolsAddcameratodb(CCmdUI *pCmdUI);
-	afx_msg void OnToolsSearchforward();
-	afx_msg void OnToolsSearchreverse();
-	afx_msg void OnUpdateToolsSearchforward(CCmdUI *pCmdUI);
-	afx_msg void OnUpdateToolsSearchreverse(CCmdUI *pCmdUI);
-	afx_msg void OnFileReprocess();
-	virtual void DeleteContents();
-	virtual BOOL OnOpenDocument(LPCTSTR lpszPathName);
-	afx_msg void OnFileOpenimage();
-	void	DoDirectSave(CString strLogName);
-	afx_msg void OnFileSaveAs();
-
-	afx_msg void OnPreviewRng(UINT nID);
-	afx_msg void OnUpdatePreviewRng(CCmdUI *pCmdUI);
-	afx_msg void OnZoomRng(UINT nID);
-	afx_msg void OnUpdateZoomRng(CCmdUI * pCmdUI);
-	afx_msg void OnToolsSearchexecutablefordqt();
-	afx_msg void OnUpdateFileReprocess(CCmdUI *pCmdUI);
-	afx_msg void OnUpdateFileSaveAs(CCmdUI *pCmdUI);
-	virtual BOOL OnSaveDocument(LPCTSTR lpszPathName);
-	afx_msg void OnToolsExtractembeddedjpeg();
-	afx_msg void OnUpdateToolsExtractembeddedjpeg(CCmdUI *pCmdUI);
-	afx_msg void OnToolsFileoverlay();
-	afx_msg void OnUpdateToolsFileoverlay(CCmdUI *pCmdUI);
-	afx_msg void OnToolsLookupmcuoffset();
-	afx_msg void OnUpdateToolsLookupmcuoffset(CCmdUI *pCmdUI);
-	afx_msg void OnOverlaysMcugrid();
-	afx_msg void OnUpdateOverlaysMcugrid(CCmdUI *pCmdUI);
+	// Public members accessed from CJPEGsnoopViewImg
+	CjfifDecode*	m_pJfifDec;
+	CimgDecode*		m_pImgDec;
 
 
+public:
+	void			DoExtractEmbeddedJPEG(bool bInteractive,bool bInsDhtAvi,CString strOutPath);
+private:
+	virtual void	DeleteContents();
+	void			DoDirectSave(CString strLogName);
 
-	afx_msg void OnUpdateIndicatorYcc(CCmdUI* pCmdUI);
-	afx_msg void OnUpdateIndicatorMcu(CCmdUI* pCmdUI);
-	afx_msg void OnUpdateIndicatorFilePos(CCmdUI* pCmdUI);
-	afx_msg void OnScansegmentDetaileddecode();
-	afx_msg void OnUpdateScansegmentDetaileddecode(CCmdUI *pCmdUI);
-	afx_msg void OnToolsExporttiff();
-	afx_msg void OnUpdateToolsExporttiff(CCmdUI *pCmdUI);
+public:
+	virtual BOOL	OnOpenDocument(LPCTSTR lpszPathName);
+private:
+	virtual BOOL	OnSaveDocument(LPCTSTR lpszPathName);
+	afx_msg void	OnFileOffset();
+	afx_msg void	OnToolsDecode();
+	afx_msg void	OnToolsAddcameratodb();
+	afx_msg void	OnUpdateToolsAddcameratodb(CCmdUI *pCmdUI);
+	afx_msg void	OnToolsSearchforward();
+	afx_msg void	OnToolsSearchreverse();
+	afx_msg void	OnUpdateToolsSearchforward(CCmdUI *pCmdUI);
+	afx_msg void	OnUpdateToolsSearchreverse(CCmdUI *pCmdUI);
+	afx_msg void	OnFileReprocess();
+	afx_msg void	OnFileOpenimage();
+	afx_msg void	OnFileSaveAs();
+	afx_msg void	OnPreviewRng(UINT nID);
+	afx_msg void	OnUpdatePreviewRng(CCmdUI *pCmdUI);
+	afx_msg void	OnZoomRng(UINT nID);
+	afx_msg void	OnUpdateZoomRng(CCmdUI * pCmdUI);
+	afx_msg void	OnToolsSearchexecutablefordqt();
+	afx_msg void	OnUpdateFileReprocess(CCmdUI *pCmdUI);
+	afx_msg void	OnUpdateFileSaveAs(CCmdUI *pCmdUI);
+	afx_msg void	OnToolsExtractembeddedjpeg();
+	afx_msg void	OnUpdateToolsExtractembeddedjpeg(CCmdUI *pCmdUI);
+	afx_msg void	OnToolsFileoverlay();
+	afx_msg void	OnUpdateToolsFileoverlay(CCmdUI *pCmdUI);
+	afx_msg void	OnToolsLookupmcuoffset();
+	afx_msg void	OnUpdateToolsLookupmcuoffset(CCmdUI *pCmdUI);
+	afx_msg void	OnOverlaysMcugrid();
+	afx_msg void	OnUpdateOverlaysMcugrid(CCmdUI *pCmdUI);
+	afx_msg void	OnUpdateIndicatorYcc(CCmdUI* pCmdUI);
+	afx_msg void	OnUpdateIndicatorMcu(CCmdUI* pCmdUI);
+	afx_msg void	OnUpdateIndicatorFilePos(CCmdUI* pCmdUI);
+	afx_msg void	OnScansegmentDetaileddecode();
+	afx_msg void	OnUpdateScansegmentDetaileddecode(CCmdUI *pCmdUI);
+	afx_msg void	OnToolsExporttiff();
+	afx_msg void	OnUpdateToolsExporttiff(CCmdUI *pCmdUI);
 };
 
 

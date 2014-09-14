@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -101,8 +101,8 @@ void CJPEGsnoopView::OnInitialUpdate()
 	// Set the default character formatting
 	CHARFORMAT cf;
 	COLORREF myColor = BLACK; //0x00ff00ff; // 00BBGGRR (purple)
-	char szFaceName[LF_FACESIZE] = "Courier New";
-	strcpy (cf.szFaceName, szFaceName);
+	TCHAR szFaceName[LF_FACESIZE] = _T("Courier New");
+	_tcscpy_s(cf.szFaceName, szFaceName);
 	CDC* pDC = GetDC();
 
 	// Modify the default character format

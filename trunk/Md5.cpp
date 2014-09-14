@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,17 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-// The following code is from the RSA's MD5 sample code project:
+// ====================================================================================================
+// SOURCE CODE ACKNOWLEDGEMENT
+// ====================================================================================================
+// The following code is derived from the following project on CodeProject:
+//
+//		Title:		ReHash - A console-based hash calculator
+//		Author:		Dominik Reichl
+//		URL:		http://www.codeproject.com/Articles/3945/ReHash-A-console-based-hash-calculator
+//		Date:		Apr 11, 2003
+//
+// ====================================================================================================
 
 
 // Free for all implementation of the MD5 hash algorithm
@@ -69,7 +79,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "stdafx.h" //CAL! to avoid compile error C1010
+#include "stdafx.h" //CAL! Added to avoid compile error C1010
 
 #include "MD5.h"
 
@@ -215,7 +225,7 @@ void MD5Init (MD5_CTX *mdContext, unsigned long pseudoRandomNumber)
 	mdContext->buf[2] = (UINT4)0x98badcfe + (pseudoRandomNumber * 37);
 	mdContext->buf[3] = (UINT4)0x10325476 + (pseudoRandomNumber * 97);
 
-	//CAL!
+	//CAL! Added
 	mdContext->digest32[0] = 0;
 	mdContext->digest32[1] = 0;
 	mdContext->digest32[2] = 0;
@@ -290,7 +300,7 @@ void MD5Final (MD5_CTX *mdContext)
 		mdContext->digest[ii+2] = (unsigned char)((mdContext->buf[i] >> 16) & 0xFF);
 		mdContext->digest[ii+3] = (unsigned char)((mdContext->buf[i] >> 24) & 0xFF);
 
-		//CAL!
+		//CAL! Added
 		// Make my own 32-bit digest, but use big endian.
 		mdContext->digest32[i] =	(((mdContext->buf[i]      ) & 0xFF) << 24) +
 									(((mdContext->buf[i] >>  8) & 0xFF) << 16) +

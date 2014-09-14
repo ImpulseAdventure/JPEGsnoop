@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -49,20 +49,19 @@ BOOL CAboutDlg::OnInitDialog()
 	// TODO:  Add extra initialization here
 
 	// Dynamically change static text of version number
-	CString tmpStr;
+	CString strTmp;
 
-	tmpStr.Format(_T("Version %s"),VERSION_STR);
-	m_staticVerNum.SetString(tmpStr);
-	m_staticVerNum.Format("Version %s",VERSION_STR);
+	strTmp.Format(_T("Version %s"),VERSION_STR);
+	m_staticVerNum.SetString(strTmp);
+	m_staticVerNum.Format(_T("Version %s"),VERSION_STR);
 
 	UpdateData(FALSE);
 
 
 	// Update the URLs
-	tmpStr.Format(_T("http://www.impulseadventure.com/photo/jpeg-snoop.html?ver=%s"),VERSION_STR);
-	m_staticURL.SetHyperlink("http://www.impulseadventure.com/photo/");
-	//m_staticURLdoc.SetHyperlink("http://www.impulseadventure.com/photo/jpeg-snoop.html?ver=0_1");
-	m_staticURLdoc.SetHyperlink(tmpStr);
+	m_staticURL.SetHyperlink(_T("http://www.impulseadventure.com/photo/"));
+	strTmp.Format(_T("http://www.impulseadventure.com/photo/jpeg-snoop.html?ver=%s"),VERSION_STR);
+	m_staticURLdoc.SetHyperlink(strTmp);
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// EXCEPTION: OCX Property Pages should return FALSE

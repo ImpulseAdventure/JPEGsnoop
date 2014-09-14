@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,6 +16,23 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-// General Global Functions
+#ifndef _GENERAL_H_
+#define _GENERAL_H_
 
-CString Dec2Bin(unsigned nVal,unsigned nLen,bool bSpace=true);
+// General Global Functions
+CString			Dec2Bin(unsigned nVal,unsigned nLen,bool bSpace=true);
+unsigned short	Swap16(unsigned short nVal);
+CString			Uint2Chars(unsigned nVal);
+CString			Uint2DotByte(unsigned nVal);
+bool			TestBit(unsigned nVal,unsigned nBit);
+//CString			ByteStr2Unicode(BYTE* pBuf, unsigned nBufLen);
+
+// General Global Constants
+extern const unsigned glb_anZigZag[64];
+extern const unsigned glb_anUnZigZag[64];
+
+extern const unsigned glb_anQuantRotate[64];
+extern const unsigned glb_anStdQuantLum[64];
+extern const unsigned glb_anStdQuantChr[64];
+
+#endif

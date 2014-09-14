@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,9 +16,17 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-
-// The following code was from UrlString by Stephane Erhardt:
-// http://www.codeguru.com/cpp/cpp/cpp_mfc/comments.php/c4029/?thread=9533
+// ====================================================================================================
+// SOURCE CODE ACKNOWLEDGEMENT
+// ====================================================================================================
+// The following code is derived from the following project on CodeGuru:
+//
+//		Title:		CUrlString: A very simple MFC class to Encode and Decode an url string
+//		Author:		Stephane Erhardt
+//		URL:		http://www.codeguru.com/cpp/cpp/cpp_mfc/article.php/c4029/URL-Encoding.htm (comments)
+//		Date:		Mar 03, 2006
+//
+// ====================================================================================================
 
 
 /*****************************************************************************
@@ -64,7 +72,7 @@ CString CUrlString::Decode(CString csEncoded)
 	for(int iPos = 0; iPos < csUnsafeEncoded.GetLength(); iPos += 3)
 	{
 		csCharEncoded = csUnsafeEncoded.Mid(iPos, 3);
-		csCharDecoded = (char)strtol(csUnsafeEncoded.Mid(iPos + 1, 2), NULL, 16);
+		csCharDecoded = (TCHAR)_tcstol(csUnsafeEncoded.Mid(iPos + 1, 2), NULL, 16);
 		csDecoded.Replace(csCharEncoded, csCharDecoded);
 	}
 	return csDecoded;

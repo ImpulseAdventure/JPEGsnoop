@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,15 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - JPEGsnoop SDI View class for the main image preview window
+// - Handles user mouse-click events to mark MCUs
+// - Tracks mouse position to provide continuous read-out in the status bar
+//
+// ==========================================================================
+
 
 #pragma once
 
@@ -38,8 +47,8 @@ protected:
 
 public:
 #ifdef _DEBUG
-	virtual void AssertValid() const;
-	virtual void Dump(CDumpContext& dc) const;
+	virtual void	AssertValid() const;
+	virtual void	Dump(CDumpContext& dc) const;
 #endif
 
 protected:
@@ -49,24 +58,23 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 private:
-	CFont*		m_pFont;
-	LOGFONT		m_logfont;
-	int			m_nPointSize;
+	CimgDecode*		GetImgDec();
+	bool			InPreviewArea(CPoint point,CPoint &ptPix);
+	void			SetScrollCenter(float fZoomOld, float fZoomNew);
+	int				MeasureFontHeight(CFont* pFont, CDC* pDC);
 
-public:
-	CimgDecode*	GetImgDec();
+	afx_msg void	OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void	OnLButtonUp(UINT nFlags, CPoint point);
+	afx_msg void	OnRButtonUp(UINT nFlags, CPoint point);
+	afx_msg BOOL	OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
+	afx_msg void	OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg BOOL	OnEraseBkgnd(CDC* pDC);
 
-	bool		InPreviewArea(CPoint point,CPoint &ptPix);
-	void		SetScrollCenter(float fZoomOld, float fZoomNew);
+private:
+	CFont*			m_pFont;
+	LOGFONT			m_logfont;
+	int				m_nPointSize;
 
-	int			MeasureFontHeight(CFont* pFont, CDC* pDC);
-
-	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
-	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
-	afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
-	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
-	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
-	afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 };
 
 

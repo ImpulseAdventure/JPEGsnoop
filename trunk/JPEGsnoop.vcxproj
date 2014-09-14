@@ -1,0 +1,225 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{B2881D75-41FE-4A97-90B3-AB8B6BD4ACB3}</ProjectGuid>
+    <RootNamespace>JPEGsnoop</RootNamespace>
+    <Keyword>MFCProj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+    <UseOfMfc>Static</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <PlatformToolset>v110</PlatformToolset>
+    <UseOfMfc>Static</UseOfMfc>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <_ProjectFileVersion>11.0.60315.1</_ProjectFileVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <OutDir>Debug\</OutDir>
+    <IntDir>Debug\</IntDir>
+    <LinkIncremental>true</LinkIncremental>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>Release\</OutDir>
+    <IntDir>Release\</IntDir>
+    <LinkIncremental>false</LinkIncremental>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>true</MinimalRebuild>
+      <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalDependencies>Wininet.lib</AdditionalDependencies>
+      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
+    </Link>
+    <Midl>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+    </Midl>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MinimalRebuild>false</MinimalRebuild>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Windows</SubSystem>
+      <OptimizeReferences>true</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <TargetMachine>MachineX86</TargetMachine>
+      <AdditionalDependencies>Wininet.lib</AdditionalDependencies>
+    </Link>
+    <Midl>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MkTypLibCompatible>false</MkTypLibCompatible>
+    </Midl>
+    <ResourceCompile>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <Culture>0x0409</Culture>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="AboutDlg.cpp" />
+    <ClCompile Include="BatchDlg.cpp" />
+    <ClCompile Include="CntrItem.cpp" />
+    <ClCompile Include="DbManageDlg.cpp" />
+    <ClCompile Include="DbSigs.cpp" />
+    <ClCompile Include="DbSubmitDlg.cpp" />
+    <ClCompile Include="DecodeDetailDlg.cpp" />
+    <ClCompile Include="Dib.cpp" />
+    <ClCompile Include="DocLog.cpp" />
+    <ClCompile Include="ExportDlg.cpp" />
+    <ClCompile Include="ExportTiffDlg.cpp" />
+    <ClCompile Include="FileTiff.cpp" />
+    <ClCompile Include="FolderDlg.cpp" />
+    <ClCompile Include="General.cpp" />
+    <ClCompile Include="HyperlinkStatic.cpp" />
+    <ClCompile Include="ImgDecode.cpp" />
+    <ClCompile Include="JfifDecode.cpp" />
+    <ClCompile Include="JPEGsnoop.cpp" />
+    <ClCompile Include="JPEGsnoopDoc.cpp" />
+    <ClCompile Include="JPEGsnoopView.cpp" />
+    <ClCompile Include="JPEGsnoopViewImg.cpp" />
+    <ClCompile Include="LookupDlg.cpp" />
+    <ClCompile Include="MainFrm.cpp" />
+    <ClCompile Include="Md5.cpp" />
+    <ClCompile Include="ModelessDlg.cpp" />
+    <ClCompile Include="NoteDlg.cpp" />
+    <ClCompile Include="OffsetDlg.cpp" />
+    <ClCompile Include="OverlayBufDlg.cpp" />
+    <ClCompile Include="PsDecode.cpp" />
+    <ClCompile Include="Registry.cpp" />
+    <ClCompile Include="SettingsDlg.cpp" />
+    <ClCompile Include="SnoopConfig.cpp" />
+    <ClCompile Include="stdafx.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="TermsDlg.cpp" />
+    <ClCompile Include="UpdateAvailDlg.cpp" />
+    <ClCompile Include="UrlString.cpp" />
+    <ClCompile Include="WindowBuf.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="AboutDlg.h" />
+    <ClInclude Include="BatchDlg.h" />
+    <ClInclude Include="CntrItem.h" />
+    <ClInclude Include="DbManageDlg.h" />
+    <ClInclude Include="DbSigs.h" />
+    <ClInclude Include="DbSubmitDlg.h" />
+    <ClInclude Include="DecodeDetailDlg.h" />
+    <ClInclude Include="Dib.h" />
+    <ClInclude Include="DocLog.h" />
+    <ClInclude Include="ExportDlg.h" />
+    <ClInclude Include="ExportTiffDlg.h" />
+    <ClInclude Include="FileTiff.h" />
+    <ClInclude Include="FolderDlg.h" />
+    <ClInclude Include="General.h" />
+    <ClInclude Include="HyperlinkStatic.h" />
+    <ClInclude Include="ImgDecode.h" />
+    <ClInclude Include="JfifDecode.h" />
+    <ClInclude Include="JPEGsnoop.h" />
+    <ClInclude Include="JPEGsnoopDoc.h" />
+    <ClInclude Include="JPEGsnoopView.h" />
+    <ClInclude Include="JPEGsnoopViewImg.h" />
+    <ClInclude Include="LookupDlg.h" />
+    <ClInclude Include="MainFrm.h" />
+    <ClInclude Include="Md5.h" />
+    <ClInclude Include="ModelessDlg.h" />
+    <ClInclude Include="NoteDlg.h" />
+    <ClInclude Include="OffsetDlg.h" />
+    <ClInclude Include="OverlayBufDlg.h" />
+    <ClInclude Include="PsDecode.h" />
+    <ClInclude Include="Registry.h" />
+    <ClInclude Include="Resource.h" />
+    <ClInclude Include="SettingsDlg.h" />
+    <ClInclude Include="snoop.h" />
+    <ClInclude Include="SnoopConfig.h" />
+    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="TermsDlg.h" />
+    <ClInclude Include="UpdateAvailDlg.h" />
+    <ClInclude Include="UrlString.h" />
+    <ClInclude Include="WindowBuf.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Signatures.inl" />
+    <None Include="res\JPEGsnoop.rc2" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\jpegsnoop-prog-icon1-novista.ico" />
+    <Image Include="res\JPEGsnoop.ico" />
+    <Image Include="res\jpegsnoop4a.ico" />
+    <Image Include="res\jpegsnoop4a1.ico" />
+    <Image Include="res\JPEGsnoopDoc.ico" />
+    <Image Include="res\Toolbar.bmp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="JPEGsnoop.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="res\JPEGsnoop.manifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="README-FILES.txt" />
+    <Text Include="ReadMe.txt" />
+    <Text Include="VERSION.txt" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties RESOURCE_FILE="JPEGsnoop.rc" />
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

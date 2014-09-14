@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -73,27 +73,11 @@ void CSettingsDlg::OnBnClickedDbDirBrowse()
 {
 	// TODO: Add your control notification handler code here
 
-	/*
-	CFolderDialog dlg(this);
-	LPCITEMIDLIST pidl = dlg.BrowseForFolder(_T("Pick a folder, any folder:"),
-		BIF_RETURNONLYFSDIRS | BIF_STATUSTEXT);
-	CString msg;
-	if (pidl)
-		msg.Format(_T("You chose: %s"), dlg.GetPathName(pidl));
-	else
-		msg = _T("You canceled without selecting a folder.");
-
-	dlg.FreePIDL(pidl);	// free PIDL when done--important!
-
-	AfxMessageBox(msg);
-	*/
-
 	CString strDir;
-	strDir = SelectFolder("Please select folder for User Database");
-	if (strDir == "") {
-		//AfxMessageBox("You cancelled");
+	strDir = SelectFolder(_T("Please select folder for User Database"));
+	if (strDir == _T("")) {
+		// User cancelled
 	} else {
-		//AfxMessageBox(strDir);
 		m_strDbDir = strDir;
 		UpdateData(false);
 	}
@@ -106,7 +90,9 @@ CString CSettingsDlg::SelectFolder(const CString& strMessage)
 	BROWSEINFO BrowseInfo;
 	memset(&BrowseInfo, 0, sizeof(BrowseInfo));
 	
-	char szBuffer[MAX_PATH];
+	TCHAR szBuffer[MAX_PATH];
+
+	szBuffer[0] = '\0';	// Start as null-terminated
 	
 	BrowseInfo.hwndOwner      = m_hWnd;
 	BrowseInfo.pszDisplayName = szBuffer;
@@ -115,7 +101,7 @@ CString CSettingsDlg::SelectFolder(const CString& strMessage)
 	
 	// Throw display dialog
 	LPITEMIDLIST pList = SHBrowseForFolder(&BrowseInfo);
-	ASSERT(strlen(szBuffer) < sizeof(szBuffer));
+	ASSERT(_tcslen(szBuffer) < sizeof(szBuffer));
 	
 	if (pList != NULL)
 	{
@@ -137,19 +123,17 @@ CString CSettingsDlg::SelectFolder(const CString& strMessage)
 
 LPITEMIDLIST CSettingsDlg::ConvertPathToLpItemIdList(const char *pszPath)
 {
-    LPITEMIDLIST  pidl;
+    LPITEMIDLIST  pidl = NULL;
     LPSHELLFOLDER pDesktopFolder;
     OLECHAR       olePath[MAX_PATH];
-    ULONG         chEaten;
-    ULONG         dwAttributes;
+    ULONG*        pchEaten = NULL;
+    ULONG         dwAttributes = 0;
     HRESULT       hr;
 
     if (SUCCEEDED(SHGetDesktopFolder(&pDesktopFolder)))
     {
-        MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pszPath, -1, olePath, 
-                            MAX_PATH);
-        hr = pDesktopFolder->ParseDisplayName(NULL,NULL,olePath,&chEaten,
-                                              &pidl,&dwAttributes);
+        MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED, pszPath, -1, olePath, MAX_PATH);
+        hr = pDesktopFolder->ParseDisplayName(NULL,NULL,olePath,pchEaten, &pidl,&dwAttributes);
         pDesktopFolder->Release();
     }
     return pidl;

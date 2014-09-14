@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -39,7 +39,7 @@ COverlayBufDlg::COverlayBufDlg(CWnd* pParent /*=NULL*/)
 	, m_pWBuf(NULL)
 	, m_sValueCurBin(_T(""))
 {
-	//CAL! Should probably mark this as invalid!!!
+	// FIXME: Should probably mark this as invalid
 	m_bApply = false;
 	m_nOffset = 0;
 }
@@ -64,7 +64,7 @@ COverlayBufDlg::COverlayBufDlg(CWnd* pParent, CwindowBuf* pWBuf, bool bEn,
 	m_bApply = false;
 
 	// Now recalc string fields
-	m_sOffset.Format("0x%08X",m_nOffset);
+	m_sOffset.Format(_T("0x%08X"),m_nOffset);
 
 }
 
@@ -99,46 +99,43 @@ END_MESSAGE_MAP()
 void COverlayBufDlg::OnBnClickedOvrLoad()
 {
 	// TODO: Add your control notification handler code here
-	CString tmpStr;
+	CString strTmp;
 	unsigned cur_val[17];
 
 	ASSERT(m_pWBuf);
 
 	UpdateData();
-	m_nOffset = strtol(m_sOffset,NULL,16);
+	m_nOffset = _tcstol(m_sOffset,NULL,16);
 
 	// get the data at the file position
 	for (unsigned i=0;i<16;i++) {
 		// Request the "clean" data as otherwise we'll see the
 		// last overlay data, which might be confusing!
 
-		//CAL! FIXME
+		// FIXME:
 		if (m_pWBuf) {
 			cur_val[i] = m_pWBuf->Buf(m_nOffset+i,true);
 		} else {
-			cur_val[i] = 00; //CAL! FIXME
+			cur_val[i] = 0; // FIXME:
 
 		}
 	}
 
-//	tmpStr.Format("0x%08X = 0x %02X %02X %02X %02X %02X %02X %02X %02X ...",
-//		m_nOffset,cur_val[0],cur_val[1],cur_val[2],cur_val[3],
-//		cur_val[4],cur_val[5],cur_val[6],cur_val[7]);
-	tmpStr.Format("0x %02X %02X %02X %02X %02X %02X %02X %02X ...",
+	strTmp.Format(_T("0x %02X %02X %02X %02X %02X %02X %02X %02X ..."),
 		cur_val[0],cur_val[1],cur_val[2],cur_val[3],
 		cur_val[4],cur_val[5],cur_val[6],cur_val[7]);
-	m_sValueCurHex = tmpStr;
+	m_sValueCurHex = strTmp;
 
-	CString tmpStrBin = "0b ";
-	tmpStrBin += Dec2Bin(cur_val[0],8);	tmpStrBin += " ";
-	tmpStrBin += Dec2Bin(cur_val[1],8);	tmpStrBin += " ";
-	tmpStrBin += Dec2Bin(cur_val[2],8);	tmpStrBin += " ";
-	tmpStrBin += Dec2Bin(cur_val[3],8);	tmpStrBin += " ";
-	tmpStrBin += Dec2Bin(cur_val[4],8);	tmpStrBin += " ";
-	tmpStrBin += Dec2Bin(cur_val[5],8);	tmpStrBin += " ";
-	tmpStrBin += Dec2Bin(cur_val[6],8);	tmpStrBin += " ";
-	tmpStrBin += Dec2Bin(cur_val[7],8);	tmpStrBin += " ...";
-	m_sValueCurBin = tmpStrBin;
+	CString strTmpBin = _T("0b ");
+	strTmpBin += Dec2Bin(cur_val[0],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(cur_val[1],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(cur_val[2],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(cur_val[3],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(cur_val[4],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(cur_val[5],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(cur_val[6],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(cur_val[7],8);	strTmpBin += _T(" ...");
+	m_sValueCurBin = strTmpBin;
 
 	UpdateData(false);
 }
@@ -146,7 +143,7 @@ void COverlayBufDlg::OnBnClickedOvrLoad()
 void COverlayBufDlg::OnBnClickedOk()
 {
 	UpdateData();
-	m_nOffset = strtol(m_sOffset,NULL,16);
+	m_nOffset = _tcstol(m_sOffset,NULL,16);
 
 	m_bApply = false;
 	OnOK();
@@ -157,7 +154,7 @@ CString COverlayBufDlg::Dec2Bin(unsigned nVal,unsigned nLen)
 {
 	unsigned	nBit;
 	unsigned	n1,n2,n3;
-	CString		strBin = "";
+	CString		strBin = _T("");
 	for (int nInd=nLen-1;nInd>=0;nInd--)
 	{
 		n1 = (1 << nInd);
@@ -167,7 +164,7 @@ CString COverlayBufDlg::Dec2Bin(unsigned nVal,unsigned nLen)
 		nBit = n3;
 		strBin += (nBit==1)?"1":"0";
 		if ( ((nInd % 8) == 0) && (nInd != 0) ) {
-			strBin += " ";
+			strBin += _T(" ");
 		}
 	}
 	return strBin;
@@ -177,7 +174,7 @@ CString COverlayBufDlg::Dec2Bin(unsigned nVal,unsigned nLen)
 void COverlayBufDlg::OnBnClickedApply()
 {
 	UpdateData();
-	m_nOffset = strtol(m_sOffset,NULL,16);
+	m_nOffset = _tcstol(m_sOffset,NULL,16);
 
 	m_bApply = true;
 	OnOK();

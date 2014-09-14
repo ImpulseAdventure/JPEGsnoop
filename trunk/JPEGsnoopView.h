@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,13 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - JPEGsnoop SDI View class for the main text log window
+//
+// ==========================================================================
+
 
 // JPEGsnoopView.h : interface of the CJPEGsnoopView class
 //
@@ -34,34 +41,35 @@ protected: // create from serialization only
 
 // Attributes
 public:
-	CJPEGsnoopDoc* GetDocument() const;
+	CJPEGsnoopDoc*	GetDocument() const;
 
 // Operations
 public:
 
 // Overrides
-	public:
-virtual BOOL PreCreateWindow(CREATESTRUCT& cs);
+public:
+	virtual BOOL	PreCreateWindow(CREATESTRUCT& cs);
 protected:
-	virtual void OnInitialUpdate(); // called first time after construct
-	virtual BOOL OnPreparePrinting(CPrintInfo* pInfo);
+	virtual void	OnInitialUpdate(); // called first time after construct
+	virtual BOOL	OnPreparePrinting(CPrintInfo* pInfo);
 
 // Implementation
 public:
-	virtual ~CJPEGsnoopView();
+	virtual			~CJPEGsnoopView();
 #ifdef _DEBUG
-	virtual void AssertValid() const;
-	virtual void Dump(CDumpContext& dc) const;
+	virtual void	AssertValid() const;
+	virtual void	Dump(CDumpContext& dc) const;
 #endif
 
 protected:
 
 // Generated message map functions
 protected:
-	afx_msg void OnDestroy();
+	afx_msg void	OnDestroy();
+
 	DECLARE_MESSAGE_MAP()
 public:
-	afx_msg void OnDropFiles(HDROP hDropInfo);
+	afx_msg void	OnDropFiles(HDROP hDropInfo);
 };
 
 #ifndef _DEBUG  // debug version in JPEGsnoopView.cpp

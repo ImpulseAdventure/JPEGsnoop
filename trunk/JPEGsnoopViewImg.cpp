@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -40,7 +40,7 @@ CJPEGsnoopViewImg::CJPEGsnoopViewImg()
 	memset(&m_logfont, 0, sizeof(m_logfont));
 	m_nPointSize = 120;
 	//_tcscpy(m_logfont.lfFaceName,_T("Courier New"));
-	_tcscpy(m_logfont.lfFaceName,_T("Arial"));
+	_tcscpy_s(m_logfont.lfFaceName,_T("Arial"));
 
 	m_logfont.lfHeight = ::MulDiv(m_nPointSize,
 		dc.GetDeviceCaps(LOGPIXELSY),720);
@@ -81,8 +81,8 @@ void CJPEGsnoopViewImg::OnInitialUpdate()
 
 
 	CSize		sizeTotal(0,0);
-	sizeTotal.cx = 500; //CAL! FIXME
-	sizeTotal.cy = 200; //CAL! FIXME
+	sizeTotal.cx = 500; // FIXME:
+	sizeTotal.cy = 200; // FIXME:
 	SetScrollSizes(MM_TEXT, sizeTotal);
 
 }
@@ -151,13 +151,15 @@ bool CJPEGsnoopViewImg::InPreviewArea(CPoint point,CPoint &ptPix)
 	unsigned	nPixX;		// 8x8 block number (not MCU unless CSS=1x1)
 	unsigned	nPixY;
 
-	fZoom = GetImgDec()->m_nZoom;
+	CimgDecode*	pImgDec = GetImgDec();
+
+	fZoom = pImgDec->GetPreviewZoom();
+	pImgDec->GetPreviewPos(nImgPosX,nImgPosY);
+
 	ASSERT(fZoom != 0);
-	nImgPosX = GetImgDec()->m_nPreviewPosX;
-	nImgPosY = GetImgDec()->m_nPreviewPosY;
 
 	CPoint	ScrolledPos = GetScrollPosition();
-	CString tmpStr;
+	CString strTmp;
 
 	pix_x = point.x;
 	pix_y = point.y;
@@ -168,14 +170,16 @@ bool CJPEGsnoopViewImg::InPreviewArea(CPoint point,CPoint &ptPix)
 	ptPix.y = 0;
 
 	// Is the preview even displayed?
-	//if (!GetImgDec()->my_DIB_ready) {
+	//if (!GetImgDec()->m_bDibTempReady) {
 	//	return false;
 	//}
 	// FIXME
 
 	// Note that m_nPreviewSize already includes effects of zoom level
-	if ( ((pix_x >= 0) && ((unsigned)pix_x < GetImgDec()->m_nPreviewSizeX)) &&
-		 ((pix_y >= 0) && ((unsigned)pix_y < GetImgDec()->m_nPreviewSizeY)) )
+	unsigned	nPreviewSzX,nPreviewSzY;
+	pImgDec->GetPreviewSize(nPreviewSzX,nPreviewSzY);
+	if ( ((pix_x >= 0) && ((unsigned)pix_x < nPreviewSzX)) &&
+		 ((pix_y >= 0) && ((unsigned)pix_y < nPreviewSzY)) )
 	{
 		// Undo zoom
 		nPixX = (unsigned)(pix_x / fZoom);
@@ -189,9 +193,9 @@ bool CJPEGsnoopViewImg::InPreviewArea(CPoint point,CPoint &ptPix)
 	return false;
 }
 
-// The following call is one I created to automatically recenter the image
-// *** Not currently used as I cannot figure out how to have this called
-//     on redraw.
+// The following routine was intended to automatically recenter the image
+// TODO: However, what is the best way to have it called during redraw?
+// Currently not used
 void CJPEGsnoopViewImg::SetScrollCenter(float fZoomOld, float fZoomNew)
 {
 	unsigned	nImgPosX;
@@ -199,11 +203,10 @@ void CJPEGsnoopViewImg::SetScrollCenter(float fZoomOld, float fZoomNew)
 
 	ASSERT(fZoomOld != 0);
 	ASSERT(fZoomNew != 0);
-	nImgPosX = GetImgDec()->m_nPreviewPosX;
-	nImgPosY = GetImgDec()->m_nPreviewPosY;
+	GetImgDec()->GetPreviewPos(nImgPosX,nImgPosY);
 
 	CPoint	ScrolledPos = GetScrollPosition();
-	ScrolledPos.Offset(-nImgPosX,-nImgPosY);
+	ScrolledPos.Offset(-(int)nImgPosX,-(int)nImgPosY);
 
 	ScrolledPos.x = (long)(ScrolledPos.x * fZoomNew / fZoomOld);
 	ScrolledPos.y = (long)(ScrolledPos.y * fZoomNew / fZoomOld);
@@ -231,21 +234,18 @@ int CJPEGsnoopViewImg::MeasureFontHeight(CFont* pFont, CDC* pDC)
 }
 
 
-
 void CJPEGsnoopViewImg::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	// TODO: Add your message handler code here and/or call default
 
-	//AfxMessageBox("LButtonDown!");
+	//AfxMessageBox(_T("LButtonDown!"));
 
 	CScrollView::OnLButtonDown(nFlags, point);
 }
 
 void CJPEGsnoopViewImg::OnLButtonUp(UINT nFlags, CPoint point)
 {
-	CString	tmpStr;
-	//unsigned nByte;
-	//unsigned nBit;
+	CString	strTmp;
 	CPoint ptPix;
 	CPoint ptMcu;
 	CPoint ptBlk;
@@ -259,7 +259,7 @@ void CJPEGsnoopViewImg::OnLButtonUp(UINT nFlags, CPoint point)
 		//Invalidate();
 
 	} else {
-		GetImgDec()->SetStatusText("");
+		GetImgDec()->SetStatusText(_T(""));
 	}
 	
 	
@@ -288,7 +288,7 @@ BOOL CJPEGsnoopViewImg::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 
 void CJPEGsnoopViewImg::OnMouseMove(UINT nFlags, CPoint point)
 {
-	CString	tmpStr;
+	CString	strTmp;
 	unsigned nByte;
 	unsigned nBit;
 	CPoint ptPix;
@@ -306,25 +306,25 @@ void CJPEGsnoopViewImg::OnMouseMove(UINT nFlags, CPoint point)
 		GetImgDec()->LookupBlkYCC(ptBlk.x,ptBlk.y,nY1,nCb1,nCr1);
 
 /*
-		tmpStr.Format("MCU [%04u,%04u] File: 0x%08X:%u\tYCC=[%05d,%05d,%05d]",
+		strTmp.Format(_T("MCU [%04u,%04u] File: 0x%08X:%u\tYCC=[%05d,%05d,%05d]"),
 			ptMcu.x,ptMcu.y,nByte,nBit,
 			nY1,nCb1,nCr1);
-		GetImgDec()->SetStatusText(tmpStr);
+		GetImgDec()->SetStatusText(strTmp);
 */
-		tmpStr.Format("MCU [%04u,%04u]",ptMcu.x,ptMcu.y);
-		GetImgDec()->SetStatusMcuText(tmpStr);
+		strTmp.Format(_T("MCU [%04u,%04u]"),ptMcu.x,ptMcu.y);
+		GetImgDec()->SetStatusMcuText(strTmp);
 
-		tmpStr.Format("File: 0x%08X:%u",nByte,nBit);
-		GetImgDec()->SetStatusFilePosText(tmpStr);
+		strTmp.Format(_T("File: 0x%08X:%u"),nByte,nBit);
+		GetImgDec()->SetStatusFilePosText(strTmp);
 
-		tmpStr.Format("YCC DC=[%05d,%05d,%05d]",nY1,nCb1,nCr1);
-		GetImgDec()->SetStatusYccText(tmpStr);
+		strTmp.Format(_T("YCC DC=[%05d,%05d,%05d]"),nY1,nCb1,nCr1);
+		GetImgDec()->SetStatusYccText(strTmp);
 
 	} else {
-//		GetImgDec()->SetStatusText("");
-		GetImgDec()->SetStatusMcuText("");
-		GetImgDec()->SetStatusFilePosText("");
-		GetImgDec()->SetStatusYccText("");
+//		GetImgDec()->SetStatusText(_T(""));
+		GetImgDec()->SetStatusMcuText(_T(""));
+		GetImgDec()->SetStatusFilePosText(_T(""));
+		GetImgDec()->SetStatusYccText(_T(""));
 	}
 
 	CScrollView::OnMouseMove(nFlags, point);
@@ -334,9 +334,9 @@ BOOL CJPEGsnoopViewImg::OnEraseBkgnd(CDC* pDC)
 {
 	// TODO: Add your message handler code here and/or call default
 
-	// Apparently this helps remove flicker!
-	// Disabled for now
-	//CAL! return 1;
+	// FIXME:
+	// Apparently this could help remove flicker! But it is disabled for now.
+	//return 1;
 
 	return CScrollView::OnEraseBkgnd(pDC);
 }

@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,6 +16,17 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - Provides a cache for file access
+// - Allows random access to a file but only issues new file I/O if
+//   the requested address is outside of the current cache window
+// - Provides an overlay for temporary (local) buffer overwrites
+// - Buffer search methods
+//
+// ==========================================================================
+
+
 #pragma once
 
 #include "DocLog.h"
@@ -28,10 +39,12 @@
 #define MAX_BUF_WINDOW		131072L
 #define MAX_BUF_WINDOW_REV	16384L //1024L
 
-#define NUM_OVERLAYS 500
-#define MAX_OVERLAY 500		// 500 bytes
+#define NUM_OVERLAYS		500
+#define MAX_OVERLAY			500		// 500 bytes
 
-#define NUM_HOLES 10
+#define NUM_HOLES			10
+
+#define	MAX_BUF_READ_STR	255	// Max number of bytes to fetch in BufReadStr()
 
 typedef struct {
 	bool			bEn;					// Enabled? -- not used currently
@@ -59,22 +72,23 @@ public:
 public:
 	void			SetStatusBar(CStatusBar* pStatBar);
 
-	void			BufLoadWindow(unsigned long position);
+	void			BufLoadWindow(unsigned long nPosition);
 	void			BufFileSet(CFile* inFile);
 	void			BufFileUnset();
-	BYTE			Buf(unsigned long offset,bool clean=false);
-	unsigned		BufX(unsigned long offset,unsigned sz,bool byteswap=false);
+	BYTE			Buf(unsigned long nOffset,bool bClean=false);
+	unsigned		BufX(unsigned long nOffset,unsigned nSz,bool bByteSwap=false);
 
-	CString			BufReadStr(unsigned long position);
-	CString			BufReadUniStr(unsigned long position);
-	CString			BufReadStrn(unsigned long position,unsigned len);
+	CString			BufReadStr(unsigned long nPosition);
+	CString			BufReadUniStr(unsigned long nPosition);
+	CString			BufReadUniStr2(unsigned long nPos, unsigned nBufLen);
+	CString			BufReadStrn(unsigned long nPosition,unsigned nLen);
 
-	bool			BufSearch(unsigned long start_pos, unsigned search_val, unsigned search_len,
-						   bool dir_fwd, unsigned long &found_pos);
-	bool			BufSearchX(unsigned long start_pos, BYTE* search_val, unsigned search_len,
-						   bool dir_fwd, unsigned long &found_pos);
+	bool			BufSearch(unsigned long nStartPos, unsigned nSearchVal, unsigned nSearchLen,
+						   bool bDirFwd, unsigned long &nFoundPos);
+	bool			BufSearchX(unsigned long nStartPos, BYTE* anSearchVal, unsigned nSearchLen,
+						   bool bDirFwd, unsigned long &nFoundPos);
 
-	bool			OverlayAlloc(unsigned ind);
+	bool			OverlayAlloc(unsigned nInd);
 	bool			OverlayInstall(unsigned nOvrInd, BYTE* pOverlay,unsigned nLen,unsigned nBegin,
 							unsigned nMcuX,unsigned nMcuY,unsigned nMcuLen,unsigned nMcuLenIns,
 							int nAdjY,int nAdjCb,int nAdjCr);
@@ -83,47 +97,27 @@ public:
 	bool			OverlayGet(unsigned nOvrInd, BYTE* &pOverlay,unsigned &nLen,unsigned &nBegin);
 	unsigned		OverlayGetNum();
 	void			ReportOverlays(CDocLog* pLog);
-
-#ifdef DEV_MODE
-	void			HoleInstall(unsigned nStart,unsigned nLen);
-	void			HoleRemoveLast();
-	void			HoleRemoveAll();
-#endif
-
+	
+	bool			GetBufOk();
+	unsigned long	GetPosEof();
 
 private:
 	void			Reset();
 
 
 private:
-	BYTE*			pszBuffer;
-	unsigned		dummyOverrun;
+	BYTE*			m_pBuffer;
 	CFile*			m_pBufFile;
-	unsigned long	buf_win_size;
-	unsigned long	buf_win_start;
+	unsigned long	m_nBufWinSize;
+	unsigned long	m_nBufWinStart;
 
 	unsigned		m_nOverlayMax;	// Number of overlays allocated (limited by mem)
 	unsigned		m_nOverlayNum;
 	sOverlay*		m_psOverlay[NUM_OVERLAYS];
 
-public: // FIXME for now
-#ifdef DEV_MODE
-	unsigned		m_nHoleCnt;
-	bool			m_bHoleEn[NUM_HOLES];
-	unsigned		m_nHoleStart[NUM_HOLES];
-	unsigned		m_nHoleLen[NUM_HOLES];
-#endif
-
-	bool			m_nInsertEn;
-	unsigned		m_nInsertStartByte;
-	BYTE			m_nInsertVal;
-
-private:
-
 	CStatusBar*		m_pStatBar;
 
-public:
-	bool			BufOK;
-	unsigned long	pos_eof;	// Byte count at EOF
+	bool			m_bBufOK;
+	unsigned long	m_nPosEof;	// Byte count at EOF
 
 };

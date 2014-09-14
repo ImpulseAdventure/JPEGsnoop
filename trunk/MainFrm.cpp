@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -116,7 +116,7 @@ int CMainFrame::FindMenuItem(CMenu* Menu, LPCTSTR MenuString)
    {
       CString str;
       if (Menu->GetMenuString(i, str, MF_BYPOSITION) &&
-         (strcmp(str, MenuString) == 0))
+         (_tcscmp(str, MenuString) == 0))
          return i;
    }
 
@@ -142,8 +142,7 @@ void CMainFrame::Dump(CDumpContext& dc) const
 
 // CMainFrame message handlers
 
-// *********** START ************
-//CAL! **** Following code was added to support split windows
+//CAL! Following code was added to support split windows
 BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext) 
 {
 	//calculate client size 
@@ -152,8 +151,8 @@ BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 
 	if ( !m_mainSplitter.CreateStatic( this, 2, 1 ) ) 
 	{ 
-		MessageBox( "Error setting up splitter frames!", 
-					"Init Error!", MB_OK | MB_ICONERROR ); 
+		MessageBox( _T("Error setting up splitter frames!"), 
+					_T("Init Error!"), MB_OK | MB_ICONERROR ); 
 		return FALSE; 
 	}
 
@@ -161,8 +160,8 @@ BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 		RUNTIME_CLASS(CJPEGsnoopView), 
 		CSize(cr.Width(), cr.Height()*3/4), pContext ) ) 
 	{ 
-		MessageBox( "Error setting up splitter frames!", 
-					"Init Error!", MB_OK | MB_ICONERROR );
+		MessageBox( _T("Error setting up splitter frames!"), 
+					_T("Init Error!"), MB_OK | MB_ICONERROR );
 		return FALSE; 
 	}
 
@@ -170,8 +169,8 @@ BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 			RUNTIME_CLASS(CJPEGsnoopViewImg), 
 			CSize(cr.Width(), cr.Height()*1/4), pContext ) ) 
 	{ 
-		MessageBox( "Error setting up splitter frames!", 
-			"Init Error!", MB_OK | MB_ICONERROR );
+		MessageBox( _T("Error setting up splitter frames!"), 
+			_T("Init Error!"), MB_OK | MB_ICONERROR );
 		return FALSE; 
 	}
 
@@ -192,14 +191,14 @@ void CMainFrame::OnSize(UINT nType, int cx, int cy)
 
 	// TODO: Add your message handler code here
 
-	//CAL!
 	CRect cr;
     GetWindowRect(&cr);
 
     if (  m_bInitSplitter && nType != SIZE_MINIMIZED )
     {
 
-		/* //CAL2!
+		/*
+		// FIXME:
 		// The following was intended to allow the current ratio / position
 		// of the splitter windows to be remembered, so that the proportion
 		// after resizing was the same. Unfortunately, it seems to really

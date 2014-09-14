@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,6 +16,18 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// ====================================================================================================
+// SOURCE CODE ACKNOWLEDGEMENT
+// ====================================================================================================
+// The following code is based on an example CFolderDialog class that appears in MSDN:
+//
+//		Title:		CFolderDialog (C++ at Work: Counting MDI Children, Browsing for Folders)
+//		Authors:	Paul DiLascia
+//		URL:		http://msdn.microsoft.com/en-us/magazine/cc163789.aspx
+//		Date:		Jun 2005
+// ====================================================================================================
+
+
 ////////////////////////////////////////////////////////////////
 // MSDN Magazine -- June 2005
 // If this code works, it was written by Paul DiLascia.
@@ -29,14 +41,12 @@
 // BRTRACEFN is like TRACEFN but only does anything if
 // CFolderDialog::bTRACE is on. See Debug.h.
 //
-#if 0 //CAL!
 #ifdef _DEBUG
 #define BFTRACE															\
 	if (CFolderDialog::bTRACE)										\
 		TRACE
 #else
 #define BFTRACE
-#endif
 #endif
 
 //////////////////
@@ -88,7 +98,7 @@ protected:
 	BOOL m_bFilter;							 // do custom filtering?
 	CComQIPtr<IShellFolder> m_shfRoot;	 // handy to have root folder
 
-	static CALLBACK CallbackProc(HWND hwnd, UINT msg, LPARAM lp, LPARAM lpData);
+	static int CALLBACK CallbackProc(HWND hwnd, UINT msg, LPARAM lp, LPARAM lpData);
 
 	virtual int OnMessage(UINT msg, LPARAM lp);	// internal catch-all
 

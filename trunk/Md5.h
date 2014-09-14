@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,18 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+// ====================================================================================================
+// SOURCE CODE ACKNOWLEDGEMENT
+// ====================================================================================================
+// The following code is derived from the following project on CodeProject:
+//
+//		Title:		ReHash - A console-based hash calculator
+//		Author:		Dominik Reichl
+//		URL:		http://www.codeproject.com/Articles/3945/ReHash-A-console-based-hash-calculator
+//		Date:		Apr 11, 2003
+//
+// ====================================================================================================
 
 /*
  **********************************************************************
@@ -82,7 +94,7 @@ typedef struct {
 	unsigned char in[64];                              /* Input buffer */
 	unsigned char digest[16];     /* Actual digest after MD5Final call */
 
-	unsigned int digest32[4]; //CAL!
+	unsigned int digest32[4]; //CAL! Added
 } MD5_CTX;
 
 static void MD5_Transform (UINT4 *buf, UINT4 *in);

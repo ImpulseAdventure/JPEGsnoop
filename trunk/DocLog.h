@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,6 +16,13 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - Simple wrapper for document log routines
+//
+// ==========================================================================
+
+
 #pragma once
 
 class CDocLog
@@ -24,14 +31,14 @@ public:
 	CDocLog(CDocument* pDoc);
 	~CDocLog(void);
 
-	void	AddLine(CString str);
-	void	AddLineHdr(CString str);
-	void	AddLineHdrDesc(CString str);
-	void	AddLineWarn(CString str);
-	void	AddLineErr(CString str);
-	void	AddLineGood(CString str);
-	void	Enable();
-	void	Disable();
+	void		AddLine(CString str);
+	void		AddLineHdr(CString str);
+	void		AddLineHdrDesc(CString str);
+	void		AddLineWarn(CString str);
+	void		AddLineErr(CString str);
+	void		AddLineGood(CString str);
+	void		Enable();
+	void		Disable();
 
 private:
 	CDocument*	m_pDoc;

@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -43,33 +43,38 @@ void COffsetDlg::CalInitialDraw()
 {
 	CString valStr;
 
-	//CAL! of should I use m_nRadioBaseMode?
 	if (m_nBaseMode == 0) {
 		// Hex
-		valStr.Format("0x%08X",m_nOffsetVal);
+		valStr.Format(_T("0x%08X"),m_nOffsetVal);
 		m_sOffsetVal = valStr;
 	} else {
 		// Dec
-		valStr.Format("%u",m_nOffsetVal);
+		valStr.Format(_T("%u"),m_nOffsetVal);
 		m_sOffsetVal = valStr;
 	}
 
 	//UpdateData(false);
 }
 
-void COffsetDlg::SetOffset(unsigned pos)
+void COffsetDlg::SetOffset(unsigned nPos)
 {
 	CString valStr;
 
-	m_nOffsetVal = pos;
+	m_nOffsetVal = nPos;
 
 	// Assume that m_nOffsetVal came directly from caller,
 	// so we want to update our controls assuming that
 	// we are in Hex mode by default.
-	valStr.Format("0x%08X",m_nOffsetVal);
+	valStr.Format(_T("0x%08X"),m_nOffsetVal);
 	m_sOffsetVal = valStr;
 	CalInitialDraw();
 }
+
+unsigned COffsetDlg::GetOffset()
+{
+	return m_nOffsetVal;
+}
+
 
 void COffsetDlg::DoDataExchange(CDataExchange* pDX)
 {
@@ -106,8 +111,8 @@ void COffsetDlg::OnBnClickedBaseh()
 		// If it was dec before, convert it!
 		m_nBaseMode = 0;
 		UpdateData();
-		m_nOffsetVal = atoi(m_sOffsetVal);
-		valStr.Format("0x%08X",m_nOffsetVal);
+		m_nOffsetVal = _tstoi(m_sOffsetVal);
+		valStr.Format(_T("0x%08X"),m_nOffsetVal);
 		m_sOffsetVal = valStr;
 		UpdateData(false);
 	}
@@ -127,8 +132,8 @@ void COffsetDlg::OnBnClickedBased()
 		// If it was hex before, convert it!
 		m_nBaseMode = 1;
 		UpdateData();
-		m_nOffsetVal = strtol(m_sOffsetVal,NULL,16);
-		valStr.Format("%u",m_nOffsetVal);
+		m_nOffsetVal = _tcstol(m_sOffsetVal,NULL,16);
+		valStr.Format(_T("%u"),m_nOffsetVal);
 		m_sOffsetVal = valStr;
 		UpdateData(false);
 	}
@@ -136,22 +141,22 @@ void COffsetDlg::OnBnClickedBased()
 
 void COffsetDlg::OnBnClickedOk()
 {
-	bool valid = false;
-	unsigned ind_start = 0;
-	unsigned ind_max;
-	char ch;
-	unsigned val_new;
-	CString tmpStr;
+	bool		valid = false;
+	unsigned	ind_start = 0;
+	unsigned	ind_max;
+	TCHAR		ch;
+	unsigned	val_new;
+	CString		strTmp;
 
 	// Store the new local value (decimal) just before
 	// we return to the caller
 	UpdateData();
 	val_new = 0;
-	ind_max = (unsigned)strlen(m_sOffsetVal);
+	ind_max = (unsigned)_tcslen(m_sOffsetVal);
 
 	if (m_nBaseMode == 0) {
 		// Hex mode
-		if (!strncmp(m_sOffsetVal,"0x",2)) {
+		if (!_tcsnccmp(m_sOffsetVal,_T("0x"),2)) {
 			ind_start = 2;
 		}
 		valid = true;
@@ -159,12 +164,12 @@ void COffsetDlg::OnBnClickedOk()
 			ch = toupper(m_sOffsetVal.GetAt(i));
 			if (!isdigit(ch) && !(ch >= 'A' && ch <= 'F')) {
 				valid = false;
-				tmpStr.Format("ERROR: Invalid hex digit [%c]",ch);
-				AfxMessageBox(tmpStr);
+				strTmp.Format(_T("ERROR: Invalid hex digit [%c]"),ch);
+				AfxMessageBox(strTmp);
 			}
 		}
 		if (valid) {
-			val_new = strtol(m_sOffsetVal,NULL,16);
+			val_new = _tcstol(m_sOffsetVal,NULL,16);
 		}
 	} else {
 		// Decimal mode
@@ -174,16 +179,16 @@ void COffsetDlg::OnBnClickedOk()
 			ch = m_sOffsetVal.GetAt(i);
 			if (!isdigit(ch)) {
 				valid = false;
-				tmpStr.Format("ERROR: Invalid decimal digit [%c]",ch);
-				AfxMessageBox(tmpStr);
+				strTmp.Format(_T("ERROR: Invalid decimal digit [%c]"),ch);
+				AfxMessageBox(strTmp);
 			}
 		}
 
 		if (valid) {
-			if (atoi(m_sOffsetVal) >= 0) {
-				val_new = atoi(m_sOffsetVal);
+			if (_tstoi(m_sOffsetVal) >= 0) {
+				val_new = _tstoi(m_sOffsetVal);
 			} else {
-				AfxMessageBox("ERROR: Offset must be >= 0");
+				AfxMessageBox(_T("ERROR: Offset must be >= 0"));
 				valid = false;
 			}
 		}

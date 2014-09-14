@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -31,6 +31,9 @@ CBatchDlg::CBatchDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CBatchDlg::IDD, pParent)
 	, m_strDir(_T(""))
 	, m_bProcessSubdir(FALSE)
+	, m_bExtractAll(FALSE)
+	, m_strDirSrc(_T(""))
+	, m_strDirDst(_T(""))
 {
 }
 
@@ -41,13 +44,53 @@ CBatchDlg::~CBatchDlg()
 void CBatchDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
-	DDX_Text(pDX, IDC_EDIT_DIR, m_strDir);
 	DDX_Check(pDX, IDC_CHECK_SUBDIRS, m_bProcessSubdir);
+	DDX_Check(pDX, IDC_CHECK_EXT_ALL, m_bExtractAll);
+	DDX_Text(pDX, IDC_EDIT_DIR_SRC, m_strDirSrc);
+	DDX_Text(pDX, IDC_EDIT_DIR_DST, m_strDirDst);
 }
 
 
 BEGIN_MESSAGE_MAP(CBatchDlg, CDialog)
+	ON_BN_CLICKED(IDC_BTN_DIR_SRC_BROWSE, &CBatchDlg::OnBnClickedBtnDirSrcBrowse)
+	ON_BN_CLICKED(IDC_BTN_DIR_DST_BROWSE, &CBatchDlg::OnBnClickedBtnDirDstBrowse)
 END_MESSAGE_MAP()
 
 
 // CBatchDlg message handlers
+
+
+void CBatchDlg::OnBnClickedBtnDirSrcBrowse()
+{
+	CFolderDialog	myFolderDlg(NULL);
+	LPCITEMIDLIST	myItemIdList;
+	CString			strPath;
+	// Save fields first
+	UpdateData(true);
+	// Now request new path
+	myItemIdList = myFolderDlg.BrowseForFolder(_T("Select input image folder"),0,0,false);
+	strPath = myFolderDlg.GetPathName(myItemIdList);
+	if (!strPath.IsEmpty()) {
+		m_strDirSrc = strPath;
+		// Also default the output log directory to same as input
+		m_strDirDst = strPath;
+		UpdateData(false);
+	}
+}
+
+
+void CBatchDlg::OnBnClickedBtnDirDstBrowse()
+{
+	CFolderDialog	myFolderDlg(NULL);
+	LPCITEMIDLIST	myItemIdList;
+	CString			strPath;
+	// Save fields first
+	UpdateData(true);
+	// Now request new path
+	myItemIdList = myFolderDlg.BrowseForFolder(_T("Select output log folder"),0,0,false);
+	strPath = myFolderDlg.GetPathName(myItemIdList);
+	if (!strPath.IsEmpty()) {
+		m_strDirDst = strPath;
+		UpdateData(false);
+	}
+}

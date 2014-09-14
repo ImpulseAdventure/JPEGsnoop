@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,6 +16,13 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - Main application code entry-point
+//
+// ==========================================================================
+
+
 // JPEGsnoop.h : main header file for the JPEGsnoop application
 //
 #pragma once
@@ -30,6 +37,8 @@
 #include "JPEGsnoopDoc.h"
 #include "SnoopConfig.h"
 
+#include "afxwinappex.h"	//xxx
+
 // CJPEGsnoopApp:
 // See JPEGsnoop.cpp for the implementation of this class
 //
@@ -43,41 +52,59 @@ public:
 
 // Overrides
 public:
-	virtual BOOL InitInstance();
+	virtual BOOL	InitInstance();
 
 // Implementation
-	afx_msg void OnAppAbout();
+	afx_msg void	OnAppAbout();
+
 	DECLARE_MESSAGE_MAP()
 
 private:
-	void MyOnFileOpen();
-	void MyOnFileNew();
+	void			MyOnFileOpen();
+	void			MyOnFileNew();
 
-	void			CheckUpdates(bool force_now);
+	void			CheckUpdates(bool bForceNow);
 	bool			CheckUpdatesWww();
 	bool			CheckEula();
-	CString			RemoveTokenWithSeparators(CString& string, LPCTSTR charset);
-	CString			RemoveTokenFromCharset(CString& string, LPCTSTR charset);
+	CString			RemoveTokenWithSeparators(CString& strText, LPCTSTR szCharSet);
+	CString			RemoveTokenFromCharset(CString& strText, LPCTSTR szCharSet);
 	CJPEGsnoopDoc*	GetCurDoc();
 	void			DocReprocess();
 	void			DocImageDirty();
 	void			HandleAutoReprocess();
 
-	afx_msg void OnOptionsDhtexpand();
-	afx_msg void OnOptionsMakernotes();
-	afx_msg void OnOptionsScandump();
-	afx_msg void OnOptionsDecodescan();
-	afx_msg void OnOptionsHistoydump();
-	afx_msg void OnUpdateOptionsDhtexpand(CCmdUI *pCmdUI);
-	afx_msg void OnUpdateOptionsMakernotes(CCmdUI *pCmdUI);
-	afx_msg void OnUpdateOptionsScandump(CCmdUI *pCmdUI);
-	afx_msg void OnUpdateOptionsDecodescan(CCmdUI *pCmdUI);
-	afx_msg void OnUpdateOptionsHistoydump(CCmdUI *pCmdUI);
-	afx_msg void OnOptionsConfiguration();
-	afx_msg void OnOptionsCheckforupdates();
-	afx_msg void OnToolsManagelocaldb();
-	afx_msg void OnOptionsSignaturesearch();
-	afx_msg void OnUpdateOptionsSignaturesearch(CCmdUI *pCmdUI);
+	afx_msg void	OnOptionsDhtexpand();
+	afx_msg void	OnOptionsMakernotes();
+	afx_msg void	OnOptionsScandump();
+	afx_msg void	OnOptionsDecodescan();
+	afx_msg void	OnOptionsHistoydump();
+	afx_msg void	OnUpdateOptionsDhtexpand(CCmdUI *pCmdUI);
+	afx_msg void	OnUpdateOptionsMakernotes(CCmdUI *pCmdUI);
+	afx_msg void	OnUpdateOptionsScandump(CCmdUI *pCmdUI);
+	afx_msg void	OnUpdateOptionsDecodescan(CCmdUI *pCmdUI);
+	afx_msg void	OnUpdateOptionsHistoydump(CCmdUI *pCmdUI);
+	afx_msg void	OnOptionsConfiguration();
+	afx_msg void	OnOptionsCheckforupdates();
+	afx_msg void	OnToolsManagelocaldb();
+	afx_msg void	OnOptionsSignaturesearch();
+	afx_msg void	OnUpdateOptionsSignaturesearch(CCmdUI *pCmdUI);
+	afx_msg void	OnOptionsDecodeac();
+	afx_msg void	OnUpdateOptionsDecodeac(CCmdUI *pCmdUI);
+	afx_msg void	OnScansegmentDecodeimage();
+	afx_msg void	OnScansegmentFullidct();
+	afx_msg void	OnScansegmentHistogramy();
+	afx_msg void	OnScansegmentDump();
+	afx_msg void	OnUpdateScansegmentDecodeimage(CCmdUI *pCmdUI);
+	afx_msg void	OnUpdateScansegmentFullidct(CCmdUI *pCmdUI);
+	afx_msg void	OnUpdateScansegmentHistogramy(CCmdUI *pCmdUI);
+	afx_msg void	OnUpdateScansegmentDump(CCmdUI *pCmdUI);
+	afx_msg void	OnScansegmentNoidct();
+	afx_msg void	OnUpdateScansegmentNoidct(CCmdUI *pCmdUI);
+	afx_msg void	OnScansegmentHistogram();
+	afx_msg void	OnUpdateScansegmentHistogram(CCmdUI *pCmdUI);
+	afx_msg void	OnOptionsHideuknownexiftags();
+	afx_msg void	OnUpdateOptionsHideuknownexiftags(CCmdUI *pCmdUI);
+	afx_msg void	OnFileBatchprocess();
 
 public:
 	// Main config options
@@ -89,24 +116,6 @@ public:
 private:
 	bool			m_bFatal;		// Fatal error occurred (e.g. mem alloc)
 
-public:
-	afx_msg void OnOptionsDecodeac();
-	afx_msg void OnUpdateOptionsDecodeac(CCmdUI *pCmdUI);
-	afx_msg void OnScansegmentDecodeimage();
-	afx_msg void OnScansegmentFullidct();
-	afx_msg void OnScansegmentHistogramy();
-	afx_msg void OnScansegmentDump();
-	afx_msg void OnUpdateScansegmentDecodeimage(CCmdUI *pCmdUI);
-	afx_msg void OnUpdateScansegmentFullidct(CCmdUI *pCmdUI);
-	afx_msg void OnUpdateScansegmentHistogramy(CCmdUI *pCmdUI);
-	afx_msg void OnUpdateScansegmentDump(CCmdUI *pCmdUI);
-	afx_msg void OnScansegmentNoidct();
-	afx_msg void OnUpdateScansegmentNoidct(CCmdUI *pCmdUI);
-	afx_msg void OnScansegmentHistogram();
-	afx_msg void OnUpdateScansegmentHistogram(CCmdUI *pCmdUI);
-	afx_msg void OnOptionsHideuknownexiftags();
-	afx_msg void OnUpdateOptionsHideuknownexiftags(CCmdUI *pCmdUI);
-	afx_msg void OnFileBatchprocess();
 };
 
 extern CJPEGsnoopApp theApp;

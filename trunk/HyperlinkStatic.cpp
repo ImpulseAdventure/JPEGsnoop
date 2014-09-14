@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,8 +16,19 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-// The following code is from the HyperlinkStatic project on CodeGuru by Franz Wong:
-// http://www.codeguru.com/cpp/controls/staticctrl/article.php/c5801
+
+// ====================================================================================================
+// SOURCE CODE ACKNOWLEDGEMENT
+// ====================================================================================================
+// The following code is derived from the following project on CodeGuru:
+//
+//		Title:		HyperlinkStatic
+//		Author:		Franz Wong
+//		URL:		http://www.codeguru.com/cpp/controls/staticctrl/article.php/c5801
+//		Date:		Jan 14, 2003
+//
+// ====================================================================================================
+
 
 
 // HyperlinkStatic.cpp : implementation file
@@ -81,7 +92,7 @@ void CHyperlinkStatic::OnLButtonDown(UINT nFlags, CPoint point)
 	if ( _bGetCaptionSize == false )
 		GetCaptionSize();
 	if (InCaptionRange(point))
-		ShellExecute(0, "open", _strHyperlink, 0, 0, SW_SHOWNORMAL);
+		ShellExecute(0, _T("open"), _strHyperlink, 0, 0, SW_SHOWNORMAL);
 	CStatic::OnLButtonDown(nFlags, point);
 }
 
