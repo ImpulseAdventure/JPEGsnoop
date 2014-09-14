@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,13 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - Dialog box used to look up a file offset from a pixel coordinate
+//
+// ==========================================================================
+
 
 #pragma once
 
@@ -36,22 +43,22 @@ public:
 
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+	virtual void	DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 
 	DECLARE_MESSAGE_MAP()
 private:
-	afx_msg void OnBnClickedBtnCalc();
+	afx_msg void	OnBnClickedBtnCalc();
 
-	UINT	m_nPixX;
-	UINT	m_nPixY;
-	CString m_sOffset;
-	UINT	m_nTestVal;
+	UINT			m_nPixX;
+	UINT			m_nPixY;
+	CString			m_strOffset;
+	UINT			m_nTestVal;
 
-	UINT	m_nSizeX;
-	UINT	m_nSizeY;
+	UINT			m_nSizeX;
+	UINT			m_nSizeY;
 
-	CString m_sRngX;
-	CString m_sRngY;
+	CString			m_strRngX;
+	CString			m_strRngY;
 
-	CimgDecode*	m_pImgDec;
+	CimgDecode*		m_pImgDec;
 };

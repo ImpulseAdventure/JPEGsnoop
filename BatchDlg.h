@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,12 +16,21 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - Dialog box for Batch image processing
+//
+// ==========================================================================
+
+
 #pragma once
 
-//CAL! BUG: I have no idea why, but for some reason the IDD_BATCHDLG
-// constant is "undeclared identifier" below. So, as a temporary
-// workaround, I have explicitly referenced "Resource.h".
+
+// FIXME:
+// For some reason, the IDD_BATCHDLG constant reports C2065 "undeclared identifier"
+// So as a workaround, I am explicitly referencing "Resource.h" here
 #include "Resource.h"
+
 
 // CBatchDlg dialog
 
@@ -41,6 +50,12 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	CString m_strDir;
-	BOOL m_bProcessSubdir;
+	afx_msg void	OnBnClickedBtnDirSrcBrowse();
+	afx_msg void	OnBnClickedBtnDirDstBrowse();
+
+	CString			m_strDir;
+	BOOL			m_bProcessSubdir;
+	BOOL			m_bExtractAll;
+	CString			m_strDirSrc;
+	CString			m_strDirDst;
 };

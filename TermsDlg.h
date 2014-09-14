@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,14 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - Dialog box for the terms & conditions (EULA)
+// - This dialog must be agreed to before application can be used
+//
+// ==========================================================================
+
 
 #pragma once
 
@@ -33,12 +41,16 @@ public:
 	enum { IDD = IDD_TERMSDLG };
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+	virtual void	DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 
 	DECLARE_MESSAGE_MAP()
-public:
-	CString strEula;
-	BOOL bEulaOk;
-	BOOL bUpdateAuto;
+private:
 	afx_msg void OnBnClickedOk();
+
+private:
+	CString			strEula;
+public:
+	BOOL			bEulaOk;
+	BOOL			bUpdateAuto;
+
 };

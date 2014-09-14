@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,14 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - Dialog box for configuring a file decoder overlay
+// - Enables local overwrite of the file buffer during decode for testing purposes
+//
+// ==========================================================================
+
 
 #pragma once
 
@@ -37,29 +45,26 @@ public:
 	enum { IDD = IDD_OVERLAYBUFDLG };
 
 protected:
-	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+	virtual void	DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 
 	DECLARE_MESSAGE_MAP()
 private:
-	CString		m_sOffset;
-	CString		m_sValueCurHex;
-	CString		m_sValueCurBin;
-	CwindowBuf*	m_pWBuf;
-
-//	CString Dec2Bin(unsigned nVal,unsigned nLen);
-
+	afx_msg void	OnBnClickedOvrLoad();
+	afx_msg void	OnBnClickedOk();
+	afx_msg void	OnBnClickedApply();
+	virtual BOOL	OnInitDialog();
 
 public:
-	afx_msg void OnBnClickedOvrLoad();
+	unsigned		m_nOffset;
+	unsigned		m_nLen;
+	bool			m_bApply;		// When OnOK(), indicate apply and redo dialog
+	BOOL			m_bEn;
+	CString			m_sValueNewHex;
+private:
+	CwindowBuf*		m_pWBuf;
+	CString			m_sOffset;
+	CString			m_sValueCurHex;
+	CString			m_sValueCurBin;
+	CString			m_sValueNewBin;
 
-	unsigned	m_nOffset;
-	unsigned	m_nLen;
-	CString		m_sValueNewHex;
-	CString		m_sValueNewBin;
-	bool		m_bApply;		// When OnOK(), indicate apply and redo dialog
-	BOOL m_bEn;
-
-	afx_msg void OnBnClickedOk();
-	afx_msg void OnBnClickedApply();
-	virtual BOOL OnInitDialog();
 };

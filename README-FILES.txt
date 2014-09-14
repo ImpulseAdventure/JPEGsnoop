@@ -20,7 +20,7 @@ Contents:
 1) FILES
 -------------------
 
-JPEGsnoop is written in Microsoft Visual C++ 2003 using MFC.
+JPEGsnoop is written in Microsoft Visual Studio 2012 Pro (C++) using MFC.
 
 The project is a SDI (Single Document Interface) with Document-View architecture.
 
@@ -125,10 +125,6 @@ Compression Signature Database
 I am very grateful to the following authors whose classes or concepts I have reused in
 the development of JPEGsnoop.
 
-  CmdLine.cpp
-  - *** NOT USED CURRENTLY
-  - SmallerAnimals
-
   FolderDlg.cpp
   - MSDN Magazine
 
@@ -141,11 +137,6 @@ the development of JPEGsnoop.
 
   MD5.cpp
   - By RSA
-
-  OperationDlg.cpp
-  - *** NOT USED CURRENTLY
-  - http://www.codeproject.com/KB/threads/TemplatedLengthyOperation.aspx
-  - Mike O'Neill
 
   Registry.cpp
   - http://www.codeproject.com/KB/system/registryvars.aspx

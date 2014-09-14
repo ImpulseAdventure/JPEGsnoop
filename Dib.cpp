@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,18 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+// ====================================================================================================
+// SOURCE CODE ACKNOWLEDGEMENT
+// ====================================================================================================
+// The following code was loosely based on an example CDIB class that appears in the following book:
+//
+//		Title:		Visual C++ 6 Unleashed
+//		Authors:	Mickey Williams and David Bennett
+//		Publisher:	Sams (July 24, 2000)
+//		ISBN-10:	0672312417
+//		ISBN-13:	978-0672312410
+// ====================================================================================================
 
 #include "stdafx.h"
 #include "dib.h"
@@ -44,28 +56,17 @@ bool CDIB::CreateDIB(DWORD dwWidth,DWORD dwHeight,int nBits)
     const DWORD dwcBihSize = sizeof(BITMAPINFOHEADER);
 
     // Calculate the memory required for the DIB
-	/* //CAL!
-	//CAL! The following cannot be right!! Maybe for smaller
-	// bit widths, but definitely not for 32-bit, as we'll
-	// get 32-bit wrap!
-    DWORD dwSize = dwcBihSize +
-                    (2>>nBits) * sizeof(RGBQUAD) +
-                    ((nBits * dwWidth) * dwHeight);
-	*/
 
-	//CAL! -- start
 	// Note that we don't actually use the color table (so 1*QUAD is not actually used)
 	// Extra +4 is just in case we're not aligned to word boundary
 	DWORD dwSize = dwcBihSize +
                     1 * sizeof(RGBQUAD) +
                     ( (dwWidth * dwHeight) * sizeof(RGBQUAD) ) +
 					4;
-	//CAL! -- end
 	
 
     m_pDIB = (LPBITMAPINFO)new BYTE[dwSize];
     if (!m_pDIB) return FALSE;
-
 
     m_pDIB->bmiHeader.biSize = dwcBihSize;
     m_pDIB->bmiHeader.biWidth = dwWidth;
@@ -88,11 +89,6 @@ void CDIB::InitializeColors()
     if (!m_pDIB) return;
     // This just initializes all colors to black
 
-	//CAL! why does the following add ~ 1760 (0x6E0) instead of 40???
-    //LPRGBQUAD lpColors =
-    //    (LPRGBQUAD)(m_pDIB+m_pDIB->bmiHeader.biSize);
-
-	//CAL!
 	LPRGBQUAD lpColors = m_pDIB->bmiColors;
 
     for(int i=0;i<GetDIBCols();i++)
@@ -107,9 +103,7 @@ void CDIB::InitializeColors()
 int CDIB::GetDIBCols() const
 {
     if (!m_pDIB) return 0;
-    //CAL! return (2>>m_pDIB->bmiHeader.biBitCount);
 
-	//CAL!
 	// According to the MSDN, the biColors (palette) are not defined
 	// for 16, 24 and 32 bit DIBs.
 	//   http://msdn.microsoft.com/library/default.asp?url=/library/en-us/gdi/bitmaps_0zn6.asp
@@ -123,14 +117,7 @@ int CDIB::GetDIBCols() const
 void* CDIB::GetDIBBitArray() const
 {
     if (!m_pDIB) return FALSE;
-	/* //CAL!
-	// For some reason I don't trust the pointer arithmetic
-	// being done here. Doesn't seem to treat as adding bytes.
-    return (m_pDIB + m_pDIB->bmiHeader.biSize +
-        GetDIBCols() * sizeof(RGBQUAD));
-	*/
 
-	//CAL! Extended form to ensure correct addition
 	unsigned char* ptr;
 	ptr = (unsigned char*)m_pDIB;
 	ptr += m_pDIB->bmiHeader.biSize;
@@ -149,12 +136,6 @@ bool CDIB::CreateDIBFromBitmap(CDC* pDC)
     if (!CreateDIB(bimapInfo.bmWidth,bimapInfo.bmHeight,
         bimapInfo.bmBitsPixel)) return FALSE;
 
-	/* //CAL!
-	//CAL! Don't trust this, so instead going to use actual pointer
-    LPRGBQUAD lpColors =
-        (LPRGBQUAD)(m_pDIB+m_pDIB->bmiHeader.biSize);
-	*/
-	//CAL! instead do the following:
 	LPRGBQUAD lpColors = m_pDIB->bmiColors;
 
 
@@ -171,11 +152,10 @@ bool CDIB::CreateDIBFromBitmap(CDC* pDC)
 bool CDIB::CopyDIB(CDC* pDestDC,int x,int y,float scale)
 {
     if (!m_pDIB || !pDestDC) return FALSE;
-//    int nOldMapMode = pDestDC->SetMapMode(MM_LOMETRIC);
     int nOldMapMode = pDestDC->SetMapMode(MM_TEXT);
 
 	// NOTE: The following line was added to make the down-sampling
-	// (zoom < 100%) look much better. Otherwise, it looked horrible!
+	// (zoom < 100%) look much better. Otherwise, the display doesn't look nice.
 	SetStretchBltMode(pDestDC->GetSafeHdc(),COLORONCOLOR);
 
     bool bOK = StretchDIBits(pDestDC->GetSafeHdc(),
@@ -193,14 +173,12 @@ bool CDIB::CopyDIB(CDC* pDestDC,int x,int y,float scale)
 
 bool CDIB::CopyDibDblBuf(CDC* pDestDC, int x, int y,CRect* rectClient, float scale)
 {
-HDC          hdcMem;
-HBITMAP      hbmMem;
-HANDLE       hOld;
+	HDC          hdcMem;
+	HBITMAP      hbmMem;
+	HANDLE       hOld;
 
-//HDC          hdc;
-
-int		win_width = rectClient->Width();
-int		win_height = rectClient->Height();
+	int		win_width = rectClient->Width();
+	int		win_height = rectClient->Height();
 
 
     // Create an off-screen DC for double-buffering
@@ -210,12 +188,6 @@ int		win_height = rectClient->Height();
 
     // Draw into hdcMem
 
-    //int nOldMapMode = hdcMem->SetMapMode(MM_TEXT);
-
-	// NOTE: The following line was added to make the down-sampling
-	// (zoom < 100%) look much better. Otherwise, it looked horrible!
-	//SetStretchBltMode(hdcMem->GetSafeHdc(),COLORONCOLOR);
-
     bool bOK = StretchDIBits(hdcMem, //hdcMem->GetSafeHdc(),
         x,y,
         (unsigned)(m_pDIB->bmiHeader.biWidth * scale),    // Dest Width
@@ -224,8 +196,6 @@ int		win_height = rectClient->Height();
         m_pDIB->bmiHeader.biWidth,         // Source Width
         m_pDIB->bmiHeader.biHeight,        // Source Height
         GetDIBBitArray(),m_pDIB,DIB_RGB_COLORS,SRCCOPY) > 0;
-
-    //hdcMem->SetMapMode(nOldMapMode);
 
     // Transfer the off-screen DC to the screen
     BitBlt(pDestDC->GetSafeHdc(), 0, 0, win_width, win_height, hdcMem, 0, 0, SRCCOPY);
@@ -256,14 +226,9 @@ bool CDIB::CopyDibPart(CDC* pDestDC,CRect rectImg,CRect* rectClient, float scale
 	CRect	rectInter;
 
 	// Determine boundaries of region to copy
-//	rectSrc = CRect(nDstX,nDstY,
-//		nDstX + (m_pDIB->bmiHeader.biWidth * scale),
-//		nDstY + (m_pDIB->bmiHeader.biHeight * scale) );
-
 	rectInter.IntersectRect(rectClient,rectImg);
 
 	// Now determine what original source rect this corresponds to
-	//...
 	rectSrc = rectInter;
 	rectSrc.OffsetRect(-rectImg.left,-rectImg.top);
 	nSrcX = rectSrc.left;
@@ -276,40 +241,18 @@ bool CDIB::CopyDibPart(CDC* pDestDC,CRect rectImg,CRect* rectClient, float scale
 	nDstH = rectInter.Height();
 
     int nOldMapMode = pDestDC->SetMapMode(MM_TEXT);
-/*
-	bool bOK = StretchDIBits(pDestDC->GetSafeHdc(),
-        rectSrc.left,rectSrc.top,	// Dest X,Y
-        rectSrc.Width(),    // Dest Width
-        rectSrc.Height(),  // Dest Height
-        0,0,	// Source X,Y
-        m_pDIB->bmiHeader.biWidth,         // Source Width
-        m_pDIB->bmiHeader.biHeight,        // Source Height
-        GetDIBBitArray(),m_pDIB,DIB_RGB_COLORS,SRCCOPY) > 0;
-*/
-	/*
-   bool bOK = StretchDIBits(pDestDC->GetSafeHdc(),
-        nDstX,nDstY,	// Dest X,Y
-        nDstWidth,    // Dest Width
-        nDstHeight,  // Dest Height
-        nSrcX,nSrcY,	// Source X,Y
-        nSrcWidth,         // Source Width
-        nSrcHeight,        // Source Height
-        GetDIBBitArray(),m_pDIB,DIB_RGB_COLORS,SRCCOPY) > 0;
-		*/
 
-	// StretchDIBits() is *really* messed up!
-	// See workaround at:
+	// NOTE: Original code would have used StretchDIBits() here
+	// but it doesn't appear to work correctly. See workaround at:
 	//   http://wiki.allegro.cc/StretchDIBits
-	//
 
-
-	nSrcX = rectInter.left; //0;
-	nSrcY = rectInter.top; //0;
+	nSrcX = rectInter.left;
+	nSrcY = rectInter.top;
 	nSrcW = rectClient->Width();
 	nSrcH = rectClient->Height();
 
-	nDstX = rectInter.left; //rectClient->left;
-	nDstY = rectInter.top; //rectClient->top;
+	nDstX = rectInter.left;
+	nDstY = rectInter.top;
 	nDstW = rectClient->Width();
 	nDstH = rectClient->Height();
 
@@ -352,10 +295,11 @@ bool CDIB::CopyDibPart(CDC* pDestDC,CRect rectImg,CRect* rectClient, float scale
 
 
 // Attempt to create a double-buffer so that we can do our
-// own resize function as the StretchDIBits() seems horrible
+// own resize function as the StretchDIBits() looks terrible
 // for downsampling!
-// *** Following is currently unused as it leads to strange
-//     redraw issues, probably due to the client rect boundaries!
+//
+// NOTE: the following is currently unused as it led to strange
+// redraw issues, likely due to client rect boundaries
 bool CDIB::CopyDIBsmall(CDC* pDestDC,int x,int y,float scale)
 {
     if (!m_pDIB || !pDestDC) return FALSE;
@@ -392,61 +336,6 @@ bool CDIB::CopyDIBsmall(CDC* pDestDC,int x,int y,float scale)
     dcm.SelectObject(pBitmapOld);
     // drop other objects from the dc context memory - if there are.
 
-
-
-/*
-
-	// -------------------
-
-	// Create dummy DC
-	CDC* pTempDC = new CDC();
-	ASSERT(pTempDC);
-	pTempDC->CreateCompatibleDC(pDestDC);
-
-    int nOldMapMode = pTempDC->SetMapMode(MM_TEXT);
-    bool bOK = StretchDIBits(pTempDC->GetSafeHdc(),
-        x,y,
-        (unsigned)(m_pDIB->bmiHeader.biWidth * scale),    // Dest Width
-        (unsigned)(m_pDIB->bmiHeader.biHeight * scale),  // Dest Height
-        0,0,
-        m_pDIB->bmiHeader.biWidth,         // Source Width
-        m_pDIB->bmiHeader.biHeight,        // Source Height
-        GetDIBBitArray(),m_pDIB,DIB_RGB_COLORS,SRCCOPY) > 0;
-
-    pTempDC->SetMapMode(nOldMapMode);
-
-	// Now copy over
-    nOldMapMode = pDestDC->SetMapMode(MM_TEXT);
-	pDestDC->BitBlt(0, 0, 1200,600, pTempDC, 0, 0, SRCCOPY);
-    pDestDC->SetMapMode(nOldMapMode);
-
-*/
-
     return bOK;
 }
 
-
-/*
-EXAMPLE:
-#include "dib.h"
-CDIB g_DIB;
-
-void CBitmapdemoView::OnInitialUpdate()
-{
-    CView::OnInitialUpdate();
-    CClientDC dc(this);
-    g_DIB.m_bmBitmap.LoadBitmap(IDB_TSTBITMAP);
-    g_DIB.CreateDIBFromBitmap(&dc);
-}
-
-void CBitmapdemoView::OnPrint(CDC* pDC, CPrintInfo* pInfo)
- {
-   g_DIB.CopyDIB(pDC,50,-50);
- }
-
-void CBitmapdemoView::OnDraw(CDC* pDC)
- {
-   g_DIB.CopyDIB(pDC,50,-50);
- }
-
-*/

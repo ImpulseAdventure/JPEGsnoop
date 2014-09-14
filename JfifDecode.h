@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,17 +16,26 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#pragma once
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - This module decodes the JPEG JFIF marker segments
+// - Decoding the scan segment (SOS) is not handled here as that is 
+//   done in the CimgDecode class.
+//
+// ==========================================================================
 
-#define MAX_COMPS 150
+#pragma once
 
 #include "DocLog.h"
 #include "ImgDecode.h"
+#include "PsDecode.h"
 #include "WindowBuf.h"
 #include "snoop.h"
 #include "SnoopConfig.h"
 
 #include "DbSigs.h"
+
+#define MAX_IFD_COMPS			150	// Maximum number of IFD entry components to display
 
 #define JFIF_SOI  0xD8
 #define JFIF_APP0 0xE0
@@ -78,259 +87,297 @@
 #define JFIF_DHT_FAKE		0x999999C4
 #define JFIF_DHT_FAKE_SZ	0x1A4
 
+#define APP14_COLXFM_UNSET		-1
+#define APP14_COLXFM_UNK_RGB	0
+#define APP14_COLXFM_YCC		1
+#define APP14_COLXFM_YCCK		2
+
+#define MAX_IDENTIFIER			256		// Max length for identifier strings (include terminator)
 
 struct CStr2 {
-	CString	tag;
-	CString	val;
-	bool	bUnknown;	// Tag is not known
+	CString		strTag;
+	CString		strVal;
+	bool		bUnknown;	// Tag is not known
 };
 
 
 struct MarkerNameTable {
-	unsigned	code;
-	char*		str;
+	unsigned	nCode;
+	LPTSTR		strName;
 };
+
 
 class CjfifDecode
 {
-public:
+	// Constructor & Initialization
+	public:
 	CjfifDecode(CDocLog* pLog,CwindowBuf* pWBuf,CimgDecode* pImgDec);
 	~CjfifDecode();
 
-	void		SetStatusBar(CStatusBar* pStatBar);
+private:
 	void		Reset();
-	void		ImgSrcChanged();
 
-	void		process(CFile* inFile);
-	void		PrepareSignature();
-	void		PrepareSignatureSingle(bool bRotate);
-	void		PrepareSignatureThumb();
-	void		PrepareSignatureThumbSingle(bool bRotate);
-	bool		CompareSignature(bool bQuiet);
-	void		PrepareSendSubmit(CString strQual,unsigned nUserSource,CString strUserSoftware,CString strUserNotes);
-	void		SetDQTQuick(unsigned dqt0[64],unsigned dqt1[64]);
+	// --------------------------------------
+	// Class Methods
+	// --------------------------------------
 
-//	void		ExportRangeSet(unsigned nStart, unsigned nEnd);
-	bool		ExportJpegPrepare(CString strFileIn,bool bForceSoi,bool bForceEoi,bool bIgnoreEoi);
-	bool		ExportJpegDo(CString strFileIn, CString strFileOut, unsigned long nFileLen,
-					bool bOverlayEn, bool bDhtAviInsert,bool bForceSoi,bool bForceEoi);
-	bool		ExportJpegDoRange(CString strFileIn, CString strFileOut, 
-					unsigned long nStart, unsigned long nEnd);
-
-private:
-	void		HuffMaskLookupGen();
-	void		DecodeDHT(bool bInject);
-	unsigned	DecodeApp13Ps();
-	unsigned	DecodeApp2Flashpix();
-	unsigned	DecodeApp2IccProfile(unsigned nLen);
-	unsigned	DecodeIccHeader(unsigned nPos);
-	bool		DecodeAvi();
-
-	void		DecodeErrCheck(bool bRet);
-	unsigned	DecodeMarker();
-	unsigned	DecodeExifIfd(CString ifd_str,unsigned pos_exif_start,unsigned start_ifd_ptr);
-//	unsigned	DecodeMakerIfd(unsigned ifd_tag,unsigned ptr,unsigned len);
-	bool		DecodeMakerSubType();
-	CString		LookupExifTag(CString sect, unsigned tag, bool &bUnknown);
-	CStr2		LookupMakerCanonTag(unsigned mainTag,unsigned subTag,unsigned val);
-
-	void		DecodeEmbeddedThumb();
-
-	bool		GetMarkerName(unsigned code,CString &markerStr);
-	void		ClearDQT();
-
-	void		OutputSpecial();
-	void		SendSubmit(CString make, CString model, CString qual, 
-							CString dqt0, CString dqt1, CString dqt2, CString dqt3,
-							CString css,
-								CString sig, CString sig_rot, CString sig_thumb, 
-								CString sig_thumb_rot, float qfact0, float qfact1, unsigned img_w, unsigned img_h, 
-								CString software, CString comment, unsigned maker,
-								unsigned user_source, CString user_software, CString extra,
-								CString user_notes, unsigned exif_landscape,
-								unsigned thumb_x,unsigned thumb_y);
-
-	void		AddHeader(unsigned code);
-	void		UnByteSwap4(unsigned nVal,unsigned &nByte0,unsigned &nByte1,unsigned &nByte2,unsigned &nByte3);
-	unsigned	ByteSwap4(unsigned b0,unsigned b1, unsigned b2, unsigned b3);
-	unsigned	ByteSwap2(unsigned b0,unsigned b1);
-	unsigned	ReadSwap2(unsigned pos);
-	unsigned	ReadSwap4(unsigned pos);
-	unsigned	ReadBe4(unsigned pos);
-	CString		Uint2Chars(unsigned nVal);
-	CString		Uint2DotByte(unsigned nVal);
-	bool		TestBit(unsigned nVal,unsigned nBit);
-	CString		DecodeIccDateTime(unsigned nVal[3]);
-
-
-	void		DbgAddLine(const char* strLine);
-
-	BYTE		Buf(unsigned long offset,bool bClean);
-
-	void		SetStatusText(CString str);
-
-	bool		DecodeValRational(unsigned pos,float &val);
-	CString		DecodeValFraction(unsigned pos);
-	bool		DecodeValGPS(unsigned pos,CString &strCoord);
-	bool		PrintValGPS(unsigned nCount, float fCoord1, float fCoord2, float fCoord3,CString &strCoord);
-	CString		PrintAsHexUC(unsigned char* naBytes,unsigned nCount);
-	CString		PrintAsHex(unsigned* naBytes,unsigned nCount);
-
+	// Public accesssor & mutator functions
 public:
-
-	// The following is made public b/c its reused in EXE DQT search
-	static const unsigned	m_sZigZag[];
-	static const unsigned	m_sUnZigZag[];
-	static const unsigned   m_sStdQuantLum[];
-	static const unsigned	m_sStdQuantChr[];
+	void			GetAviMode(bool &bIsAvi,bool &bIsMjpeg);
+	void			SetAviMode(bool bIsAvi,bool bIsMjpeg);
+	void			ImgSrcChanged();
+	unsigned long	GetPosEmbedStart();
+	unsigned long	GetPosEmbedEnd();
+	void			GetDecodeSummary(CString &strHash,CString &strHashRot,CString &strImgExifMake,CString &strImgExifModel,
+										CString &strImgQualExif,CString &strSoftware,teDbAdd &eDbReqSuggest);
+	unsigned		GetDqtZigZagIndex(unsigned nInd,bool bZigZag);
+	unsigned		GetDqtQuantStd(unsigned nInd);
 
 private:
-	CDocLog*		m_pLog;
-	CimgDecode*		m_pImgDec;
-	CwindowBuf*		m_pWBuf;
+
+
+	// Export Operations
+public:
+//	void			ExportRangeSet(unsigned nStart, unsigned nEnd);
+	bool			ExportJpegPrepare(CString strFileIn,bool bForceSoi,bool bForceEoi,bool bIgnoreEoi);
+	bool			ExportJpegDo(CString strFileIn, CString strFileOut, unsigned long nFileLen,
+						bool bOverlayEn, bool bDhtAviInsert,bool bForceSoi,bool bForceEoi);
+private:
+	bool			ExportJpegDoRange(CString strFileIn, CString strFileOut, 
+						unsigned long nStart, unsigned long nEnd);
+
+
+	// General parsing
+public:
+	void			ProcessFile(CFile* inFile);
+private:
+	unsigned		DecodeMarker();
+	void			DecodeEmbeddedThumb();
+	bool			DecodeAvi();
+
+	// Marker specific parsing
+	bool			GetMarkerName(unsigned nCode,CString &markerStr);
+	unsigned		DecodeExifIfd(CString strIfd,unsigned nPosExifStart,unsigned nStartIfdPtr);
+//	unsigned		DecodeMakerIfd(unsigned ifd_tag,unsigned ptr,unsigned len);
+	bool			DecodeMakerSubType();
+	void			DecodeDHT(bool bInject);
+	unsigned		DecodeApp13Ps();
+	unsigned		DecodeApp2Flashpix();
+	unsigned		DecodeApp2IccProfile(unsigned nLen);
+	unsigned		DecodeIccHeader(unsigned nPos);
+
+	// DQT / DHT
+	void			ClearDQT();
+	void			SetDQTQuick(unsigned anDqt0[64],unsigned anDqt1[64]);
+	void			GenLookupHuffMask();
+
+	// Field parsing
+	bool			DecodeValRational(unsigned nPos,float &nVal);
+	CString			DecodeValFraction(unsigned nPos);
+	bool			DecodeValGPS(unsigned nPos,CString &strCoord);
+	bool			PrintValGPS(unsigned nCount, float fCoord1, float fCoord2, float fCoord3,CString &strCoord);
+	CString			DecodeIccDateTime(unsigned anVal[3]);
+	CString			LookupExifTag(CString strSect, unsigned nTag, bool &bUnknown);
+	CStr2			LookupMakerCanonTag(unsigned nMainTag,unsigned nSubTag,unsigned nVal);
+
+
+	// Signature database
+public:
+	void			PrepareSendSubmit(CString strQual,teSource eUserSource,CString strUserSoftware,CString strUserNotes);
+private:
+	void			PrepareSignature();
+	void			PrepareSignatureSingle(bool bRotate);
+	void			PrepareSignatureThumb();
+	void			PrepareSignatureThumbSingle(bool bRotate);
+	bool			CompareSignature(bool bQuiet);
+	void			SendSubmit(CString strExifMake, CString strExifModel, CString strQual, 
+							CString strDqt0, CString strDqt1, CString strDqt2, CString strDqt3,
+							CString strCss,
+							CString strSig, CString strSigRot, CString strSigThumb, 
+							CString strSigThumbRot, float fQFact0, float fQFact1, unsigned nImgW, unsigned nImgH, 
+							CString strExifSoftware, CString strComment, teMaker eMaker,
+							teSource eUserSource, CString strUserSoftware, CString strExtra,
+							CString strUserNotes, unsigned nExifLandscape,
+							unsigned nThumbX,unsigned nThumbY);
+	void			OutputSpecial();
+
+
+	// Display routines
+	void			DbgAddLine(LPCTSTR strLine);
+	void			AddHeader(unsigned nCode);
+	CString			PrintAsHexUC(unsigned char* anBytes,unsigned nCount);
+	CString			PrintAsHex8(unsigned* anBytes,unsigned nCount);
+	CString			PrintAsHex32(unsigned* anWords,unsigned nCount);
+
+	// Buffer access
+	BYTE			Buf(unsigned long nOffset,bool bClean);
+	void			UnByteSwap4(unsigned nVal,unsigned &nByte0,unsigned &nByte1,unsigned &nByte2,unsigned &nByte3);
+	unsigned		ByteSwap4(unsigned nByte0,unsigned nByte1, unsigned nByte2, unsigned nByte3);
+	unsigned		ByteSwap2(unsigned nByte0,unsigned nByte1);
+	unsigned		ReadSwap2(unsigned nPos);
+	unsigned		ReadSwap4(unsigned nPos);
+	unsigned		ReadBe4(unsigned nPos);
+
+	// UI elements
+public:
+	void			SetStatusBar(CStatusBar* pStatBar);
+private:
+	void			SetStatusText(CString strText);
+	void			DecodeErrCheck(bool bRet);
+
+
+	// --------------------------------------
+	// Class variables
+	// --------------------------------------
+
+private:
+	// Configuration
 	CSnoopConfig*	m_pAppConfig;
+	bool			m_bVerbose;
+	bool			m_bOutputDB;
+	bool			m_bBufFakeDHT;		// Flag to redirect DHT read to AVI DHT over Buffer content
+
+	// General classes required for decoding
+	CwindowBuf*		m_pWBuf;
+	CimgDecode*		m_pImgDec;
+	CPsDecode*		m_pPsDec;
+
+	// UI elements & log
+	CDocLog*		m_pLog;
 	CStatusBar*		m_pStatBar;		// Link to status bar
 
-public: // FIXME public for BATCH_DO_DBSUBMIT
-	CString			m_strFileName;
-private:
+	// Constants
+	static const BYTE				m_abMJPGDHTSeg[JFIF_DHT_FAKE_SZ];	// Motion JPEG DHT
+	static const MarkerNameTable	m_pMarkerNames[];
 
 
 
-	bool		bVerbose;
-	bool		bOutputWeb;
-	bool		bOutputExcel;
-	bool		bOutputDB;
+	// Status
+	bool			m_bImgOK;					// Img decode encounter SOF
+	bool			m_bAvi;						// Is it an AVI file?
+	bool			m_bAviMjpeg;				// Is it a MotionJPEG AVI file?
+	bool			m_bPsd;						// Is it a Photoshop file?
 
+	bool			m_pImgSrcDirty;				// Do we need to recalculate the scan decode?
+
+
+	// File position records
 	unsigned long	m_nPos;				// Current file/buffer position
 	unsigned long	m_nPosEoi;			// Position of EOI (0xFFD9) marker
-public: // for ExportJpeg
+	unsigned		m_nPosSos;
 	unsigned long	m_nPosEmbedStart;	// Embedded/offset start
 	unsigned long	m_nPosEmbedEnd;		// Embedded/offset end
-public:
 	unsigned long	m_nPosFileEnd;		// End of file position
-private:
-	bool			m_bBufFakeDHT;		// Temporary Buf redirect mode to read in AVI DHT
-
-	static const unsigned	m_sQuantRotate[];
 
 
+	// Decoder state
+	TCHAR			m_acApp0Identifier[MAX_IDENTIFIER];	// APP0 type: JFIF, AVI1, etc.
 
-	bool		m_bImgOK;					// Img decode encounter SOF
-	bool		m_bAvi;						// Is it an AVI file?
-public: // for ExportJpeg
-	bool		m_bAviMjpeg;				// Is it a MotionJPEG AVI file?
-private:
+	float			m_afStdQuantLumCompare[64];
+	float			m_afStdQuantChrCompare[64];
 
-	bool		m_pImgSrcDirty;				// Do we need to recalculate the scan decode?
+	unsigned		m_anMaskLookup[32];
 
-	char		m_strApp0Identifier[32];	// APP0 type: JFIF, AVI1, etc.
+	unsigned		m_nImgVersionMajor;
+	unsigned		m_nImgVersionMinor;
+	unsigned		m_nImgUnits;
+	unsigned		m_nImgDensityX;
+	unsigned		m_nImgDensityY;
+	unsigned		m_nImgThumbSizeX;
+	unsigned		m_nImgThumbSizeY;
 
-	float		m_afStdQuantLumCompare[64];
-	float		m_afStdQuantChrCompare[64];
+	bool			m_bImgProgressive;		// Progressive scan?
 
-	unsigned	m_anMaskLookup[32];
+	CString			m_strComment;			// Comment string
 
-	unsigned	m_nImgVersionMajor,m_nImgVersionMinor;
-	unsigned	m_nImgUnits;
-	unsigned	m_nImgDensityX,m_nImgDensityY;
-	unsigned	m_nImgThumbSizeX,m_nImgThumbSizeY;
+	unsigned		m_nSosNumCompScan_Ns;	
+	unsigned		m_nSosSpectralStart_Ss;
+	unsigned		m_nSosSpectralEnd_Se;
+	unsigned		m_nSosSuccApprox_A;
 
-	bool		m_bImgProgressive;		// Progressive scan?
+	bool			m_nImgRstEn;		// DRI seen
+	unsigned		m_nImgRstInterval;
 
-	CString		m_strComment;			// Comment string
+	unsigned		m_anImgDqtTbl[MAX_DQT_DEST_ID][MAX_DQT_COEFF];
+	double			m_adImgDqtQual[MAX_DQT_DEST_ID];
+	bool			m_abImgDqtSet[MAX_DQT_DEST_ID];		// Has this table been configured?
+	unsigned		m_anDhtNumCodesLen_Li[17];
 
-	unsigned	m_nImgSosCompNum;
-	unsigned	m_nImgSpectralStart,m_nImgSpectralEnd;
-	unsigned	m_nImgSuccApprox;
+	unsigned		m_nSofPrecision_P;
+	unsigned		m_nSofNumLines_Y;
+	unsigned		m_nSofSampsPerLine_X;
+	unsigned		m_nSofNumComps_Nf;					// Number of components in frame (might not equal m_nSosNumCompScan_Ns)
 
-	bool		m_nImgRstEn;		// DRI seen
-	unsigned	m_nImgRstInterval;
+	// Define Quantization table details for the indexed Component Identifier
+	// - Component identifier (SOF:Ci) has a range of 0..255
+	unsigned		m_anSofQuantCompId[MAX_SOF_COMP_NF];		// SOF:Ci, index is i-1
+	unsigned		m_anSofQuantTblSel_Tqi[MAX_SOF_COMP_NF];
+	unsigned		m_anSofHorzSampFact_Hi[MAX_SOF_COMP_NF];
+	unsigned		m_anSofVertSampFact_Vi[MAX_SOF_COMP_NF];
+	unsigned		m_nSofHorzSampFactMax_Hmax;
+	unsigned		m_nSofVertSampFactMax_Vmax;
 
-	unsigned	m_anImgDqt[4][64];
-	double		m_adImgDqtQual[4];
-	bool		m_bImgDqtSet[4];		// Has this table been configured?
-	unsigned	m_anImgDhtCodesLen[17];
+	// FIXME: Move to CPsDecode
+	unsigned		m_nImgQualPhotoshopSa;
+	unsigned		m_nImgQualPhotoshopSfw;
 
-	unsigned	m_nImgPrecision;
-	unsigned	m_nImgNumLines,m_nImgSampsPerLine;
-	unsigned	m_nImgSofCompNum;	// From SOF, probably same as m_nImgSosCompNum from SOS. No, differs for progscan
+	int				m_nApp14ColTransform;	// Color transform from JFIF APP14 Adobe marker (-1 if not set)
 
-	unsigned	m_anImgQuantCompId[4];
-	unsigned	m_anImgQuantTblSel[4];
-	unsigned	m_nImgSampFactorXMax,m_nImgSampFactorYMax;
-	unsigned	m_anImgSampFactorX[4];
-	unsigned	m_anImgSampFactorY[4];
-
-	unsigned	m_nImgQualPhotoshopSa;
-	unsigned	m_nImgQualPhotoshopSfw;
-
-
-	unsigned	m_nImgLandscape;		// TRUE=Landscape, FALSE=portrait
-	CString		m_strImgQuantCss;  // Chroma subsampling (e.g. "2x1")
+	teLandscape		m_eImgLandscape;		// Landscape vs Portrait
+	CString			m_strImgQuantCss;		// Chroma subsampling (e.g. "2x1")
 	
-	unsigned	m_nImgExifEndian;	// 0=Intel 1=Motorola
-	unsigned	m_nImgExifSubIfdPtr;
-	unsigned	m_nImgExifGpsIfdPtr;
-	unsigned	m_nImgExifInteropIfdPtr;
-	unsigned	m_nImgExifMakerPtr;
+	unsigned		m_nImgExifEndian;		// 0=Intel 1=Motorola
+	unsigned		m_nImgExifSubIfdPtr;
+	unsigned		m_nImgExifGpsIfdPtr;
+	unsigned		m_nImgExifInteropIfdPtr;
+	unsigned		m_nImgExifMakerPtr;
 
-	bool		m_bImgExifMakeSupported; // Mark makes that we support decode for
-	unsigned	m_nImgExifMakeSubtype; // Used for Nikon (e.g. type3)
+	bool			m_bImgExifMakeSupported;	// Mark makes that we support decode for
+	unsigned		m_nImgExifMakeSubtype;		// Used for Nikon (e.g. type3)
 
-	CString		m_strImgExtras;			// Extra strings used for DB submission
-
-	static const BYTE m_abMJPGDHTSeg[JFIF_DHT_FAKE_SZ];
-
-private:
-
-	static const MarkerNameTable m_pMarkerNames[];
+	CString			m_strImgExtras;				// Extra strings used for DB submission
 
 	// Embedded EXIF Thumbnail
-	unsigned	m_nImgExifThumbComp;
-	unsigned	m_nImgExifThumbOffset;
-	unsigned	m_nImgExifThumbLen;
-	unsigned	m_anImgThumbDqt[4][64];
-	bool		m_bImgDqtThumbSet[4];
-	CString		m_strHashThumb;
-	CString		m_strHashThumbRot;
-	unsigned	m_nImgThumbNumLines;
-	unsigned	m_nImgThumbSampsPerLine;
+	unsigned		m_nImgExifThumbComp;
+	unsigned		m_nImgExifThumbOffset;
+	unsigned		m_nImgExifThumbLen;
+	unsigned		m_anImgThumbDqt[4][64];
+	bool			m_abImgDqtThumbSet[4];
+	CString			m_strHashThumb;
+	CString			m_strHashThumbRot;
+	unsigned		m_nImgThumbNumLines;
+	unsigned		m_nImgThumbSampsPerLine;
 
-	bool		m_bSigExactInDB;		// Is current entry already in local DB?
+	// Signature handling
+	bool			m_bSigExactInDB;		// Is current entry already in local DB?
 
 	// State of decoder -- have we seen each marker?
-	bool		m_bStateAbort;			// Do we abort decoding? (eg. user hits cancel after errs)
+	bool			m_bStateAbort;			// Do we abort decoding? (eg. user hits cancel after errs)
 
-	bool		m_bStateSoi;
-	bool		m_bStateDht;
-	bool		m_bStateDhtOk;
-	bool		m_bStateDhtFake;		// Fake DHT required for AVI
-	bool		m_bStateDqt;
-	bool		m_bStateDqtOk;
-	bool		m_bStateSof;
-	bool		m_bStateSofOk;
-	bool		m_bStateSos;
-	bool		m_bStateSosOk;
-	bool		m_bStateEoi;
+	bool			m_bStateSoi;
+	bool			m_bStateDht;
+	bool			m_bStateDhtOk;
+	bool			m_bStateDhtFake;		// Fake DHT required for AVI
+	bool			m_bStateDqt;
+	bool			m_bStateDqtOk;
+	bool			m_bStateSof;
+	bool			m_bStateSofOk;
+	bool			m_bStateSos;
+	bool			m_bStateSosOk;
+	bool			m_bStateEoi;
 
-public:
-	unsigned	m_nPosSos;
 
-public:
-	// FIXME
-	// Following are public for JPEGsnoopDoc, which uses them
-	// for DbSubmitDlg, etc.
-	unsigned	m_nDbReqSuggest;
-	CString		m_strHash;
-	CString		m_strHashRot;
-	CString		m_strImgExifMake;
-	CString		m_strImgExifModel;
-	CString		m_strImgQualExif;		// Quality (e.g. "fine") from makernotes
-	CString		m_strSoftware;			// EXIF Software field
-	bool		m_bImgExifMakernotes;	// Are any Makernotes present?
+	teDbAdd			m_eDbReqSuggest;
+	CString			m_strHash;
+	CString			m_strHashRot;
+	CString			m_strImgExifMake;
+	CString			m_strImgExifModel;
+	CString			m_strImgQualExif;		// Quality (e.g. "fine") from makernotes
+	CString			m_strSoftware;			// EXIF Software field
+	bool			m_bImgExifMakernotes;	// Are any Makernotes present?
 
-	unsigned	m_nImgEdited;			// Image edited? 0 = unset, 1 = yes, etc.
+	teEdited		m_eImgEdited;			// Image edited? 0 = unset, 1 = yes, etc.
+
 
 };
 

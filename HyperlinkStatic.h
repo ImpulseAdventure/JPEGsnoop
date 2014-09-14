@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,12 +16,27 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// ====================================================================================================
+// SOURCE CODE ACKNOWLEDGEMENT
+// ====================================================================================================
+// The following code is derived from the following project on CodeGuru:
+//
+//		Title:		HyperlinkStatic
+//		Author:		Franz Wong
+//		URL:		http://www.codeguru.com/cpp/controls/staticctrl/article.php/c5801
+//		Date:		Jan 14, 2003
+//
+// ====================================================================================================
+
+
 #if !defined(AFX_HYPERLINKSTATIC_H__32A71426_1315_407C_9D90_A484C5589D80__INCLUDED_)
 #define AFX_HYPERLINKSTATIC_H__32A71426_1315_407C_9D90_A484C5589D80__INCLUDED_
 
 #if _MSC_VER > 1000
 #pragma once
 #endif // _MSC_VER > 1000
+
+
 // HyperlinkStatic.h : header file
 //
 

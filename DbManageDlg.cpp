@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -32,11 +32,7 @@ CDbManageDlg::CDbManageDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CDbManageDlg::IDD, pParent)
 {
 	m_asToInsert.SetSize(0,10);
-	m_anEntriesInd.SetSize(0,10);
-	m_asEntriesVal.SetSize(0,10);
-
-	m_nEntriesOrigMax = 0;
-
+	m_anListBoxInd.SetSize(0,10);
 }
 
 CDbManageDlg::~CDbManageDlg()
@@ -46,7 +42,25 @@ CDbManageDlg::~CDbManageDlg()
 void CDbManageDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_LIST, m_listBox);
+	DDX_Control(pDX, IDC_LIST, m_ctlListBox);
+}
+
+BOOL CDbManageDlg::OnInitDialog()
+{
+	CDialog::OnInitDialog();
+
+	int	lpiTabs[4];
+	lpiTabs[0] = 150;
+	lpiTabs[1] = 250;
+	lpiTabs[2] = 300;
+	m_ctlListBox.SetTabStops(3,lpiTabs);
+
+	// TODO:  Add extra initialization here
+	// Transfer the pending list of 
+	PopulateList();
+
+	return TRUE;  // return TRUE unless you set the focus to a control
+	// EXCEPTION: OCX Property Pages should return FALSE
 }
 
 
@@ -58,113 +72,80 @@ END_MESSAGE_MAP()
 
 // CDbManageDlg message handlers
 
-void CDbManageDlg::OnBnClickedRemove()
-{
-	// TODO: Add your control notification handler code here
-	int pos;
-	pos = m_listBox.GetCurSel();
-
-	// Check for case where no line is selected!
-	if (pos != -1) {
-
-		m_listBox.DeleteString(pos); 
-
-		m_anEntriesInd.RemoveAt(pos);
-		m_asEntriesVal.RemoveAt(pos);
-
-	}
-}
-
+// Prepare a custom signature entry for addition into the dialog listbox
 void CDbManageDlg::InsertEntry(unsigned ind,CString strMake, CString strModel, CString strQual, CString strSig)
 {
-	CString tmpStr;
-	tmpStr.Format("Make: [%s]\tModel: [%s]\tQual: [%s]",strMake,strModel,strQual);
-	m_asToInsert.Add(tmpStr);
-	m_anEntriesInd.Add(ind);
-	m_asEntriesVal.Add(tmpStr);
-	m_nEntriesOrigMax++;
+	CString strTmp;
+	strTmp.Format(_T("Make: [%s]\tModel: [%s]\tQual: [%s]"),(LPCTSTR)strMake,(LPCTSTR)strModel,(LPCTSTR)strQual);
+	m_asToInsert.Add(strTmp);
 }
 
-// Copy entries from array to 
+// Copy entries from insert array to the listbox and record their position
 void CDbManageDlg::PopulateList()
 {
-	CString	tmpStr;
-	m_nEntriesOrigMax = m_asToInsert.GetCount();
-	for (unsigned ind=0;ind<m_nEntriesOrigMax;ind++)
-	{
-		tmpStr = m_asToInsert.GetAt(ind);
-		m_listBox.AddString(tmpStr);
+	CString	strTmp;
 
-		m_anEntriesInd.Add(ind);
-		m_asEntriesVal.Add(tmpStr);
+	// Reset the current entry index list
+	m_anListBoxInd.RemoveAll();
+
+	// Now copy entries over
+	int nEntriesOrigMax = m_asToInsert.GetCount();
+	int	nListPos;
+	for (int nInd=0;nInd<nEntriesOrigMax;nInd++)
+	{
+		strTmp = m_asToInsert.GetAt(nInd);
+		nListPos = m_ctlListBox.AddString(strTmp);
+
+		// Save the original index for each listbox row
+		m_anListBoxInd.Add(nInd);
+
+		// To allow for alternate implementations that don't use
+		// a parallel array for the indices, save the original
+		// index into the listbox rows themselves. Note that
+		// I am not currently using this method as it is much
+		// easier to leverage the parallel array member than use a
+		// window control that disappears after DoModal().
+		m_ctlListBox.SetItemData(nListPos,nInd);
 	}
 
 }
 
 
+// Remove an entry from the signature list
+void CDbManageDlg::OnBnClickedRemove()
+{
+	int nPos;
+	nPos = m_ctlListBox.GetCurSel();
 
+	// Check for case where no line is selected!
+	if (nPos != -1) {
+		m_ctlListBox.DeleteString(nPos); 
+		m_anListBoxInd.RemoveAt(nPos);
+	}
+}
+
+
+// Remove all entries from the signature list
 void CDbManageDlg::OnBnClickedRemoveall()
 {
-	m_anEntriesInd.RemoveAll();
-	m_asEntriesVal.RemoveAll();
-	m_listBox.ResetContent();
+	m_anListBoxInd.RemoveAll();
+	m_ctlListBox.ResetContent();
 }
 
-BOOL CDbManageDlg::OnInitDialog()
+// Fetch the list of original indices that remain after
+// any operations (such as remove).
+// Note that this may be called after DoModal() so we
+// can no longer query the listbox via GetItemData(),
+// for example.
+void CDbManageDlg::GetRemainIndices(CUIntArray& anRemain)
 {
-	CDialog::OnInitDialog();
-
-	int	lpiTabs[4];
-//	lpiTabs[0] = 120;
-//	lpiTabs[1] = 220;
-//	lpiTabs[2] = 300;
-
-	lpiTabs[0] = 150;
-	lpiTabs[1] = 250;
-	lpiTabs[2] = 300;
-	m_listBox.SetTabStops(3,lpiTabs);
-
-	// TODO:  Add extra initialization here
-	PopulateList();
-
-	return TRUE;  // return TRUE unless you set the focus to a control
-	// EXCEPTION: OCX Property Pages should return FALSE
-}
-
-
-
-void CDbManageDlg::GetDeleted(CUIntArray& anDeleted)
-{
-	unsigned ind_cur;
-	unsigned ind_orig;
-	unsigned ind_new;
-	ind_new = 0;
-	ind_cur = 0;
-
-	for (ind_orig=0;ind_orig<m_nEntriesOrigMax;ind_orig++) {
-
-		// NOTE: We cannot call *.GetAt(#) when the IntArray is
-		// of length 0! (this will happen if we do a "Delete All").
-		// In debug mode this will result in a debugger exception.
-
-		// Therefore, we'll check for this condition and fake out
-		// the ind_new to be something that will fall through to
-		// the next clause which adds it to the deleted list
-
-		if (!m_anEntriesInd.IsEmpty()) {
-			ind_new = m_anEntriesInd.GetAt(ind_cur);
-		} else {
-			// Fake out the index so that it doesn't match original position
-			ind_new = 99999;
-		}
-
-		if (ind_orig==ind_new) {
-			// Entries match, advance current pointer along
-			ind_cur++;
-		} else {
-			// Entry missing, mark as deleted, but don't
-			// advance current pointer
-			anDeleted.Add(ind_orig);
-		}
+	unsigned	nNumEntries;
+	unsigned	nEntryInd;
+	nNumEntries = m_anListBoxInd.GetCount();
+	for (unsigned nInd=0;nInd<nNumEntries;nInd++) {
+		nEntryInd = m_anListBoxInd.GetAt(nInd);
+		anRemain.Add(nEntryInd);
 	}
 }
+
+

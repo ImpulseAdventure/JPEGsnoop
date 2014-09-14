@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,6 +16,19 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// ====================================================================================================
+// SOURCE CODE ACKNOWLEDGEMENT
+// ====================================================================================================
+// The following code is derived from the following project on CodeProject:
+//
+//		Title:		Another registry class
+//		Author:		SteveKing
+//		URL:		http://www.codeproject.com/Articles/2521/Another-registry-class
+//		Date:		Apr 25, 2003
+//		License:	CPOL (Code Project Open License)
+//
+// ====================================================================================================
+
 #pragma once
 #include <string>
 #include <Shlwapi.h>
@@ -23,7 +36,6 @@
 #ifdef _MFC_VER
 
 /**
-http://www.codeproject.com/system/registryvars.asp?df=100&forumid=4210&select=692880#xx692880xx
  * \ingroup CommonClasses
  * Base class for the registry classes.
  *
@@ -579,7 +591,9 @@ public:
 		
 	operator stdstring();
 	CRegStdString& operator=(stdstring s);
-	CRegStdString& operator+=(stdstring s) { return *this = (stdstring)*this + s; }
+	//CAL! Commended out the following as otherwise we get error C2440. We don't
+	//     use this function anyway.
+	//CRegStdString& operator+=(stdstring s) { return *this = (stdstring)*this + s; }
 	operator LPCTSTR();
 	
 	
@@ -687,3 +701,4 @@ protected:
 	BOOL	m_read;					///< indicates if the value has already been read from the registry
 	BOOL	m_force;				///< indicates if no cache should be used, i.e. always read and write directly from registry
 };
+	

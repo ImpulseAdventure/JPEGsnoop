@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,18 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+// ====================================================================================================
+// SOURCE CODE ACKNOWLEDGEMENT
+// ====================================================================================================
+// The following code is derived from the following project on CodeGuru:
+//
+//		Title:		CUrlString: A very simple MFC class to Encode and Decode an url string
+//		Author:		Stephane Erhardt
+//		URL:		http://www.codeguru.com/cpp/cpp/cpp_mfc/article.php/c4029/URL-Encoding.htm (comments)
+//		Date:		Mar 03, 2006
+//
+// ====================================================================================================
 
 /*****************************************************************************
 Module :     UrlString.h

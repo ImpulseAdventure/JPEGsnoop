@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,20 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - Dialog box that allows user to manage the local signatures database
+// - The caller will invoke InsertEntry() on all extra database signatures
+//   which can then be added to the listbox via PopulateList() during OnInitDialog().
+// - A sideband parallel array is used to record the original index positions
+//   of each entry in the listbox so that we can easily determine which entries
+//   have been deleted once the dialog has completed.
+// - The parallel array can be queried after the dialog box has closed via GetRemainIndices()
+//   to return the list of custom signature indices that remain. This allows
+//   the master list to be trimmed down (ie. entries removed).
+// ==========================================================================
+
 
 #pragma once
 #include "afxwin.h"
@@ -38,22 +52,21 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	void	InsertEntry(unsigned ind,CString strMake, CString strModel, CString strQual, CString strSig);
-	void	PopulateList();
-
-	void		GetDeleted(CUIntArray& anDeleted);
+	void			InsertEntry(unsigned ind,CString strMake, CString strModel, CString strQual, CString strSig);
+	void			PopulateList();
+	void			GetRemainIndices(CUIntArray& anRemain);
 
 private:
-	CListBox		m_listBox;
-	CStringArray	m_asToInsert;		// Entries ready for PopulateList()
+	virtual BOOL	OnInitDialog();
+	afx_msg void	OnBnClickedRemove();
+	afx_msg void	OnBnClickedRemoveall();
 
-	unsigned		m_nEntriesOrigMax;
-	CUIntArray		m_anEntriesInd;		// Index of entries currently  (e.g 1,2,4,7,15)
-	CStringArray	m_asEntriesVal;		// Values of entries currently (e.g A,X,D,R,G)
+private:
+	CListBox		m_ctlListBox;		// Listbox representing custom signatures
+	CStringArray	m_asToInsert;		// Entries to be added to Listbox via PopulateList()
 
-	afx_msg void OnBnClickedRemove();
-	afx_msg void OnBnClickedRemoveall();
-	virtual BOOL OnInitDialog();
+	CUIntArray		m_anListBoxInd;		// Index of entries currently in listBox  (e.g 1,2,4,7,15)
+
 
 
 };

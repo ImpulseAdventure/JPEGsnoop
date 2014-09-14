@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,6 +16,18 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// ====================================================================================================
+// SOURCE CODE ACKNOWLEDGEMENT
+// ====================================================================================================
+// The following code was loosely based on an example CDIB class that appears in the following book:
+//
+//		Title:		Visual C++ 6 Unleashed
+//		Authors:	Mickey Williams and David Bennett
+//		Publisher:	Sams (July 24, 2000)
+//		ISBN-10:	0672312417
+//		ISBN-13:	978-0672312410
+// ====================================================================================================
+
 #pragma once
 
 class CDIB : public CObject
@@ -24,21 +36,20 @@ public:
     CDIB();
     virtual ~CDIB();
 
-	void Kill();	//CAL! Added
-
-    bool CreateDIB(DWORD dwWidth,DWORD dwHeight,int nBits);
-    bool CreateDIBFromBitmap(CDC* pDC);
-    void InitializeColors();
-    int GetDIBCols() const;
-    void* GetDIBBitArray() const;
-    bool CopyDIB(CDC* pDestDC,int x,int y,float scale=1);
-	bool CopyDibDblBuf(CDC* pDestDC, int x, int y,CRect* rectClient, float scale);
-    bool CopyDIBsmall(CDC* pDestDC,int x,int y,float scale=1);
-	bool	CopyDibPart(CDC* pDestDC,CRect rectImg,CRect* rectClient, float scale);
+	void			Kill();
+    bool			CreateDIB(DWORD dwWidth,DWORD dwHeight,int nBits);
+    bool			CreateDIBFromBitmap(CDC* pDC);
+    void			InitializeColors();
+    int				GetDIBCols() const;
+    void*			GetDIBBitArray() const;
+    bool			CopyDIB(CDC* pDestDC,int x,int y,float scale=1);
+	bool			CopyDibDblBuf(CDC* pDestDC, int x, int y,CRect* rectClient, float scale);
+    bool			CopyDIBsmall(CDC* pDestDC,int x,int y,float scale=1);
+	bool			CopyDibPart(CDC* pDestDC,CRect rectImg,CRect* rectClient, float scale);
 
 public:
-    CBitmap             m_bmBitmap;
+    CBitmap			m_bmBitmap;
 
 private:
-    LPBITMAPINFO        m_pDIB;
+    LPBITMAPINFO	m_pDIB;
 };

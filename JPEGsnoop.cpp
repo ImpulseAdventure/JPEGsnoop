@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -91,9 +91,9 @@ BEGIN_MESSAGE_MAP(CJPEGsnoopApp, CWinApp)
 	ON_COMMAND(ID_FILE_BATCHPROCESS, OnFileBatchprocess)
 END_MESSAGE_MAP()
 
-//CAL! FIXME
+// FIXME:
 // Would like to change string table JPEGsnoop.rc to add:
-//   AFX_IDS_OPENFILE 0xF000 (61440) = "Open Image / Movie" for Open Dialog
+//   AFX_IDS_OPENFILE 0xF000 (61440) = _T("Open Image / Movie") for Open Dialog
 // but linker complains error RC2151 "cannot reuse string constants"
 
 
@@ -105,25 +105,30 @@ END_MESSAGE_MAP()
 //
 // One of the following input parameters:
 //   -i <fname_in>    : [Mandatory] Defines input JPEG filename
-//   -b <directory>   : [Mandatory] UNSUPPORTED: Batch mode operation
+//   -b <directory>   : [Mandatory] Batch mode operation
 // Zero or more of the following input parameters:
 //   -o <fname_log>   : [Optional]  Defines output log filename
-//   -nogui           : [Optional]  Disables GUI interface
+//   -nogui           : [Optional]  Runs in non-GUI mode (window minimized) and exits after operations
+//   -b <dir>         : [Optional]  Batch process directory
+//   -br <dir>        : [Optional]  Batch process directory (recursive)
+//   -ext_all         : [Optional]  Extract all from file
+//   -ext_dht_avi     : [Optional]  Force insert DHT for AVI (-ext_all mode)
 //   -scan            : [Optional]  Enables Scan Segment decode
 //   -maker           : [Optional]  Enables Makernote decode
 //   -scandump        : [Optional]  Enables Scan Segment dumping
 //   -histo_y         : [Optional]  Enables luminance histogram
 //   -dht_exp         : [Optional]  Enables DHT table expansion into huffman bitstrings
 //   -exif_hide_unk   : [Optional]  Disables decoding of unknown makernotes
+//
 
-
+// Command-line parser class
 class CMyCommandParser : public CCommandLineInfo
 {
  	typedef enum	{cla_idle,cla_input,cla_output,cla_err,cla_batchdir} cla_e;
 	int				index;
 	cla_e			next_arg;
 	CSnoopConfig*	m_pCfg;
-	CString			tmpStr;
+	CString			strTmp;
 
 public:
 	CMyCommandParser(CSnoopConfig* pCfg) {
@@ -133,58 +138,73 @@ public:
 		next_arg = cla_idle;
 	};  
 
-     virtual void ParseParam(const char* pszParam, BOOL bFlag, BOOL bLast) {
+     virtual void ParseParam(LPCTSTR pszParam, BOOL bFlag, BOOL bLast) {
 				CString msg;
 
 		 switch(next_arg) {
 			case cla_idle:
-				if (bFlag && !strcmp(pszParam,"i")) {
+				if (bFlag && !_tcscmp(pszParam,_T("i"))) {
 					next_arg = cla_input;
 				}
-				else if (bFlag && !strcmp(pszParam,"o")) {
+				else if (bFlag && !_tcscmp(pszParam,_T("o"))) {
 					next_arg = cla_output;
 				}
-				else if (bFlag && !strcmp(pszParam,"b")) {
+				else if (bFlag && !_tcscmp(pszParam,_T("b"))) {
 					next_arg = cla_batchdir;
 				}
-				else if (bFlag && !strcmp(pszParam,"nogui")) {
-					m_pCfg->cmdline_gui = false;
+				else if (bFlag && !_tcscmp(pszParam,_T("br"))) {
+					m_pCfg->bCmdLineBatchRec = true;
+					next_arg = cla_batchdir;
+				}
+				else if (bFlag && !_tcscmp(pszParam,_T("ext_all"))) {
+					m_pCfg->bCmdLineExtractEn = true;
 					next_arg = cla_idle;
 				}
-				else if (bFlag && !strcmp(pszParam,"scan")) {
+				else if (bFlag && !_tcscmp(pszParam,_T("ext_dht_avi"))) {
+					m_pCfg->bCmdLineExtractDhtAvi = true;
+					next_arg = cla_idle;
+				}
+				else if (bFlag && !_tcscmp(pszParam,_T("nogui"))) {
+					m_pCfg->bCmdLineGui = false;	// Force non-GUI mode
+					// In non-GUI mode we also want to hide message boxes
+					m_pCfg->bInteractive = false;
+					next_arg = cla_idle;
+				}
+				else if (bFlag && !_tcscmp(pszParam,_T("scan"))) {
 					m_pCfg->bDecodeScanImg = true;
 					next_arg = cla_idle;
 				}
-				else if (bFlag && !strcmp(pszParam,"maker")) {
+				else if (bFlag && !_tcscmp(pszParam,_T("maker"))) {
 					m_pCfg->bDecodeMaker = true;
 					next_arg = cla_idle;
 				}
-				else if (bFlag && !strcmp(pszParam,"scandump")) {
+				else if (bFlag && !_tcscmp(pszParam,_T("scandump"))) {
 					m_pCfg->bOutputScanDump = true;
 					next_arg = cla_idle;
 				}
-				else if (bFlag && !strcmp(pszParam,"histo_y")) {
+				else if (bFlag && !_tcscmp(pszParam,_T("histo_y"))) {
 					m_pCfg->bDumpHistoY = true;
 					next_arg = cla_idle;
 				}
-				else if (bFlag && !strcmp(pszParam,"dhtexp")) {
+				else if (bFlag && !_tcscmp(pszParam,_T("dhtexp"))) {
 					m_pCfg->bOutputDHTexpand = true;
 					next_arg = cla_idle;
 				}
-				else if (bFlag && !strcmp(pszParam,"exif_hide_unk")) {
+				else if (bFlag && !_tcscmp(pszParam,_T("exif_hide_unk"))) {
 					m_pCfg->bExifHideUnknown = true;
 					next_arg = cla_idle;
 				}
 				else if (bFlag) {
 					// Unknown flag
-					tmpStr.Format(_T("ERROR: Unknown command-line flag [-%s]"),pszParam);
-					AfxMessageBox(tmpStr);
+					strTmp.Format(_T("ERROR: Unknown command-line flag [-%s]"),pszParam);
+					// Don't disable dialog in non-interactive mode as this could be an important error
+					AfxMessageBox(strTmp);
 					next_arg = cla_err;
 				}
 				else {
 					// Not a flag, so assume it is a drag & drop file open
-					m_pCfg->cmdline_open = true;
-					m_pCfg->cmdline_open_fname = pszParam;
+					m_pCfg->bCmdLineOpenEn = true;
+					m_pCfg->strCmdLineOpenFname = pszParam;
 
 					m_nShellCommand = FileOpen;
 					m_strFileName = pszParam;
@@ -193,11 +213,11 @@ public:
 				break;
 
 			case cla_input:
-				msg = "Input=[";
+				msg = _T("Input=[");
 				msg += pszParam;
-				msg += "]";
-				m_pCfg->cmdline_open = true;
-				m_pCfg->cmdline_open_fname = pszParam;
+				msg += _T("]");
+				m_pCfg->bCmdLineOpenEn = true;
+				m_pCfg->strCmdLineOpenFname = pszParam;
 
 				m_nShellCommand = FileOpen;
 				m_strFileName = pszParam;
@@ -205,34 +225,31 @@ public:
 				next_arg = cla_idle;
 				break;
 
-			// TODO: Batch processing
+			// Batch directory processing
 			case cla_batchdir:
-				msg = "BatchDir=[";
+				msg = _T("BatchDir=[");
 				msg += pszParam;
-				msg += "]";
+				msg += _T("]");
 
-				// TODO:
-				//   Need to create a member variable to store
-				//   the batch directory name.
-				//m_pCfg->cmdline_batch = true;
-				//m_pCfg->cmdline_batch_dirname = pszParam;
+				// Store the batch directory name
+				m_pCfg->bCmdLineBatchEn = true;
+				m_pCfg->strCmdLineBatchDirName = pszParam;
 
-				//   Also set the ShellCommand so that the InitProcess()
-				//   call can determine which action to take. We should
-				//   probably define a new value for the ShellCommand
-				//   specific to batch processing.
-				//m_nShellCommand = FileOpen;
-				//m_strFileName = pszParam;
+				// Set the ShellCommand to FileNothing so that the InitProcess()
+				// call doesn't take any action. Instead, we can perform the
+				// batch processing ourself.
+				m_nShellCommand = FileNothing;
+				m_strFileName = _T("");	// Unused
 
 				next_arg = cla_idle;
 				break;
 
 			case cla_output:
-				msg = "Output=[";
+				msg = _T("Output=[");
 				msg += pszParam;
-				msg += "]";
-				m_pCfg->cmdline_output = true;
-				m_pCfg->cmdline_output_fname = pszParam;
+				msg += _T("]");
+				m_pCfg->bCmdLineOutputEn = true;
+				m_pCfg->strCmdLineOutputFname = pszParam;
 				next_arg = cla_idle;
 				break;
 
@@ -248,28 +265,29 @@ public:
 
 // CJPEGsnoopApp construction
 
+// Constructor
 CJPEGsnoopApp::CJPEGsnoopApp()
 {
 
-
+	// Reset fatal error flag
 	m_bFatal = false;
 
 	// Application-level config options
 	m_pAppConfig = new CSnoopConfig();
 	if (!m_pAppConfig) {
-		AfxMessageBox("ERROR: Couldn't allocate memory for SnoopConfig");
+		AfxMessageBox(_T("ERROR: Couldn't allocate memory for SnoopConfig"));
 		m_bFatal = true;
 	}
 
 	m_pDbSigs = new CDbSigs();
 	if (!m_pDbSigs) {
-		AfxMessageBox("ERROR: Couldn't allocate memory for DbSigs");
+		AfxMessageBox(_T("ERROR: Couldn't allocate memory for DbSigs"));
 		m_bFatal = true;
 	}
 
-
 }
 
+// Destructor
 CJPEGsnoopApp::~CJPEGsnoopApp()
 {
 
@@ -318,6 +336,7 @@ BOOL CJPEGsnoopApp::InitInstance()
 		return FALSE;
 	}
 
+
 	// Standard initialization
 	// If you are not using these features and wish to reduce the size
 	// of your final executable, you should remove from the following
@@ -327,7 +346,7 @@ BOOL CJPEGsnoopApp::InitInstance()
 	// This call actually concatenates CWinApp::m_pszAppName ("JPEGsnoop")
 	// with the "REG_COMPANY_NAME" to create the full
 	// key path "Software/ImpulseAdventure/JPEGsnoop/Recent File List"
-	SetRegistryKey(_T(REG_COMPANY_NAME));
+	SetRegistryKey(REG_COMPANY_NAME);
 	LoadStdProfileSettings(4);  // Load standard INI file options (including MRU)
 
 	// ------------------------------------
@@ -355,7 +374,7 @@ BOOL CJPEGsnoopApp::InitInstance()
 	// Register the application's document templates.  Document templates
 	//  serve as the connection between documents, frame windows and views
 
-	//CAL! FIXME
+	// FIXME:
 	CSingleDocTemplate* pDocTemplate;
 	pDocTemplate = new CSingleDocTemplate(
 		IDR_MAINFRAME,
@@ -370,36 +389,51 @@ BOOL CJPEGsnoopApp::InitInstance()
 
 
 	// Parse command line for standard shell commands, DDE, file open
-	//CAL! CCommandLineInfo cmdInfo;
 	CMyCommandParser cmdInfo(m_pAppConfig);
 	ParseCommandLine(cmdInfo);
-	// Dispatch commands specified on the command line.  Will return FALSE if
-	// app was launched with /RegServer, /Register, /Unregserver or /Unregister.
-	/*
+
+	if (m_pAppConfig->bCmdLineGui == false) {
+		// If the user has requested non-GUI mode:
+		// - Command-line "-nogui"
+		// then we will still create a window as a result of OnInitialUpdate()
+		// in OpenDocumentFile and OnFileNew() in ProcessShellCommand.
+		//
+		// So, to ensure that we don't take focus away from other user UI tasks
+		// we force the window into MINIMIZED mode.
+		// Ref: http://www.codeproject.com/Articles/23419/A-Simple-Method-to-Control-the-Startup-State-of-an
+		this->m_nCmdShow = SW_MINIMIZE;
+	} else {
+		// If the user has requested that we open up a file in GUI mode:
+		// - Drag & drop
+		// - Command-line "-i" without '-nogui"
+		// then we need to ensure that the view has been created before we
+		// enter the OnOpenDocument() in OpenDocumentFile(). The reason for this
+		// is that OnOpenDocument will call AnalyzeFile() and insert the log into
+		// the view. The view is only created at the end of OpenDocumentFile() as
+		// a result of OnInitialUpdate().
+		//
+		// To achieve this, the easiest method is to force a New file operation
+		// first. This ensures that we create the view (in OnInitialUpdate)
+		// before we launch into any processing.
+		//
+		// For cosmetic reasons, also call UpdateWindow to ensure that the
+		// frame is drawn fully before any further processing.
+		OnFileNew();
+		m_pMainWnd->ShowWindow(SW_SHOW);
+		m_pMainWnd->UpdateWindow();
+	}
+
+
+	// Do my own ProcessShellCommand(). The following is based
+	// on part of what exists in appui2.cpp with no real changes.
+	// I have dropped off some of the unsupported m_nShellCommand modes.
+	// Perhaps this will provide us with an easier means of extending
+	// support to other batch commands later.
+	// ----------------------------------------------------------
+#if 1
 	if (!ProcessShellCommand(cmdInfo))
 		return FALSE;
-	*/
-
-
-	//CAL!
-	// We need rich edit control already present before we start any
-	// command-line handling. Therefore, we probably want to force
-	// a FileNew so that we get a control to work with. There doesn't
-	// seem to be any harm with doing this.
-	//
-	// BUG: One issue with the above is that it ends up calling
-	// OnFileNew() twice because of the CCommandLineInfo code below
-	//
-	// We also do a show-window so that we don't get partial drawn frames
-	// when we are processing a file. Normally, we wouldn't want to display
-	// the main window on some of these command-line options, but for now
-	// we'll leave it up until I figure out how to hide it.
-	OnFileNew();
-	m_pMainWnd->ShowWindow(SW_SHOW);
-	m_pMainWnd->UpdateWindow();
-
-	//CAL! Do my own ProcessShellCommand(). The following is based
-	// on part of what exists in appui2.cpp
+#else
 	BOOL bResult = TRUE;
 	switch (cmdInfo.m_nShellCommand) {
 		// Note that FileNew is the default
@@ -410,7 +444,7 @@ BOOL CJPEGsnoopApp::InitInstance()
 				bResult = FALSE;
 			break;
 
-		//CAL! Note: We expect that the RichEditView is already created!
+		// NOTE: We expect that the RichEditView is already created!
 		case CCommandLineInfo::FileOpen:
 			if (!OpenDocumentFile(cmdInfo.m_strFileName))
 				bResult = FALSE;
@@ -419,52 +453,74 @@ BOOL CJPEGsnoopApp::InitInstance()
 			bResult = FALSE;
 			break;
 
-		//CAL! TODO:
-		//  Here is where I should probably add in a handler for
-		//  the batch processing invoked from the command line.
-		//  Ideally, I'd like to call JPEGsnoopDoc::batchProcess()!
 	}
 	if (!bResult)
 		return FALSE;
+#endif
+	// ----------------------------------------------------------
 
+	// Now handle any other command-line directives that we haven't
+	// already covered above
+	if (m_pAppConfig->bCmdLineBatchEn) {
 
-	// If we wanted quiet operation, don't leave up the window!
-	// We might even want the OpenDocumentFile() to skip the window part as well,
-	// if possible...
-	if (m_pAppConfig->cmdline_gui == false) {
+		// TODO: Is there a cleaner way of doing this?
+		// Force an OnFileNew() to ensure that we have created the "Document" class
+		OnFileNew();
+
+		CJPEGsnoopDoc* pMyDoc;
+		pMyDoc = GetCurDoc();
+		if (pMyDoc) {
+			// Pass in batch directory path from user
+			// Disable the bAskSettings mode as all have been
+			// provided via the command-line
+			pMyDoc->DoBatchProcess(false,m_pAppConfig->strCmdLineBatchDirName,m_pAppConfig->bCmdLineBatchRec,m_pAppConfig->bCmdLineExtractEn);
+		}
+	}
+
+	if (m_pAppConfig->bCmdLineExtractEn) {
+
+		// TODO: Is there a cleaner way of doing this?
+		// Force an OnFileNew() to ensure that we have created the "Document" class
+		OnFileNew();
+
+		CJPEGsnoopDoc* pMyDoc;
+		pMyDoc = GetCurDoc();
+		if (pMyDoc) {
+			// Pass in batch directory path from user
+			pMyDoc->DoExtractEmbeddedJPEG(false,m_pAppConfig->bCmdLineExtractDhtAvi,_T(""));
+		}
+	}
+
+	// ----------------------------------------------------------
+
+	// If we are in command-line -nogui mode then we want to exit this function
+	// with return false to terminate the main program (since we have already
+	// completed our tasks in the ProcessShellCommand() above).
+	// 
+	// The CSingleDocTemplate::OpenDocumentFile() call within OnFileNew() will still cause the view
+	// and frame to have been allocated so we can't just exit. Instead, we need
+	// to deallocate it first through DestroyWindow(). If we don't do this, then
+	// we will get the error "Destroying non-Null m_pMainWnd".
+	if (m_pAppConfig->bCmdLineGui == false) {
+		m_pMainWnd->DestroyWindow();
 		return FALSE;
 	}
-	//CAL! We only leave here if there is a window to show (bResult)
 
-	
+	// We only arrive here if there is a window to show (bResult)
+
+	// Original wizard code follows
+
 	// The one and only window has been initialized, so show and update it
 	m_pMainWnd->ShowWindow(SW_SHOW);
 	m_pMainWnd->UpdateWindow();
 	// call DragAcceptFiles only if there's a suffix
 	//  In an SDI app, this should occur after ProcessShellCommand
 	
+	// ----------------
 
 	return TRUE;
 
 
-
-	/* CAL! Original templated code
-
-	// Parse command line for standard shell commands, DDE, file open
-	CCommandLineInfo cmdInfo;
-	ParseCommandLine(cmdInfo);
-	// Dispatch commands specified on the command line.  Will return FALSE if
-	// app was launched with /RegServer, /Register, /Unregserver or /Unregister.
-	if (!ProcessShellCommand(cmdInfo))
-		return FALSE;
-	// The one and only window has been initialized, so show and update it
-	m_pMainWnd->ShowWindow(SW_SHOW);
-	m_pMainWnd->UpdateWindow();
-	// call DragAcceptFiles only if there's a suffix
-	//  In an SDI app, this should occur after ProcessShellCommand
-	return TRUE;
-
-	*/
 
 }
 
@@ -472,15 +528,22 @@ BOOL CJPEGsnoopApp::InitInstance()
 // If it has been more than "nUpdateAutoDays" days since our
 // last check for a recent update to the software, check the
 // website for a newer version.
-void CJPEGsnoopApp::CheckUpdates(bool force_now)
+// - If a new version is available, the user is notified but
+//   no action or changes are made. The user needs to navigate
+//   to the website to download the latest version manually.
+//
+// INPUT:
+// - bForceNow			= Do we ignore day timer and force a check now?
+//
+void CJPEGsnoopApp::CheckUpdates(bool bForceNow)
 {
 	CString		strUpdateLastChk = m_pAppConfig->strUpdateLastChk;
 
     unsigned nCheckYear,nCheckMon,nCheckDay;
 	if (strUpdateLastChk.GetLength()==8) {
-		nCheckYear = atoi(strUpdateLastChk.Mid(0,4));
-		nCheckMon  = atoi(strUpdateLastChk.Mid(4,2));
-		nCheckDay  = atoi(strUpdateLastChk.Mid(6,2));
+		nCheckYear = _tstoi(strUpdateLastChk.Mid(0,4));
+		nCheckMon  = _tstoi(strUpdateLastChk.Mid(4,2));
+		nCheckDay  = _tstoi(strUpdateLastChk.Mid(6,2));
 	} else {
 		nCheckYear = 1980;
 		nCheckMon  = 1;
@@ -493,7 +556,7 @@ void CJPEGsnoopApp::CheckUpdates(bool force_now)
 	CTimeSpan tmeDiff;
 	tmeDiff = tmeToday - tmeUpdateLastChk;
 
-	if ((force_now) || (tmeDiff >= tmePeriod)) {
+	if ((bForceNow) || (tmeDiff >= tmePeriod)) {
 		CModelessDlg*	pdlg;
 		pdlg = new CModelessDlg;
 		if (!pdlg) {
@@ -508,7 +571,7 @@ void CJPEGsnoopApp::CheckUpdates(bool force_now)
 
 		// Update the timestamp of the last update check
 		CString strCurDate;
-		strCurDate = tmeToday.Format("%Y%m%d");
+		strCurDate = tmeToday.Format(_T("%Y%m%d"));
 		m_pAppConfig->strUpdateLastChk = strCurDate;
 		m_pAppConfig->Dirty();
 
@@ -518,54 +581,59 @@ void CJPEGsnoopApp::CheckUpdates(bool force_now)
 
 // Scrape the header of the web page to determine if a newer version
 // of the software is available.
+// - No information is sent to the website other than the current version number
+//
+// RETURN:
+// - Success if connection to web page was OK
+//
 bool CJPEGsnoopApp::CheckUpdatesWww()
 {
 
-	CString	strVerLatest = "";
-	CString strDateLatest = "";
+	CString	strVerLatest = _T("");
+	CString strDateLatest = _T("");
 
-	CString submit_host;
-	CString submit_page;
-	submit_host = IA_HOST;
-	submit_page = IA_UPDATES_CHK_PAGE;
+	CString			strSubmitHost;
+	CString			strSubmitPage;
+	strSubmitHost = IA_HOST;
+	strSubmitPage = IA_UPDATES_CHK_PAGE;
 
-	static LPSTR acceptTypes[2]={"*/*", NULL};
+	static LPTSTR acceptTypes[2]={_T("*/*"), NULL};
 	HINTERNET hINet, hConnection, hData;
 
-	unsigned len;
+	unsigned nLen;
 
 	CString		strFormat;
 	CString		strFormData;
 	unsigned	nFormDataLen;
 	CString		strHeaders =
 		_T("Content-Type: application/x-www-form-urlencoded");
-	strFormat  = "ver=%s";
+	strFormat  = _T("ver=%s");
 
 	//*** Need to sanitize data for URL submission!
 	// Search for "&", "?", "="
 	strFormData.Format(strFormat,VERSION_STR);
 	nFormDataLen = strFormData.GetLength();
 
-	CString tmpStr;
+	CString			strTmp;
 
-	CHAR buffer[2048] ;
-	CString m_strContents ;
-	DWORD dwRead; //dwStatus;
-	hINet = InternetOpen("JPEGsnoop/1.0", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0 );
+	CHAR			pcBuffer[2048] ;
+	CString			strContents ;
+	DWORD			dwRead; //dwStatus;
+	hINet = InternetOpen(_T("JPEGsnoop/1.0"), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0 );
 	if ( !hINet )
 	{
-		AfxMessageBox("InternetOpen Failed");
+		AfxMessageBox(_T("InternetOpen Failed"));
 		return false;
 	}
 	try
 	{
-		hConnection = InternetConnect( hINet, (LPCTSTR)submit_host, 80, NULL,NULL, INTERNET_SERVICE_HTTP, 0, 1 );
+		hConnection = InternetConnect( hINet, (LPCTSTR)strSubmitHost, 80, NULL,NULL, INTERNET_SERVICE_HTTP, 0, 1 );
 		if ( !hConnection )
 		{
 			InternetCloseHandle(hINet);
 			return false;
 		}
-		hData = HttpOpenRequest( hConnection, "POST", (LPCTSTR)submit_page, NULL, NULL, NULL, 0, 1 );
+		hData = HttpOpenRequest( hConnection, _T("POST"), (LPCTSTR)strSubmitPage, NULL, NULL, NULL, 0, 1 );
 		if ( !hData )
 		{
 			InternetCloseHandle(hConnection);
@@ -577,7 +645,7 @@ bool CJPEGsnoopApp::CheckUpdatesWww()
 		if (!HttpSendRequest( hData, (LPCTSTR)strHeaders, strHeaders.GetLength(), strFormData.GetBuffer(), strFormData.GetLength())) {
 			InternetCloseHandle(hConnection);
 			InternetCloseHandle(hINet);
-			AfxMessageBox("ERROR: Couldn't SendRequest");
+			AfxMessageBox(_T("ERROR: Couldn't SendRequest"));
 			return false;
 		}
 
@@ -587,15 +655,15 @@ bool CJPEGsnoopApp::CheckUpdatesWww()
 		unsigned	nScrapeLen = 0;
 		unsigned	nScrapeMax = 1024;
 		while (!bScrapeDone) {
-			if (!InternetReadFile( hData, buffer, 255, &dwRead )) {
+			if (!InternetReadFile( hData, pcBuffer, 255, &dwRead )) {
 				bScrapeDone = true;
 			} else {
 				if ( dwRead == 0 ) {
 					bScrapeDone = true;
 					break;
 				}
-				buffer[dwRead] = 0;
-				m_strContents += buffer;
+				pcBuffer[dwRead] = 0;
+				strContents += pcBuffer;
 				nScrapeLen += dwRead;
 				if (nScrapeLen >= nScrapeMax) {
 					bScrapeDone = true;
@@ -605,72 +673,73 @@ bool CJPEGsnoopApp::CheckUpdatesWww()
 		
 		// Parse the HTTP result and search for the latest
 		// version identification string
-		len = m_strContents.GetLength();
+		nLen = strContents.GetLength();
 
-		CString	strData;
-		CString strParam,strVal;
-		int	indDataStart = -1;
-		int indDataEnd = -1;
-		unsigned indDataLen = 0;
-		bool bFoundRange = true;
-		indDataStart = m_strContents.Find("***(")+4;
-		indDataEnd = m_strContents.Find(")***");
+		CString			strData;
+		CString			strParam;
+		CString			strVal;
+		int				nIndDataStart = -1;
+		int				nIndDataEnd = -1;
+		unsigned		nIndDataLen = 0;
+		bool			bFoundRange = true;
+		nIndDataStart = strContents.Find(_T("***("))+4;
+		nIndDataEnd = strContents.Find(_T(")***"));
 
-		if ((indDataStart == -1) || (indDataEnd == -1)) {
+		if ((nIndDataStart == -1) || (nIndDataEnd == -1)) {
 			// Couldn't find start or end
 			bFoundRange = false;
 		}
 
-		if (indDataStart > indDataEnd) {
+		if (nIndDataStart > nIndDataEnd) {
 			// Start and End positions look wrong
 			bFoundRange = false;
 		}
 
 		if (bFoundRange) {
 			// Found start & end markers
-			indDataLen = indDataEnd-indDataStart;
-			strData = m_strContents.Mid(indDataStart,indDataLen);
-			bool done = false;
-			bool tok_done;
-			CString strCh;
-			unsigned ind = 0;
-			while (!done) {
-				if (ind >= indDataLen) {
-					done = true;
+			nIndDataLen = nIndDataEnd-nIndDataStart;
+			strData = strContents.Mid(nIndDataStart,nIndDataLen);
+			bool		bDone = false;
+			bool		bTokDone;
+			CString		strCh;
+			unsigned	nInd = 0;
+			while (!bDone) {
+				if (nInd >= nIndDataLen) {
+					bDone = true;
 				} else {
-					tok_done = false;
-					strParam = "";
-					while (!tok_done) {
-						strCh = strData.GetAt(ind);
-						if (strCh=="=") {
-							tok_done = true;
-							ind+=2; // skip [
+					bTokDone = false;
+					strParam = _T("");
+					while (!bTokDone) {
+						strCh = strData.GetAt(nInd);
+						if (strCh==_T("=")) {
+							bTokDone = true;
+							nInd+=2; // skip [
 						} else {
 							strParam += strCh;
-							ind++;
+							nInd++;
 						}
 					}
 
-					tok_done = false;
-					strVal = "";
-					while (!tok_done) {
-						strCh = strData.GetAt(ind);
-						if (strCh=="]") {
-							tok_done = true;
-							ind+=2; // skip ,
+					bTokDone = false;
+					strVal = _T("");
+					while (!bTokDone) {
+						strCh = strData.GetAt(nInd);
+						if (strCh==_T("]")) {
+							bTokDone = true;
+							nInd+=2; // skip ,
 						} else {
 							strVal += strCh;
-							ind++;
+							nInd++;
 						}
 					}
 
-					//tmpStr.Format("Param[%s] Val[%s]",strParam,strVal);
-					//AfxMessageBox(tmpStr);
+					//strTmp.Format(_T("Param[%s] Val[%s]"),strParam,strVal);
+					//AfxMessageBox(strTmp);
 
-					if (strParam == "latest_ver") {
+					if (strParam == _T("latest_ver")) {
 						strVerLatest = strVal;
 					}
-					if (strParam == "latest_date") {
+					if (strParam == _T("latest_date")) {
 						strDateLatest = strVal;
 					}
 
@@ -684,7 +753,7 @@ bool CJPEGsnoopApp::CheckUpdatesWww()
 	{
 		e->ReportError();
 		e->Delete();
-		//AfxMessageBox("EXCEPTION!");
+		//AfxMessageBox(_T("EXCEPTION!"));
 	}
 	InternetCloseHandle(hConnection);
 	InternetCloseHandle(hINet);
@@ -706,20 +775,16 @@ bool CJPEGsnoopApp::CheckUpdatesWww()
 	return true;
 }
 
-CString CJPEGsnoopApp::RemoveTokenWithSeparators(CString& string, LPCTSTR charset) {
-  CString token = string.SpanExcluding(charset);
-  string = string.Mid(token.GetLength());
-  return token;
-}
 
-CString CJPEGsnoopApp::RemoveTokenFromCharset(CString& string, LPCTSTR charset) {
-  CString token = string.SpanIncluding(charset);
-  string = string.Mid(token.GetLength());
-  return token;
-}
 
-// Ensure that the EULA has been previously signed, and if not, present
-// the user with a dialog box to sign.
+// Check the End-User License Agreement status
+// - Ensure that the EULA has been previously signed
+// - If EULA hasn't been signed, then show dialog box
+//
+// POST:
+// - m_pAppConfig->bEulaAccepted
+// - m_pAppConfig->bUpdateAuto
+//
 bool CJPEGsnoopApp::CheckEula()
 {
 	if (m_pAppConfig->bEulaAccepted) {
@@ -729,8 +794,8 @@ bool CJPEGsnoopApp::CheckEula()
 		if (dlg.DoModal() == IDOK) {
 			// They must have accepted the terms, update the
 			// acceptance in the registry
-			m_pAppConfig->bEulaAccepted = dlg.bEulaOk;
-			m_pAppConfig->bUpdateAuto = dlg.bUpdateAuto;
+			m_pAppConfig->bEulaAccepted = (dlg.bEulaOk != 0);
+			m_pAppConfig->bUpdateAuto = (dlg.bUpdateAuto != 0);
 			m_pAppConfig->Dirty();
 			m_pAppConfig->RegistryStore();
 			return true;
@@ -758,19 +823,26 @@ void CJPEGsnoopApp::OnAppAbout()
 
 // CJPEGsnoopApp message handlers
 
+// Present file open dialog
+// - Populate file filter list with main decode formats
+//
+// POST:
+// - Calls OpenDocumentFile()
+//
 void CJPEGsnoopApp::MyOnFileOpen()
 {
 
-	bool status = 0;
-	char strFilter[] =
-		"JPEG Image (*.jpg;*.jpeg)|*.jpg;*.jpeg|"\
-		"Thumbnail (*.thm)|*.thm|"\
-		"AVI Movie (*.avi)|*.avi|"\
-		"QuickTime Movie (*.mov)|*.mov|"\
-		"Digital Negative (*.dng)|*.dng|"\
-		"RAW Image (*.crw;*.cr2;*.nef;*.orf;*.pef)|*.crw;*.cr2;*.nef;*.orf;*.pef|"\
-		"PDF Files (*.pdf)|*.pdf|"\
-		"All Files (*.*)|*.*||";
+	bool bStatus = 0;
+	TCHAR aszFilter[] =
+		_T("JPEG Image (*.jpg;*.jpeg)|*.jpg;*.jpeg|")\
+		_T("Thumbnail (*.thm)|*.thm|")\
+		_T("AVI Movie (*.avi)|*.avi|")\
+		_T("QuickTime Movie (*.mov)|*.mov|")\
+		_T("Digital Negative (*.dng)|*.dng|")\
+		_T("RAW Image (*.crw;*.cr2;*.nef;*.orf;*.pef)|*.crw;*.cr2;*.nef;*.orf;*.pef|")\
+		_T("PDF Files (*.pdf)|*.pdf|")\
+		_T("Photoshop Files (*.psd)|*.psd|")\
+		_T("All Files (*.*)|*.*||");
 
 	/*
 		CFileDialog(BOOL bOpenFileDialog, // TRUE for FileOpen, FALSE for FileSaveAs
@@ -782,20 +854,21 @@ void CJPEGsnoopApp::MyOnFileOpen()
 		DWORD dwSize = 0);
 		*/
 
-	//CAL!: BUG 1008
-	CFileDialog FileDlg(TRUE, ".jpg", NULL, OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, strFilter);
+	// BUG: #1008
+	CFileDialog FileDlg(TRUE, _T(".jpg"), NULL, OFN_HIDEREADONLY | OFN_FILEMUSTEXIST, aszFilter);
 
-	CString title;
-	CString sFileName;
-	VERIFY(title.LoadString(IDS_CAL_FILEOPEN));
-	FileDlg.m_ofn.lpstrTitle = title;
+	CString strTitle;
+	CString strFileName;
+	CString	strPathName;		// Added
+	VERIFY(strTitle.LoadString(IDS_CAL_FILEOPEN));
+	FileDlg.m_ofn.lpstrTitle = strTitle;
 
 	// Extend the maximum filename length
 	// Default is 64 for filename, 260 for path
 	// Some users have requested support for longer filenames
-	char*	spFilePath;
-	spFilePath = new char[501];
-	spFilePath[0] = char(0);
+	LPTSTR	spFilePath;
+	spFilePath = new TCHAR[501];
+	spFilePath[0] = TCHAR(0);
 	FileDlg.m_pOFN->lpstrFile = spFilePath;
 	FileDlg.m_pOFN->nMaxFile = 500;
 	FileDlg.m_pOFN->nMaxFileTitle = 300;
@@ -804,8 +877,33 @@ void CJPEGsnoopApp::MyOnFileOpen()
 	// For reference, see: http://msdn.microsoft.com/en-us/library/windows/desktop/ms646960%28v=vs.85%29.aspx
 	if( FileDlg.DoModal() == IDOK )
 	{
-		sFileName = FileDlg.GetFileName();
-		OpenDocumentFile(sFileName);
+		strFileName = FileDlg.GetFileName();
+		strPathName = FileDlg.GetPathName();
+		//
+		// For testing purposes, added this GetCurrentDirectory() check
+		TCHAR	szDirCur[501];
+		GetCurrentDirectory(500,szDirCur);
+
+		// NOTE:
+		// The OpenDocumentFile() call converts any relative path to absolute path before loading the file.
+		// It appears that VS 2003 was allowing me to pass strFileName into the OpenDocumentFile() call
+		// and the user selected directory in the previous CFileDialog() caused a SetCurrentDirectory()
+		// which made the relative to absolute conversion work.
+		//
+		// In VS 2012, it appears that the CFileDialog() is no longer causing SetCurrentDirectory()
+		// to pick up the selected folder, so the relative to absolute conversion is returning a path
+		// to the project/executable directory. Net result is that the file doesn't get opened as it
+		// cannot be found. Opens from the MRU list will still work, however.
+		//
+		// In VS 2012, I can theoretically get CFileDialog to work in the old way if I happened to initialize COM
+		// with COINIT_MULTITHREADED, but this doesn't seem recommended.
+		//
+		// Instead, it looks like I can simply pass in the full path (GetPathName()) and everything
+		// works fine!
+
+//		OpenDocumentFile(strFileName);
+		OpenDocumentFile(strPathName);	// Added
+
 		// if returns NULL, the user has already been alerted
 	}
 
@@ -813,6 +911,7 @@ void CJPEGsnoopApp::MyOnFileOpen()
 
 }
 
+// Basic placeholder for OnFileNew
 void CJPEGsnoopApp::MyOnFileNew()
 {
 	// Default
@@ -829,7 +928,9 @@ CJPEGsnoopDoc* CJPEGsnoopApp::GetCurDoc()
 	return pMyDoc;
 }
 
-// Inform the document to reprocess the file (if it exists)
+// Reprocess the current file
+// - Invokes the Reprocess action in the Document
+// - Ensures that the document is available first 
 void CJPEGsnoopApp::DocReprocess()
 {
 	CJPEGsnoopDoc* pMyDoc;
@@ -839,8 +940,8 @@ void CJPEGsnoopApp::DocReprocess()
 	}
 }
 
-// Mark the image view as needing update. Will take
-// effect on next "Reprocess" call.
+// Mark the image view as needing update
+// - Will take effect on next "Reprocess" call.
 void CJPEGsnoopApp::DocImageDirty()
 {
 	CJPEGsnoopDoc* pMyDoc;
@@ -852,6 +953,7 @@ void CJPEGsnoopApp::DocImageDirty()
 
 // -------------------- Handle Menu actions ------------------
 
+// Set menu item toggle for Options DHT Expand
 void CJPEGsnoopApp::OnOptionsDhtexpand()
 {
 	if (m_pAppConfig->bOutputDHTexpand) {
@@ -866,6 +968,8 @@ void CJPEGsnoopApp::OnOptionsDhtexpand()
 
 }
 
+// Set menu item toggle for Options Makernotes
+// - Invoke reprocess if enabled
 void CJPEGsnoopApp::OnOptionsMakernotes()
 {
 	if (m_pAppConfig->bDecodeMaker) {
@@ -880,6 +984,8 @@ void CJPEGsnoopApp::OnOptionsMakernotes()
 
 }
 
+// Set menu item toggle for Scan Segment Dump
+// - Invoke reprocess if enabled
 void CJPEGsnoopApp::OnScansegmentDump()
 {
 	if (m_pAppConfig->bOutputScanDump) {
@@ -894,7 +1000,8 @@ void CJPEGsnoopApp::OnScansegmentDump()
 }
 
 
-
+// Set menu item toggle for Scan Segment Dump
+// - Invoke reprocess if enabled
 void CJPEGsnoopApp::OnScansegmentDecodeimage()
 {
 	if (m_pAppConfig->bDecodeScanImg) {
@@ -909,7 +1016,9 @@ void CJPEGsnoopApp::OnScansegmentDecodeimage()
 }
 
 
-
+// Set menu item toggle for Scan Segment Histogram (Y)
+// - Mark the image as dirty
+// - Invoke reprocess if enabled
 void CJPEGsnoopApp::OnScansegmentHistogramy()
 {
 	if (m_pAppConfig->bDumpHistoY) {
@@ -937,6 +1046,9 @@ void CJPEGsnoopApp::OnScansegmentHistogramy()
 
 
 
+// If Automatic Reprocessing is enabled, reprocess the file
+// - If Reprocessing is not enabled and the coach message has
+//   not been disabled, inform user of option to enable
 void CJPEGsnoopApp::HandleAutoReprocess()
 {
 	if (m_pAppConfig->bReprocessAuto) {
@@ -953,6 +1065,9 @@ void CJPEGsnoopApp::HandleAutoReprocess()
 	}
 }
 
+// Set menu item toggle for Scan Segment Full IDCT
+// - Mark the image as dirty
+// - Invoke reprocess if enabled
 void CJPEGsnoopApp::OnScansegmentFullidct()
 {
 	if (m_pAppConfig->bDecodeScanImgAc) {
@@ -972,8 +1087,12 @@ void CJPEGsnoopApp::OnScansegmentFullidct()
 	HandleAutoReprocess();
 }
 
-// Even though "Noidct" is the opposite of "Fullidct", the menu
-// option simply toggles the state, so we can reuse the handler.
+// Set menu item toggle for Scan Segment No IDCT
+// - Mark the image as dirty
+// - Invoke reprocess if enabled
+// NOTES:
+// - Even though "Noidct" is the opposite of "Fullidct", the menu
+//   option simply toggles the state, so we can reuse the handler.
 void CJPEGsnoopApp::OnScansegmentNoidct()
 {
 	OnScansegmentFullidct();
@@ -984,6 +1103,7 @@ void CJPEGsnoopApp::OnScansegmentNoidct()
 
 // -------------------- Handle Menu status ------------------
 
+// Set menu item status for Options DHT Expand
 void CJPEGsnoopApp::OnUpdateOptionsDhtexpand(CCmdUI *pCmdUI)
 {
 	if (m_pAppConfig->bOutputDHTexpand) {
@@ -993,6 +1113,7 @@ void CJPEGsnoopApp::OnUpdateOptionsDhtexpand(CCmdUI *pCmdUI)
 	}
 }
 
+// Set menu item status for Options Makernotes
 void CJPEGsnoopApp::OnUpdateOptionsMakernotes(CCmdUI *pCmdUI)
 {
 	if (m_pAppConfig->bDecodeMaker) {
@@ -1003,6 +1124,7 @@ void CJPEGsnoopApp::OnUpdateOptionsMakernotes(CCmdUI *pCmdUI)
 }
 
 
+// Set menu item status for Scan Segment Dump
 void CJPEGsnoopApp::OnUpdateScansegmentDump(CCmdUI *pCmdUI)
 {
 	if (m_pAppConfig->bOutputScanDump) {
@@ -1013,6 +1135,7 @@ void CJPEGsnoopApp::OnUpdateScansegmentDump(CCmdUI *pCmdUI)
 }
 
 
+// Set menu item status for Scan Segment Decode Image
 void CJPEGsnoopApp::OnUpdateScansegmentDecodeimage(CCmdUI *pCmdUI)
 {
 	if (m_pAppConfig->bDecodeScanImg) {
@@ -1022,7 +1145,8 @@ void CJPEGsnoopApp::OnUpdateScansegmentDecodeimage(CCmdUI *pCmdUI)
 	}
 }
 
-
+// Set menu item status for Scan Segment Histogram (Y)
+// - May be disabled if Decode Scan Image or Histogram are disabled
 void CJPEGsnoopApp::OnUpdateScansegmentHistogramy(CCmdUI *pCmdUI)
 {
 	if (m_pAppConfig->bDecodeScanImg && m_pAppConfig->bHistoEn) {
@@ -1037,6 +1161,8 @@ void CJPEGsnoopApp::OnUpdateScansegmentHistogramy(CCmdUI *pCmdUI)
 	}
 }
 
+// Set menu item status for Scan Segment Full IDCT
+// - May be disabled if Decode Scan Image is disabled
 void CJPEGsnoopApp::OnUpdateScansegmentFullidct(CCmdUI *pCmdUI)
 {
 	if (m_pAppConfig->bDecodeScanImg) {
@@ -1051,7 +1177,10 @@ void CJPEGsnoopApp::OnUpdateScansegmentFullidct(CCmdUI *pCmdUI)
 	}
 }
 
-// Opposite functionality of Fullidct
+// Set menu item status for Scan Segment No IDCT
+// - May be disabled if Decode Scan Image is disabled
+// NOTE:
+// - Opposite functionality of Fullidct
 void CJPEGsnoopApp::OnUpdateScansegmentNoidct(CCmdUI *pCmdUI)
 {
 	if (m_pAppConfig->bDecodeScanImg) {
@@ -1067,10 +1196,11 @@ void CJPEGsnoopApp::OnUpdateScansegmentNoidct(CCmdUI *pCmdUI)
 }
 
 
-// Launch the configuration options dialog box
-// and pre-populate it with the current m_pAppConfig
-// settings. If the user hits OK, then the revised
-// setttings are stored back into the registry.
+// Options Configuration Dialog
+// - Show the dialog box
+// - Pre-populate with current m_pAppConfig settings
+// - If user clicks OK, then revised settings are stored back
+//   into the registry
 void CJPEGsnoopApp::OnOptionsConfiguration()
 {
 	CSettingsDlg	setDlg;
@@ -1084,13 +1214,13 @@ void CJPEGsnoopApp::OnOptionsConfiguration()
 
 	if (setDlg.DoModal() == IDOK)
 	{
-		m_pAppConfig->bUpdateAuto = setDlg.m_bUpdateAuto;
+		m_pAppConfig->bUpdateAuto = (setDlg.m_bUpdateAuto != 0);
 		m_pAppConfig->nUpdateAutoDays = setDlg.m_nUpdateChkDays;
 		m_pAppConfig->strDbDir = setDlg.m_strDbDir;
-		m_pAppConfig->bReprocessAuto = setDlg.m_bReprocessAuto;
-		m_pAppConfig->bDbSubmitNet = setDlg.m_bDbSubmitNet;
+		m_pAppConfig->bReprocessAuto = (setDlg.m_bReprocessAuto != 0);
+		m_pAppConfig->bDbSubmitNet = (setDlg.m_bDbSubmitNet != 0);
 		m_pAppConfig->nErrMaxDecodeScan = setDlg.m_nRptErrMaxScanDecode;
-		//m_pAppConfig->bStatClipEn = setDlg.m_bReportClip;
+		//m_pAppConfig->bStatClipEn = (setDlg.m_bReportClip != 0);
 		m_pAppConfig->Dirty();
 
 		// Since the signature database needs to know of the
@@ -1104,15 +1234,17 @@ void CJPEGsnoopApp::OnOptionsConfiguration()
 	}
 }
 
+// Menu item to check for JPEGsnoop updates
 void CJPEGsnoopApp::OnOptionsCheckforupdates()
 {
 	CheckUpdates(true);
 }
 
 
-// Present the user with the Manage Local signature database dialog.
-// This dialog enables the user to view and delete entries that are
-// defined and stored within the current installation file.
+// Manage Local Signature Database
+// - Present user with database dialog box
+// - This dialog enables the user to view and delete entries that are
+//   defined and stored within the current installation file.
 void CJPEGsnoopApp::OnToolsManagelocaldb()
 {
 	CDbManageDlg	manageDlg;
@@ -1121,28 +1253,39 @@ void CJPEGsnoopApp::OnToolsManagelocaldb()
 	if (pMyDoc) {
 		pMyDoc->m_pJfifDec->ImgSrcChanged();
 
-		unsigned	n_DbUserEntries;
+		unsigned	nDbUserEntries;
 		CString		strTmp;
-		CompSig		mySig;
-		n_DbUserEntries = m_pDbSigs->DatabaseExtraGetNum();
+		CompSig		sMySig;
+		nDbUserEntries = m_pDbSigs->DatabaseExtraGetNum();
 
-		for (unsigned ind=0;ind<n_DbUserEntries;ind++) {
-			mySig = m_pDbSigs->DatabaseExtraGet(ind);
+		for (unsigned nInd=0;nInd<nDbUserEntries;nInd++) {
+			sMySig = m_pDbSigs->DatabaseExtraGet(nInd);
 
-			if (mySig.m_editor == ENUM_SOURCE_SW) {
-				manageDlg.InsertEntry(ind,mySig.m_swdisp,"",mySig.um_qual,mySig.c_sig);
+			// TODO: Should we confirm that all entries are marked as valid already?
+
+			if (sMySig.eEditor == ENUM_SOURCE_SW) {
+				manageDlg.InsertEntry(nInd,sMySig.strMSwDisp,_T(""),sMySig.strUmQual,sMySig.strCSig);
 			} else {
-				manageDlg.InsertEntry(ind,mySig.x_make,mySig.x_model,mySig.um_qual,mySig.c_sig);
+				manageDlg.InsertEntry(nInd,sMySig.strXMake,sMySig.strXModel,sMySig.strUmQual,sMySig.strCSig);
 			}
 		}
 
+
 		if (manageDlg.DoModal() == IDOK) {
 			// Now determine which entries were deleted
-			CUIntArray	anDeleted;
-			manageDlg.GetDeleted(anDeleted);
-			for (unsigned ind=0;ind<(unsigned)anDeleted.GetCount();ind++) {
-                m_pDbSigs->DatabaseExtraMarkDelete(anDeleted.GetAt(ind));
-
+			// Set all flags to invalid
+			// Step through remaining list from dialog and fetch indices
+			// For each remaining index, set the corresponding valid indicator in the main list
+			unsigned nNumExtra = m_pDbSigs->DatabaseExtraGetNum();
+			for (unsigned nInd=0;nInd<nNumExtra;nInd++) {
+				m_pDbSigs->SetEntryValid(nInd,false);
+			}
+			CUIntArray	anRemain;
+			unsigned	nRemainInd;
+			manageDlg.GetRemainIndices(anRemain);
+			for (unsigned nInd=0;nInd<(unsigned)anRemain.GetCount();nInd++) {
+				nRemainInd = anRemain.GetAt(nInd);
+				m_pDbSigs->SetEntryValid(nRemainInd,true);
 			}
 
 			m_pDbSigs->DatabaseExtraStore();
@@ -1155,6 +1298,8 @@ void CJPEGsnoopApp::OnToolsManagelocaldb()
 
 }
 
+// Set menu item toggle for Options Signature Search
+// - Invoke reprocess if enabled
 void CJPEGsnoopApp::OnOptionsSignaturesearch()
 {
 	if (m_pAppConfig->bSigSearch) {
@@ -1167,6 +1312,7 @@ void CJPEGsnoopApp::OnOptionsSignaturesearch()
 	HandleAutoReprocess();
 }
 
+// Set menu item status for Options Signature Search
 void CJPEGsnoopApp::OnUpdateOptionsSignaturesearch(CCmdUI *pCmdUI)
 {
 	if (m_pAppConfig->bSigSearch) {
@@ -1177,6 +1323,9 @@ void CJPEGsnoopApp::OnUpdateOptionsSignaturesearch(CCmdUI *pCmdUI)
 }
 
 
+// Set menu item toggle for Scan Segment Histogram
+// - Mark the image as dirty
+// - Invoke reprocess if enabled
 void CJPEGsnoopApp::OnScansegmentHistogram()
 {
 	if (m_pAppConfig->bHistoEn) {
@@ -1202,6 +1351,8 @@ void CJPEGsnoopApp::OnScansegmentHistogram()
 	HandleAutoReprocess();
 }
 
+// Set menu item status for Options Signature Search
+// - May be disabled if Decode Scan Image is disabled
 void CJPEGsnoopApp::OnUpdateScansegmentHistogram(CCmdUI *pCmdUI)
 {
 	if (m_pAppConfig->bDecodeScanImg) {
@@ -1216,6 +1367,8 @@ void CJPEGsnoopApp::OnUpdateScansegmentHistogram(CCmdUI *pCmdUI)
 	}
 }
 
+// Set menu item toggle for Options Hide Unknown EXIF tags
+// - Invoke reprocess if enabled
 void CJPEGsnoopApp::OnOptionsHideuknownexiftags()
 {
 	if (m_pAppConfig->bExifHideUnknown) {
@@ -1230,6 +1383,7 @@ void CJPEGsnoopApp::OnOptionsHideuknownexiftags()
 
 }
 
+// Set menu item status for Options Hide Unknown EXIF tags
 void CJPEGsnoopApp::OnUpdateOptionsHideuknownexiftags(CCmdUI *pCmdUI)
 {
 	if (m_pAppConfig->bExifHideUnknown) {
@@ -1239,12 +1393,18 @@ void CJPEGsnoopApp::OnUpdateOptionsHideuknownexiftags(CCmdUI *pCmdUI)
 	}
 }
 
+// Menu item for File Batch Process
+// - Invoke DoBatchProcess() from Document
 void CJPEGsnoopApp::OnFileBatchprocess()
 {
 	// TODO: Add your command handler code here
 	CJPEGsnoopDoc* pMyDoc;
 	pMyDoc = GetCurDoc();
 	if (pMyDoc) {
-		pMyDoc->batchProcess();
+		// Enable the bAskSettings dialog mode so the user can specify some
+		// additional parameters (eg. recursive subdir and "extract all" settings)
+		// These parameters are ignored in the function call in bShowSettings mode
+		pMyDoc->DoBatchProcess(true,_T(""),false,false);
 	}
 }
+

@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -33,9 +33,9 @@ CLookupDlg::CLookupDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CLookupDlg::IDD, pParent)
 	, m_nPixX(0)
 	, m_nPixY(0)
-	, m_sOffset(_T(""))
-	, m_sRngX(_T(""))
-	, m_sRngY(_T(""))
+	, m_strOffset(_T(""))
+	, m_strRngX(_T(""))
+	, m_strRngY(_T(""))
 	, m_nSizeX(0)
 	, m_nSizeY(0)
 	, m_pImgDec(NULL)
@@ -46,14 +46,14 @@ CLookupDlg::CLookupDlg(CWnd* pParent,CimgDecode* pImgDec, unsigned nSizeX, unsig
 	: CDialog(CLookupDlg::IDD, pParent)
 	, m_nPixX(0)
 	, m_nPixY(0)
-	, m_sOffset(_T("Not Calculated"))
-	, m_sRngX(_T(""))
-	, m_sRngY(_T(""))
+	, m_strOffset(_T("Not Calculated"))
+	, m_strRngX(_T(""))
+	, m_strRngY(_T(""))
 	, m_nSizeX(nSizeX)
 	, m_nSizeY(nSizeY)
 {
-	m_sRngX.Format("(0..%u)",m_nSizeX-1);
-	m_sRngY.Format("(0..%u)",m_nSizeY-1);
+	m_strRngX.Format(_T("(0..%u)"),m_nSizeX-1);
+	m_strRngY.Format(_T("(0..%u)"),m_nSizeY-1);
 	m_pImgDec = pImgDec;
 }
 
@@ -66,9 +66,9 @@ void CLookupDlg::DoDataExchange(CDataExchange* pDX)
 	CDialog::DoDataExchange(pDX);
 	DDX_Text(pDX, IDC_X, m_nPixX);
 	DDX_Text(pDX, IDC_Y, m_nPixY);
-	DDX_Text(pDX, IDC_OFFSET, m_sOffset);
-	DDX_Text(pDX, IDC_RNGX, m_sRngX);
-	DDX_Text(pDX, IDC_RNGY, m_sRngY);
+	DDX_Text(pDX, IDC_OFFSET, m_strOffset);
+	DDX_Text(pDX, IDC_RNGX, m_strRngX);
+	DDX_Text(pDX, IDC_RNGY, m_strRngY);
 }
 
 
@@ -86,15 +86,13 @@ void CLookupDlg::OnBnClickedBtnCalc()
 	UpdateData();
 
 	if (m_nPixX > m_nSizeX-1) {
-		AfxMessageBox("Pixel X coord out of range");
+		AfxMessageBox(_T("Pixel X coord out of range"));
 	} else if (m_nPixY > m_nSizeY-1) {
-		AfxMessageBox("Pixel Y coord out of range");
+		AfxMessageBox(_T("Pixel Y coord out of range"));
 	} else {
-		//offset = theApp.m_pImgDec->LookupFilePosPix(m_nPixX,m_nPixY,nByte,nBit);
-		//m_sOffset.Format("0x%08X",offset);
 		if (m_pImgDec) {
 			m_pImgDec->LookupFilePosPix(m_nPixX,m_nPixY,nByte,nBit);
-			m_sOffset.Format("0x%08X : %u",nByte,nBit);
+			m_strOffset.Format(_T("0x%08X : %u"),nByte,nBit);
 			UpdateData(FALSE);
 		}
 	}

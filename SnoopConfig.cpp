@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -24,12 +24,24 @@
 //#include <shlobj.h>    // for SHGetFolderPath
 
 
+// Define the defaults for the application configuration
 CSnoopConfig::CSnoopConfig(void)
 {
 
-	cmdline_gui = true;
-	cmdline_open = false;
-	cmdline_output = false;	// No output file specified
+	// Default to showing message dialogs
+	bInteractive = true;
+
+	// Command-line modes
+	bCmdLineGui = true;
+	bCmdLineOpenEn = false;
+	strCmdLineOpenFname = _T("");
+	bCmdLineOutputEn = false;	// No output file specified
+	strCmdLineOutputFname = _T("");
+	bCmdLineBatchEn = false;
+	strCmdLineBatchDirName = _T("");
+	bCmdLineBatchRec = false;
+	bCmdLineExtractEn = false;
+	bCmdLineExtractDhtAvi = false;
 
 	nPosStart = 0;
 
@@ -37,10 +49,10 @@ CSnoopConfig::CSnoopConfig(void)
 	// Registry settings
 	bDirty = false;			// Have the registry options been dirtied?
 	bEulaAccepted = false;
-	bUpdateAuto = false;
+	bUpdateAuto = true;
 	nUpdateAutoDays = 14;		// Check every 14 days
-	strUpdateLastChk = "";
-	strDbDir = "";
+	strUpdateLastChk = _T("");
+	strDbDir = _T("");
 	bReprocessAuto = false;
 	bDecodeScanImg = true;
 	bDecodeScanImgAc = false;		// Coach message will be shown just in case
@@ -68,6 +80,8 @@ CSnoopConfig::CSnoopConfig(void)
 	// Reset coach message flags
 	CoachReset();
 
+	// Reset the current filename
+	strCurFname = _T("");
 
 	// --------------------------------
 
@@ -87,11 +101,12 @@ CSnoopConfig::CSnoopConfig(void)
        ( (osvi.dwMajorVersion == 5) && (osvi.dwMinorVersion >= 1) ));
 	
 	/*
-	CString tmpStr;//CAL! ***
-	tmpStr.Format("OS Version: Platform=[%u] VerMajor=[%u] VerMinor=[%u] (>=NT:%s >=XP:%s)",
+	// Debug code to output the version info
+	CString strTmp;
+	strTmp.Format(_T("OS Version: Platform=[%u] VerMajor=[%u] VerMinor=[%u] (>=NT:%s >=XP:%s)"),
 		osvi.dwPlatformId,osvi.dwMajorVersion,osvi.dwMinorVersion,
 		(bIsWindowsNTorLater)?"Y":"N",(bIsWindowsXPorLater)?"Y":"N");
-	AfxMessageBox(tmpStr);
+	AfxMessageBox(strTmp);
 	*/
 
 }
@@ -99,6 +114,7 @@ CSnoopConfig::CSnoopConfig(void)
 CSnoopConfig::~CSnoopConfig(void)
 {
 }
+
 
 // This is generally called after app initializes and registry
 // has just been loaded.
@@ -108,11 +124,15 @@ void CSnoopConfig::UseDefaults()
 	// But some need copying over
 }
 
+// Update the flag to mark the configuration as dirty / modified
+// - This is used later to indicate that a resave is required
+//
 void CSnoopConfig::Dirty(bool mode)
 {
 	bDirty = mode;
 }
 
+// Fetch all configuration values from the registry
 void CSnoopConfig::RegistryLoad()
 {
 	CString		strKeyPath;
@@ -123,12 +143,12 @@ void CSnoopConfig::RegistryLoad()
 
 	/////////////
 
-	strField = "General\\UserDbPath";
+	strField = _T("General\\UserDbPath");
 	strKeyFull = strKeyPath + strField;
-	CRegString regUserDbPath(strKeyFull,"???",TRUE,HKEY_CURRENT_USER);
+	CRegString regUserDbPath(strKeyFull,_T("???"),TRUE,HKEY_CURRENT_USER);
 
 	// Try to load the registry entry
-	if ((CString)regUserDbPath == "???") {
+	if ((CString)regUserDbPath == _T("???")) {
 		// None specified, so determine a suitable default
 		strDbDir = GetDefaultDbDir();
 		bDirty = true;
@@ -142,14 +162,14 @@ void CSnoopConfig::RegistryLoad()
 
 	CString strCurDate;
 	CTime tmeToday = CTime::GetCurrentTime();
-	strCurDate = tmeToday.Format("%Y%m%d");
+	strCurDate = tmeToday.Format(_T("%Y%m%d"));
 
-	strField = "General\\UpdateLastChk";
+	strField = _T("General\\UpdateLastChk");
 	strKeyFull = strKeyPath + strField;
-	CRegString regUpdateLastChk(strKeyFull,"???",TRUE,HKEY_CURRENT_USER);
+	CRegString regUpdateLastChk(strKeyFull,_T("???"),TRUE,HKEY_CURRENT_USER);
 
 	// Try to load the registry entry
-	if ((CString)regUpdateLastChk == "???") {
+	if ((CString)regUpdateLastChk == _T("???")) {
 		// None specified, so determine a suitable default
 		strUpdateLastChk = strCurDate;
 		bDirty = true;
@@ -160,40 +180,42 @@ void CSnoopConfig::RegistryLoad()
 
 	//////////////////
 
-//	RegistryLoadStr( "General\\UserDbPath",     "???", strDbDir);
-	RegistryLoadBool("General\\UpdateAuto",     999,   bUpdateAuto);
-	RegistryLoadUint("General\\UpdateAutoDays", 999,   nUpdateAutoDays);
-//	RegistryLoadStr( "General\\UpdateLastChk",  "???", strUpdateLastChk);
-	RegistryLoadBool("General\\EulaAccepted",   999,   bEulaAccepted);
-	RegistryLoadBool("General\\ReprocessAuto",  999,   bReprocessAuto);
-	RegistryLoadBool("General\\SigSearch",      999,   bSigSearch);
-	RegistryLoadBool("General\\DecScanImg",     999,   bDecodeScanImg);
-	RegistryLoadBool("General\\DecScanImgAc",   999,   bDecodeScanImgAc);
+//	RegistryLoadStr( _T("General\\UserDbPath"),     "???", strDbDir);
+	RegistryLoadBool(_T("General\\UpdateAuto"),     999,   bUpdateAuto);
+	RegistryLoadUint(_T("General\\UpdateAutoDays"), 999,   nUpdateAutoDays);
+//	RegistryLoadStr( _T("General\\UpdateLastChk"),  "???", strUpdateLastChk);
+	RegistryLoadBool(_T("General\\EulaAccepted"),   999,   bEulaAccepted);
+	RegistryLoadBool(_T("General\\ReprocessAuto"),  999,   bReprocessAuto);
+	RegistryLoadBool(_T("General\\SigSearch"),      999,   bSigSearch);
+	RegistryLoadBool(_T("General\\DecScanImg"),     999,   bDecodeScanImg);
+	RegistryLoadBool(_T("General\\DecScanImgAc"),   999,   bDecodeScanImgAc);
 
-	RegistryLoadBool("General\\DumpScan",       999,   bOutputScanDump);
-	RegistryLoadBool("General\\DumpDHTExpand",  999,   bOutputDHTexpand);
-	RegistryLoadBool("General\\DecMaker",       999,   bDecodeMaker);
-	RegistryLoadBool("General\\DumpHistoY",     999,   bDumpHistoY);
-//	RegistryLoadBool("General\\DecScanClip",    999,   bStatClipEn);
-	RegistryLoadBool("General\\DecScanHisto",   999,   bHistoEn);
+	RegistryLoadBool(_T("General\\DumpScan"),       999,   bOutputScanDump);
+	RegistryLoadBool(_T("General\\DumpDHTExpand"),  999,   bOutputDHTexpand);
+	RegistryLoadBool(_T("General\\DecMaker"),       999,   bDecodeMaker);
+	RegistryLoadBool(_T("General\\DumpHistoY"),     999,   bDumpHistoY);
+//	RegistryLoadBool(_T("General\\DecScanClip"),    999,   bStatClipEn);
+	RegistryLoadBool(_T("General\\DecScanHisto"),   999,   bHistoEn);
 
-	RegistryLoadBool("General\\DbSubmitNet",    999,   bDbSubmitNet);
-	RegistryLoadBool("General\\ExifHideUnk",    999,   bExifHideUnknown);
+	RegistryLoadBool(_T("General\\DbSubmitNet"),    999,   bDbSubmitNet);
+	RegistryLoadBool(_T("General\\ExifHideUnk"),    999,   bExifHideUnknown);
 
-	RegistryLoadUint("Report\\ErrMaxDecodeScan", 999,  nErrMaxDecodeScan);
+	RegistryLoadUint(_T("Report\\ErrMaxDecodeScan"), 999,  nErrMaxDecodeScan);
 
-	RegistryLoadBool("Coach\\ReprocessAuto",    999,   bCoachReprocessAuto);
-	RegistryLoadBool("Coach\\DecodeIdct",       999,   bCoachDecodeIdct);
+	RegistryLoadBool(_T("Coach\\ReprocessAuto"),    999,   bCoachReprocessAuto);
+	RegistryLoadBool(_T("Coach\\DecodeIdct"),       999,   bCoachDecodeIdct);
 
 	// Deprecated Registry strings
-	// FIXME - Later on, decide to delete these if found
+	// FIXME: Later on, decide if we should delete deprecated strings if found
 	// "General\\ScanImgDec"
 	// "General\\ScanImgDecDef"
 	// "General\\ScanPreviewDef"
 	// "General\\SigSearchAuto"
-	// "General\\DecScanClip"		(only for me)
 }
 
+// Write all configuration parameters to the registry
+// - Skip write if no changes were made (!bDirty)
+//
 void CSnoopConfig::RegistryStore()
 {
 	// If no changes made, skip
@@ -201,30 +223,29 @@ void CSnoopConfig::RegistryStore()
 		return;
 	}
 
-	RegistryStoreStr(  "General\\UserDbPath",     strDbDir);
-	RegistryStoreBool( "General\\UpdateAuto",     bUpdateAuto);
-	RegistryStoreUint( "General\\UpdateAutoDays", nUpdateAutoDays);
-	RegistryStoreStr(  "General\\UpdateLastChk",  strUpdateLastChk);
-	RegistryStoreBool( "General\\EulaAccepted",   bEulaAccepted);
-	RegistryStoreBool( "General\\ReprocessAuto",  bReprocessAuto);
-	RegistryStoreBool( "General\\SigSearch",      bSigSearch);
-	RegistryStoreBool( "General\\DecScanImg",     bDecodeScanImg);
-	RegistryStoreBool( "General\\DecScanImgAc",   bDecodeScanImgAc);
+	RegistryStoreStr(  _T("General\\UserDbPath"),     strDbDir);
+	RegistryStoreBool( _T("General\\UpdateAuto"),     bUpdateAuto);
+	RegistryStoreUint( _T("General\\UpdateAutoDays"), nUpdateAutoDays);
+	RegistryStoreStr(  _T("General\\UpdateLastChk"),  strUpdateLastChk);
+	RegistryStoreBool( _T("General\\EulaAccepted"),   bEulaAccepted);
+	RegistryStoreBool( _T("General\\ReprocessAuto"),  bReprocessAuto);
+	RegistryStoreBool( _T("General\\SigSearch"),      bSigSearch);
+	RegistryStoreBool( _T("General\\DecScanImg"),     bDecodeScanImg);
+	RegistryStoreBool( _T("General\\DecScanImgAc"),   bDecodeScanImgAc);
 
-	RegistryStoreBool( "General\\DumpScan",       bOutputScanDump);
-	RegistryStoreBool( "General\\DumpDHTExpand",  bOutputDHTexpand);
-	RegistryStoreBool( "General\\DecMaker",       bDecodeMaker);
-	RegistryStoreBool( "General\\DumpHistoY",     bDumpHistoY);
-//	RegistryStoreBool( "General\\DecScanClip",    bStatClipEn);
-	RegistryStoreBool( "General\\DecScanHisto",   bHistoEn);
+	RegistryStoreBool( _T("General\\DumpScan"),       bOutputScanDump);
+	RegistryStoreBool( _T("General\\DumpDHTExpand"),  bOutputDHTexpand);
+	RegistryStoreBool( _T("General\\DecMaker"),       bDecodeMaker);
+	RegistryStoreBool( _T("General\\DumpHistoY"),     bDumpHistoY);
+	RegistryStoreBool( _T("General\\DecScanHisto"),   bHistoEn);
 
-	RegistryStoreBool( "General\\DbSubmitNet",    bDbSubmitNet);
-	RegistryStoreBool( "General\\ExifHideUnk",    bExifHideUnknown);
+	RegistryStoreBool( _T("General\\DbSubmitNet"),    bDbSubmitNet);
+	RegistryStoreBool( _T("General\\ExifHideUnk"),    bExifHideUnknown);
 
-	RegistryStoreUint( "Report\\ErrMaxDecodeScan", nErrMaxDecodeScan);
+	RegistryStoreUint( _T("Report\\ErrMaxDecodeScan"), nErrMaxDecodeScan);
 
-	RegistryStoreBool( "Coach\\ReprocessAuto",    bCoachReprocessAuto);
-	RegistryStoreBool( "Coach\\DecodeIdct",       bCoachDecodeIdct);
+	RegistryStoreBool( _T("Coach\\ReprocessAuto"),    bCoachReprocessAuto);
+	RegistryStoreBool( _T("Coach\\DecodeIdct"),       bCoachDecodeIdct);
 
 	// Registry entries are no longer dirty
 	bDirty = false;
@@ -232,6 +253,15 @@ void CSnoopConfig::RegistryStore()
 }
 
 
+// Load a string from the registry
+//
+// INPUT:
+// - strKey				Registry key to read
+// - strDefault			Default value (in case the key doesn't exist)
+//
+// OUTPUT:
+// - String value from the registry key (or strDefault if not defined)
+//
 void CSnoopConfig::RegistryLoadStr(CString strKey,CString strDefault,CString &strSetting)
 {
 	CString strKeyPath = REG_KEY_PATH;
@@ -247,6 +277,15 @@ void CSnoopConfig::RegistryLoadStr(CString strKey,CString strDefault,CString &st
 	}
 }
 
+// Load a boolean from the registry
+//
+// INPUT:
+// - strKey				Registry key to read
+// - nDefault			Default value (in case the key doesn't exist)
+//
+// OUTPUT:
+// - Boolean value from the registry key (or nDefault if not defined)
+//
 void CSnoopConfig::RegistryLoadBool(CString strKey,unsigned nDefault,bool &bSetting)
 {
 	CString strKeyPath = REG_KEY_PATH;
@@ -262,6 +301,15 @@ void CSnoopConfig::RegistryLoadBool(CString strKey,unsigned nDefault,bool &bSett
 	}
 }
 
+// Load an UINT32 from the registry
+//
+// INPUT:
+// - strKey				Registry key to read
+// - nDefault			Default value (in case the key doesn't exist)
+//
+// OUTPUT:
+// - UINT32 value from the registry key (or nDefault if not defined)
+//
 void CSnoopConfig::RegistryLoadUint(CString strKey,unsigned nDefault,unsigned &nSetting)
 {
 	CString strKeyPath = REG_KEY_PATH;
@@ -277,6 +325,12 @@ void CSnoopConfig::RegistryLoadUint(CString strKey,unsigned nDefault,unsigned &n
 	}
 }
 
+// Store an UINT32 to the registry
+//
+// INPUT:
+// - strKey				Registry key to write
+// - nSetting			Value to store at registry key
+//
 void CSnoopConfig::RegistryStoreUint(CString strKey,unsigned nSetting)
 {
 	CString strKeyPath = REG_KEY_PATH;
@@ -287,18 +341,30 @@ void CSnoopConfig::RegistryStoreUint(CString strKey,unsigned nSetting)
 	ASSERT(regRd == nSetting);
 }
 
+// Store a boolean to the registry
+//
+// INPUT:
+// - strKey				Registry key to write
+// - bSetting			Value to store at registry key
+//
 void CSnoopConfig::RegistryStoreBool(CString strKey,bool bSetting)
 {
 	RegistryStoreUint(strKey,(bSetting)?1:0);
 }
 
+// Store a string to the registry
+//
+// INPUT:
+// - strKey				Registry key to write
+// - strSetting			Value to store at registry key
+//
 void CSnoopConfig::RegistryStoreStr(CString strKey,CString strSetting)
 {
 	CString strKeyPath = REG_KEY_PATH;
 	CString strKeyFull = strKeyPath + strKey;
-	CRegString regWr(strKeyFull,"???",TRUE,HKEY_CURRENT_USER);
+	CRegString regWr(strKeyFull,_T("???"),TRUE,HKEY_CURRENT_USER);
 	regWr = strSetting;
-	CRegString regRd(strKeyFull,"???",TRUE,HKEY_CURRENT_USER);
+	CRegString regRd(strKeyFull,_T("???"),TRUE,HKEY_CURRENT_USER);
 	ASSERT(regRd == strSetting);
 }
 
@@ -336,10 +402,10 @@ CString CSnoopConfig::GetDefaultDbDir()
 		// Get path for each computer, non-user specific and non-roaming data.
 		//if ( SUCCEEDED( SHGetFolderPath( NULL, CSIDL_APPDATA, 
 		//								NULL, 0, szFilePath ) ) )
-		if ( SUCCEEDED( SHGetSpecialFolderPath( NULL, szFilePath, CSIDL_APPDATA, true )))
+		if ( SHGetSpecialFolderPath( NULL, szFilePath, CSIDL_APPDATA, true ))
 		{
 			// Append product-specific path.
-			PathAppend( szFilePath, "\\JPEGsnoop" );
+			PathAppend( szFilePath, _T("\\JPEGsnoop") );
 
 			// Since the full path may not already exist, and CreateDirectory() only
 			// works on one level of hierarchy at a time, use a recursive function
@@ -347,7 +413,7 @@ CString CSnoopConfig::GetDefaultDbDir()
 			CreateDir(szFilePath);
 		} else {
 			// No error handling
-			AfxMessageBox("Problem trying to locate suitable directory; please choose manually");
+			AfxMessageBox(_T("Problem trying to locate suitable directory; please choose manually"));
 
 			// As a default, start with EXE directory
 			wsprintf(szFilePath,GetExeDir());
@@ -357,24 +423,25 @@ CString CSnoopConfig::GetDefaultDbDir()
 		// Apparently not a recent version of Windows, so we'll revert
 		// to some older methods at getting the directory
 
-		ExpandEnvironmentStrings("%userprofile%",szUserProfile,sizeof(szUserProfile));
+		ExpandEnvironmentStrings(_T("%userprofile%"),szUserProfile,sizeof(szUserProfile)/sizeof(*szUserProfile));
 
-		// *** In Win95/98 it is likely that the above will return the literal "%userprofile%"
-		//     so in that case we don't want to create a directory -- use the exe dir instead
-		if (!strcmp(szUserProfile,"%userprofile%")) {
-			wsprintf(szFilePath, "");
+		// NOTE:
+		// - In Win95/98 it is likely that the above will return the literal "%userprofile%"
+		//   so in that case we don't want to create a directory -- use the exe dir instead
+		if (!_tcscmp(szUserProfile,_T("%userprofile%"))) {
+			wsprintf(szFilePath, _T(""));
 			// Since we can't locate the user profile directory from environment
 			// strings, we don't want to create any subdirectory. If we were to
 			// call CreateDir() with an empty string, we'd end up with a garbled
 			// folder name created!
 
-			// So, for now, default to executable directory!
+			// So, for now, default to executable directory
 			wsprintf(szFilePath,GetExeDir());
 		} else {
 			// FIXME
 			// Note that the following is not very good as it doesn't select
 			// a suitable directory for non-English systems.
-			wsprintf(szFilePath, "%s%s", szUserProfile,"\\Application Data\\JPEGsnoop");
+			wsprintf(szFilePath, _T("%s%s"), szUserProfile,_T("\\Application Data\\JPEGsnoop"));
 
 			// Since the full path may not already exist, and CreateDirectory() only
 			// works on one level of hierarchy at a time, use a recursive function
@@ -385,29 +452,34 @@ CString CSnoopConfig::GetDefaultDbDir()
 	return szFilePath;
 }
 
+// Get the directory path of the JPEGsnoop executable
+// - This is used as a default location for the user signature database
 CString CSnoopConfig::GetExeDir()
 {
-	char szPath[1024];
-	GetModuleFileName(AfxGetApp()->m_hInstance, szPath, sizeof(szPath));
+	TCHAR szPath[1024];
+	GetModuleFileName(AfxGetApp()->m_hInstance, szPath, sizeof(szPath)/sizeof(*szPath));
 	
-	char *ptr = strrchr(szPath, '\\');
+	TCHAR *ptr = _tcsrchr(szPath, '\\');
 	
 	if (ptr)
 	{
 		ptr[1] = '\0';
 	}
 	
-	ASSERT(strlen(szPath) < sizeof(szPath));
+	ASSERT(_tcslen(szPath) < sizeof(szPath));
 	
 	return szPath;
 }
 
 // Recursively create directories as needed to create full path
-void CSnoopConfig::CreateDir(char* Path)
+// TODO: Should replace this by SHCreateDirectoryEx()
+void CSnoopConfig::CreateDir(LPTSTR Path)
 {
-	char DirName[256];
-	char* p = Path;
-	char* q = DirName; 
+	TCHAR DirName[256];
+	TCHAR* p = Path;
+	TCHAR* q = DirName; 
+	DirName[0] = '\0';	// Start as null-terminated
+
 	while(*p)
 	{
 		if (('\\' == *p) || ('/' == *p))

@@ -13,13 +13,11 @@
 #undef APSTUDIO_READONLY_SYMBOLS
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// English (United States) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
-#endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -81,7 +79,7 @@ IDR_MAINFRAME           BITMAP                  "res\\Toolbar.bmp"
 // Toolbar
 //
 
-IDR_MAINFRAME TOOLBAR  16, 15
+IDR_MAINFRAME TOOLBAR 16, 15
 BEGIN
     BUTTON      ID_FILE_NEW
     BUTTON      ID_FILE_OPEN
@@ -101,7 +99,7 @@ END
 // Menu
 //
 
-IDR_MAINFRAME MENU 
+IDR_MAINFRAME MENU
 BEGIN
     POPUP "&File"
     BEGIN
@@ -176,9 +174,7 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "Lookup MCU Offset...",        ID_TOOLS_LOOKUPMCUOFFSET
         MENUITEM "File Overlay...",             ID_TOOLS_FILEOVERLAY
-        MENUITEM "Search Executable for DQT...", 
-                                                ID_TOOLS_SEARCHEXECUTABLEFORDQT
-
+        MENUITEM "Search Executable for DQT...", ID_TOOLS_SEARCHEXECUTABLEFORDQT
         MENUITEM "Export JPEG...",              ID_TOOLS_EXTRACTEMBEDDEDJPEG
         MENUITEM "Export TIFF...",              ID_TOOLS_EXPORTTIFF
         MENUITEM SEPARATOR
@@ -189,25 +185,21 @@ BEGIN
     BEGIN
         MENUITEM "DHT Expand",                  ID_OPTIONS_DHTEXPAND
         MENUITEM "Hide Unknown EXIF Tags",      ID_OPTIONS_HIDEUKNOWNEXIFTAGS
-
         MENUITEM "Maker Notes",                 ID_OPTIONS_MAKERNOTES
         MENUITEM "Signature Search",            ID_OPTIONS_SIGNATURESEARCH
         MENUITEM SEPARATOR
         POPUP "Scan Segment"
         BEGIN
             MENUITEM "Decode Image",                ID_SCANSEGMENT_DECODEIMAGE
-
             MENUITEM SEPARATOR
             MENUITEM "Full IDCT (AC+DC - slow)",    ID_SCANSEGMENT_FULLIDCT
             MENUITEM "No IDCT (DC only - fast)",    ID_SCANSEGMENT_NOIDCT
             MENUITEM SEPARATOR
             MENUITEM "Histogram RGB",               ID_SCANSEGMENT_HISTOGRAM
             MENUITEM "Histogram Y",                 ID_SCANSEGMENT_HISTOGRAMY
-
             MENUITEM SEPARATOR
             MENUITEM "Dump",                        ID_SCANSEGMENT_DUMP
             MENUITEM "Detailed Decode...",          ID_SCANSEGMENT_DETAILEDDECODE
-
         END
         MENUITEM SEPARATOR
         MENUITEM "Configuration...",            ID_OPTIONS_CONFIGURATION
@@ -219,7 +211,7 @@ BEGIN
     END
 END
 
-IDR_CNTR_INPLACE MENU 
+IDR_CNTR_INPLACE MENU
 BEGIN
     POPUP "&File"
     BEGIN
@@ -246,7 +238,7 @@ END
 // Accelerator
 //
 
-IDR_MAINFRAME ACCELERATORS 
+IDR_MAINFRAME ACCELERATORS
 BEGIN
     VK_ESCAPE,      ID_CANCEL_EDIT_CNTR,    VIRTKEY, NOINVERT
     "C",            ID_EDIT_COPY,           VIRTKEY, CONTROL, NOINVERT
@@ -284,7 +276,7 @@ BEGIN
     "1",            ID_TOOLS_SEARCHREVERSE, VIRTKEY, CONTROL, NOINVERT
 END
 
-IDR_CNTR_INPLACE ACCELERATORS 
+IDR_CNTR_INPLACE ACCELERATORS
 BEGIN
     "N",            ID_FILE_NEW,            VIRTKEY, CONTROL
     "O",            ID_FILE_OPEN,           VIRTKEY, CONTROL
@@ -302,63 +294,52 @@ END
 //
 
 IDD_ABOUTBOX DIALOGEX 0, 0, 242, 94
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About JPEGsnoop"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,12,6,20,20
     LTEXT           "JPEGsnoop",IDC_STATIC,42,6,39,8,SS_NOPREFIX
-    LTEXT           "Copyright © 2012 Calvin Hass",IDC_STATIC,42,18,124,8
+    LTEXT           "Copyright © 2014 Calvin Hass",IDC_STATIC,42,18,124,8
     DEFPUSHBUTTON   "OK",IDOK,185,7,50,16,WS_GROUP
     LTEXT           "www.impulseadventure.com/photo/",IDC_URL,24,66,117,8
-    LTEXT           "Documentation and Updates for JPEGsnoop",IDC_URL_DOC,24,
-                    48,169,8
+    LTEXT           "Documentation and Updates for JPEGsnoop",IDC_URL_DOC,24,48,169,8
     LTEXT           "Version",IDC_VER_NUM,96,6,86,10
     GROUPBOX        "",IDC_STATIC,12,36,222,54
 END
 
 IDD_DBSUBMITDLG DIALOGEX 0, 0, 397, 180
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Submit Compression Signature to Database"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,340,7,50,16
     PUSHBUTTON      "Cancel",IDCANCEL,340,26,50,16
     EDITTEXT        IDC_QUAL,258,12,66,14,ES_AUTOHSCROLL
-    CONTROL         "Direct from Camera",IDC_RADIO_CAM,"Button",
-                    BS_AUTORADIOBUTTON | WS_GROUP,228,84,76,10
-    CONTROL         "Edited / Processed by Software",IDC_RADIO_SW,"Button",
-                    BS_AUTORADIOBUTTON,228,96,116,10
+    CONTROL         "Direct from Camera",IDC_RADIO_CAM,"Button",BS_AUTORADIOBUTTON | WS_GROUP,228,84,76,10
+    CONTROL         "Edited / Processed by Software",IDC_RADIO_SW,"Button",BS_AUTORADIOBUTTON,228,96,116,10
     EDITTEXT        IDC_USER_SOFTWARE,276,108,108,14,ES_AUTOHSCROLL
-    CONTROL         "I really don't know where it came from",
-                    IDC_RADIO_UNKNOWN,"Button",BS_AUTORADIOBUTTON,228,126,
-                    138,10
+    CONTROL         "I really don't know where it came from",IDC_RADIO_UNKNOWN,
+                    "Button",BS_AUTORADIOBUTTON,228,126,138,10
     EDITTEXT        IDC_NOTES,126,150,138,14,ES_AUTOHSCROLL
     EDITTEXT        IDC_MAKE,78,12,96,14,ES_AUTOHSCROLL | ES_READONLY
     EDITTEXT        IDC_MODEL,78,30,96,14,ES_AUTOHSCROLL | ES_READONLY
     EDITTEXT        IDC_SOFTWARE,78,48,96,14,ES_AUTOHSCROLL | ES_READONLY
     EDITTEXT        IDC_SIG,48,72,150,14,ES_AUTOHSCROLL | ES_READONLY
-    LTEXT           "e.g. superfine, normal, 70, 10, high, etc. For software, the save quality setting.",
-                    IDC_STATIC,198,30,125,17
-    LTEXT           "Camera / Software Quality Setting:",IDC_STATIC,186,12,
-                    66,18
-    LTEXT           "NOTE: Clicking OK will send compression signature (not the photo or any other information) to your local user database file and the ImpulseAdventure database used for JPEGsnoop to authenticate new digital cameras.",
-                    IDC_STATIC,6,96,186,42
+    LTEXT           "e.g. superfine, normal, 70, 10, high, etc. For software, the save quality setting.",IDC_STATIC,198,30,125,17
+    LTEXT           "Camera / Software Quality Setting:",IDC_STATIC,186,12,66,18
+    LTEXT           "NOTE: Clicking OK will send compression signature (not the photo or any other information) to your local user database file and the ImpulseAdventure database used for JPEGsnoop to authenticate new digital cameras.",IDC_STATIC,6,96,186,42
     LTEXT           "EXIF Make:",IDC_STATIC,6,12,38,8
     LTEXT           "EXIF Model:",IDC_STATIC,6,30,40,8
     LTEXT           "Signature:",IDC_STATIC,6,72,42,8
     LTEXT           "EXIF Software:",IDC_STATIC,6,48,48,8
     LTEXT           "Software:",IDC_STATIC,240,108,31,8
     GROUPBOX        "This file is:",IDC_STATIC,216,72,174,71
-    LTEXT           "Any other notes about this file:",IDC_STATIC,18,150,96,
-                    8
+    LTEXT           "Any other notes about this file:",IDC_STATIC,18,150,96,8
 END
 
 IDD_OVERLAYBUFDLG DIALOGEX 0, 0, 376, 138
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "File Overlay Test"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -373,8 +354,7 @@ BEGIN
     LTEXT           "(Hex):",IDC_STATIC,18,102,24,8
     EDITTEXT        IDC_OVRLEN,318,102,40,14,ES_AUTOHSCROLL | ES_NUMBER
     LTEXT           "Len (bytes)",IDC_STATIC,270,102,42,8
-    CONTROL         "Overlay Enabled?",IDC_OVREN,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,6,12,72,10
+    CONTROL         "Overlay Enabled?",IDC_OVREN,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,6,12,72,10
     LTEXT           "Current value",IDC_OVRCURBIN,42,73,318,8
     LTEXT           "(Bin):",IDC_STATIC,18,73,24,8
     GROUPBOX        "Original Data in Overlay Region",IDC_STATIC,6,48,360,36
@@ -383,8 +363,7 @@ BEGIN
 END
 
 IDD_LOOKUP DIALOGEX 0, 0, 247, 78
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Lookup File Offset of MCU"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
@@ -403,18 +382,15 @@ BEGIN
 END
 
 IDD_OFFSETDLG DIALOGEX 0, 0, 263, 54
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Starting File Offset"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,206,7,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,206,24,50,14
     LTEXT           "Offset (Bytes):",IDC_STATIC,14,15,50,8
-    CONTROL         "Hex",IDC_BASEH,"Button",BS_AUTORADIOBUTTON | WS_GROUP | 
-                    WS_TABSTOP,69,14,29,10
-    CONTROL         "Decimal",IDC_BASED,"Button",BS_AUTORADIOBUTTON,69,28,40,
-                    10
+    CONTROL         "Hex",IDC_BASEH,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,69,14,29,10
+    CONTROL         "Decimal",IDC_BASED,"Button",BS_AUTORADIOBUTTON,69,28,40,10
     EDITTEXT        IDC_OFFSETVAL,117,17,82,14,ES_AUTOHSCROLL
 END
 
@@ -424,23 +400,18 @@ CAPTION "JPEGsnoop Configuration"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     EDITTEXT        IDC_DB_DIR,30,20,126,14,ES_AUTOHSCROLL
-    CONTROL         "Automatically check for updates",IDC_UPDATE_CHK,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,12,66,126,10
+    CONTROL         "Automatically check for updates",IDC_UPDATE_CHK,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,66,126,10
     EDITTEXT        IDC_UPDATE_CHK_DAYS,168,66,24,14,ES_AUTOHSCROLL
-    CONTROL         "Auto Reprocess files on change in Options (slower)",
-                    IDC_REPROCESS_AUTO,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
-                    12,102,209,10
-    CONTROL         "Submit signature to Online DB when User submit",
-                    IDC_DBSUBMIT_NET,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,
-                    12,114,210,10
+    CONTROL         "Auto Reprocess files on change in Options (slower)",IDC_REPROCESS_AUTO,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,102,209,10
+    CONTROL         "Submit signature to Online DB when User submit",IDC_DBSUBMIT_NET,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,114,210,10
     EDITTEXT        IDC_RPTERRMAX_SCANDECODE,150,150,40,12,ES_AUTOHSCROLL
-    LTEXT           "Coach Messages can be re-enabled:",IDC_STATIC,12,186,
-                    125,8
+    LTEXT           "Coach Messages can be re-enabled:",IDC_STATIC,12,186,125,8
     PUSHBUTTON      "Reset",IDC_COACH_RESET,132,180,50,14
     DEFPUSHBUTTON   "Save",IDOK,258,6,50,16
     PUSHBUTTON      "Cancel",IDCANCEL,258,25,50,16
-    LTEXT           "Max # errors to report in Scan Decode",IDC_STATIC,12,
-                    150,138,8
+    LTEXT           "Max # errors to report in Scan Decode",IDC_STATIC,12,150,138,8
     PUSHBUTTON      "Browse",IDC_DB_DIR_BROWSE,159,17,50,10
     PUSHBUTTON      "Default",IDC_DB_DIR_DEFAULT,159,28,50,10
     GROUPBOX        "Directory for User Database",IDC_STATIC,6,6,228,42
@@ -459,16 +430,12 @@ FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,291,7,50,16
     PUSHBUTTON      "EXIT",IDCANCEL,291,26,50,16
-    EDITTEXT        IDC_EULA,25,55,252,78,ES_MULTILINE | ES_READONLY | 
-                    WS_VSCROLL
+    EDITTEXT        IDC_EULA,25,55,252,78,ES_MULTILINE | ES_READONLY | WS_VSCROLL
     CONTROL         "I have read and agree to the terms above",IDC_EULA_OK,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,25,137,165,10
-    CONTROL         "Automatically check for updates",IDC_UPDATE_AUTO,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,25,175,168,10
-    LTEXT           "You can always change this option later in Configuration",
-                    IDC_STATIC,37,186,181,8
-    CTEXT           "Welcome to JPEGsnoop!",IDC_STATIC,95,17,118,12,
-                    SS_CENTERIMAGE | SS_SUNKEN
+    CONTROL         "Automatically check for updates",IDC_UPDATE_AUTO,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,25,175,168,10
+    LTEXT           "You can always change this option later in Configuration",IDC_STATIC,37,186,181,8
+    CTEXT           "Welcome to JPEGsnoop!",IDC_STATIC,95,17,118,12,SS_CENTERIMAGE | SS_SUNKEN
     GROUPBOX        "Software Updates:",IDC_STATIC,15,162,270,41
     GROUPBOX        "Software Agreement:",IDC_STATIC,15,44,270,109
 END
@@ -480,28 +447,24 @@ FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,257,7,50,16
     PUSHBUTTON      "Cancel",IDCANCEL,257,26,50,16
-    LTEXT           "A newer version of JPEGsnoop is available for download!",
-                    IDC_STATIC,6,12,191,8
+    LTEXT           "A newer version of JPEGsnoop is available for download!",IDC_STATIC,6,12,191,8
     LTEXT           "Current Version:",IDC_STATIC,18,29,51,8
     LTEXT           "Latest Version:",IDC_STATIC,18,48,48,8
     LTEXT           "cur",IDC_VER_CUR,78,29,60,8
     LTEXT           "latest",IDC_VER_LATEST,78,48,60,8
     PUSHBUTTON      "Download Page",IDC_BUTTON1,151,49,84,14
-    CONTROL         "Continue to check for new updates in the future",
-                    IDC_UPDATE_AUTO_STILL,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,39,73,174,10
+    CONTROL         "Continue to check for new updates in the future",IDC_UPDATE_AUTO_STILL,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,39,73,174,10
     LTEXT           "Released on:",IDC_STATIC,18,58,46,8
     LTEXT           "date",IDC_DATE_LATEST,78,58,55,8
 END
 
 IDD_MODELESSDLG DIALOGEX 0, 100, 259, 43
-STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_VISIBLE | 
-    WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
 CAPTION "Checking for Updates"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
-    LTEXT           "Checking ImpulseAdventure.com for JPEGsnoop updates ...",
-                    IDC_STATIC,29,16,198,8
+    LTEXT           "Checking ImpulseAdventure.com for JPEGsnoop updates ...",IDC_STATIC,29,16,198,8
 END
 
 IDD_NOTEDLG DIALOGEX 0, 0, 369, 73
@@ -513,8 +476,7 @@ BEGIN
     LTEXT           "msg",IDC_MSG,6,6,285,27,SS_SUNKEN
     CONTROL         "In the future, do not show this message",IDC_COACH_OFF,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,18,42,151,10
-    LTEXT           "NOTE: You can always re-enable coach messages in Configuration",
-                    IDC_STATIC,30,54,225,8
+    LTEXT           "NOTE: You can always re-enable coach messages in Configuration",IDC_STATIC,30,54,225,8
 END
 
 IDD_DBMANAGEDLG DIALOGEX 0, 0, 405, 132
@@ -524,8 +486,7 @@ FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,348,7,50,16
     PUSHBUTTON      "Cancel",IDCANCEL,348,26,50,16
-    LISTBOX         IDC_LIST,6,6,332,96,LBS_USETABSTOPS | 
-                    LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
+    LISTBOX         IDC_LIST,6,6,332,96,LBS_USETABSTOPS | LBS_NOINTEGRALHEIGHT | WS_VSCROLL | WS_TABSTOP
     PUSHBUTTON      "Remove",IDC_REMOVE,6,108,50,14
     PUSHBUTTON      "Remove All",IDC_REMOVEALL,66,108,50,14
 END
@@ -537,21 +498,16 @@ FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,233,7,50,16
     PUSHBUTTON      "Cancel",IDCANCEL,233,26,50,16
-    CONTROL         "Enable Overlays (Slower)",IDC_OVERLAY,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,12,36,120,10
+    CONTROL         "Enable Overlays (Slower)",IDC_OVERLAY,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,36,120,10
     CONTROL         "Insert MJPEG DHT (for AVI Frame export)",IDC_DHTAVI,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,54,150,10
     LTEXT           "Source file start offset:",IDC_STATIC,12,6,84,8
     LTEXT           "Offset",IDC_OFFSET_START,102,6,48,8
-    CONTROL         "Missing EOI: Force EOI",IDC_FORCE_EOI,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,12,78,150,10
+    CONTROL         "Missing EOI: Force EOI",IDC_FORCE_EOI,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,78,150,10
     GROUPBOX        "Settings",IDC_STATIC,6,24,216,90
-    CONTROL         "Missing EOI: Ignore",IDC_IGNORE_EOI,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,12,90,96,10
-    CONTROL         "Missing SOI: Force SOI",IDC_FORCE_SOI,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,12,66,150,10
-    CONTROL         "Extract All JPEGs",IDC_EXT_ALL,"Button",BS_AUTOCHECKBOX | 
-                    WS_TABSTOP,138,36,78,10
+    CONTROL         "Missing EOI: Ignore",IDC_IGNORE_EOI,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,90,96,10
+    CONTROL         "Missing SOI: Force SOI",IDC_FORCE_SOI,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,12,66,150,10
+    CONTROL         "Extract All JPEGs",IDC_EXT_ALL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,138,36,78,10
 END
 
 IDD_DECODEDETAILDLG DIALOGEX 0, 0, 262, 121
@@ -569,13 +525,10 @@ BEGIN
     RTEXT           "# MCUs =",IDC_STATIC,18,60,33,8
     GROUPBOX        "Starting MCU for Decode",IDC_STATIC,6,6,186,36
     GROUPBOX        "Length of Decode",IDC_STATIC,6,48,186,36
-    CONTROL         "Enable detailed Scan Decode?",IDC_CHECK1,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,6,90,114,10
-    LTEXT           "Detailed Scan Decode will be reported in the next decode operation",
-                    IDC_STATIC,18,102,228,8
+    CONTROL         "Enable detailed Scan Decode?",IDC_CHECK1,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,6,90,114,10
+    LTEXT           "Detailed Scan Decode will be reported in the next decode operation",IDC_STATIC,18,102,228,8
     PUSHBUTTON      "Load Coords",IDC_BTN_LOAD,204,72,50,14
-    LTEXT           "Load X/Y/Len from last 2 clicks:",IDC_STATIC,198,48,54,
-                    18
+    LTEXT           "Load X/Y/Len from last 2 clicks:",IDC_STATIC,198,48,54,18
 END
 
 IDD_EXPORTTIFFDLG DIALOGEX 0, 0, 256, 108
@@ -585,45 +538,41 @@ FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,198,6,50,16
     PUSHBUTTON      "Cancel",IDCANCEL,198,25,50,16
-    CONTROL         "RGB (8 bit)",IDC_RAD_RGB8,"Button",BS_AUTORADIOBUTTON | 
-                    WS_GROUP,24,54,72,10
-    CONTROL         "RGB (16 bit)",IDC_RAD_RGB16,"Button",BS_AUTORADIOBUTTON,
-                    24,66,72,10
-    CONTROL         "YCC (8 bit)",IDC_RAD_YCC8,"Button",BS_AUTORADIOBUTTON,
-                    24,79,72,10
+    CONTROL         "RGB (8 bit)",IDC_RAD_RGB8,"Button",BS_AUTORADIOBUTTON | WS_GROUP,24,54,72,10
+    CONTROL         "RGB (16 bit)",IDC_RAD_RGB16,"Button",BS_AUTORADIOBUTTON,24,66,72,10
+    CONTROL         "YCC (8 bit)",IDC_RAD_YCC8,"Button",BS_AUTORADIOBUTTON,24,79,72,10
     GROUPBOX        "Output Format",IDC_STATIC,12,36,90,60
     LTEXT           "Save Filename:",IDC_STATIC,12,12,54,8
     EDITTEXT        IDC_EDIT_FNAME,66,12,120,14,ES_AUTOHSCROLL | ES_READONLY
 END
 
-IDD_BATCHDLG DIALOGEX 0, 0, 232, 108
+IDD_BATCHDLG DIALOGEX 0, 0, 249, 146
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Batch Processing"
 FONT 8, "MS Sans Serif", 0, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,162,66,50,16
-    PUSHBUTTON      "Cancel",IDCANCEL,162,84,50,16
-    CONTROL         "Process subdirectories?",IDC_CHECK_SUBDIRS,"Button",
-                    BS_AUTOCHECKBOX | WS_TABSTOP,30,73,98,10
-    EDITTEXT        IDC_EDIT_DIR,30,49,180,14,ES_AUTOHSCROLL | ES_READONLY
-    LTEXT           "Directory:",IDC_STATIC,24,36,42,8
-    LTEXT           "NOTE 1: Recommend for use on backup copy of files only",
-                    IDC_STATIC,6,6,186,8
-    LTEXT           "NOTE 2: For faster operation, disable ""Decode Image"" before use",
-                    IDC_STATIC,6,18,210,8
+    DEFPUSHBUTTON   "OK",IDOK,174,102,50,16
+    PUSHBUTTON      "Cancel",IDCANCEL,174,121,50,16
+    CONTROL         "Process subdirectories?",IDC_CHECK_SUBDIRS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,42,110,98,10
+    LTEXT           "Input Image Directory:",IDC_STATIC,12,36,72,8
+    LTEXT           "NOTE 1: Recommend for use on backup copy of files only",IDC_STATIC,6,6,186,8
+    LTEXT           "NOTE 2: For faster operation, disable ""Decode Image"" before use",IDC_STATIC,6,18,210,8
+    CONTROL         "Extract all JPEGs",IDC_CHECK_EXT_ALL,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,42,121,90,10
+    PUSHBUTTON      "...",IDC_BTN_DIR_SRC_BROWSE,204,48,18,14
+    EDITTEXT        IDC_EDIT_DIR_SRC,24,48,180,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_EDIT_DIR_DST,24,78,180,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_BTN_DIR_DST_BROWSE,204,78,18,14
+    LTEXT           "Output Log Directory:",IDC_STATIC,12,66,72,8
 END
 
 IDD_OPERATIONDLG DIALOGEX 0, 0, 186, 73
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | 
-    WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Operation Progress"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "Abort",ID_BTN_ABORT,66,48,50,14
-    CONTROL         "",IDC_PROGRESS_BAR,"msctls_progress32",WS_BORDER,6,6,
-                    174,14
-    CTEXT           "Progress: ddd of ddd",IDC_STATIC_PROGRESS,6,24,174,12,
-                    SS_SUNKEN
+    CONTROL         "",IDC_PROGRESS_BAR,"msctls_progress32",WS_BORDER,6,6,174,14
+    CTEXT           "Progress: ddd of ddd",IDC_STATIC_PROGRESS,6,24,174,12,SS_SUNKEN
 END
 
 
@@ -633,8 +582,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,6,1,0
- PRODUCTVERSION 1,6,1,0
+ FILEVERSION 1,7,1,0
+ PRODUCTVERSION 1,7,1,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -651,12 +600,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "ImpulseAdventure"
             VALUE "FileDescription", "JPEGsnoop"
-            VALUE "FileVersion", "1.6.1.0"
+            VALUE "FileVersion", "1.7.1.0"
             VALUE "InternalName", "JPEGsnoop.exe"
-            VALUE "LegalCopyright", "(c) 2012 Calvin Hass.  All rights reserved."
+            VALUE "LegalCopyright", "(c) 2014 Calvin Hass.  All rights reserved."
             VALUE "OriginalFilename", "JPEGsnoop.exe"
             VALUE "ProductName", "JPEGsnoop"
-            VALUE "ProductVersion", "1.6.1.0"
+            VALUE "ProductVersion", "1.7.1.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -672,7 +621,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_ABOUTBOX, DIALOG
     BEGIN
@@ -789,9 +738,9 @@ BEGIN
     IDD_BATCHDLG, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 225
+        RIGHTMARGIN, 242
         TOPMARGIN, 7
-        BOTTOMMARGIN, 101
+        BOTTOMMARGIN, 139
     END
 
     IDD_OPERATIONDLG, DIALOG
@@ -810,7 +759,7 @@ END
 // String Table
 //
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDR_MAINFRAME           "JPEGsnoop\nUntitled\nJPEGsnoop\nJPEG Image/Video (*.jpg;*.jpeg;*.avi;*.mov)\n.jpg;.jpeg;.avi;.mov\nJPEGsnoop.Document\nJPEGsnoop.Document"
     IDR_MAINFRAME_BAK       "JPEGsnoop\n\nJPEGsnoop\n\n\nJPEGsnoop.Document\nJPEGsnoop.Document"
@@ -827,13 +776,13 @@ BEGIN
     ID_INDICATOR_FILEPOS    "File: 0x00000000:0"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     AFX_IDS_APP_TITLE       "JPEGsnoop"
     AFX_IDS_IDLEMESSAGE     "Ready"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_INDICATOR_EXT        "EXT"
     ID_INDICATOR_CAPS       "CAP"
@@ -843,7 +792,7 @@ BEGIN
     ID_INDICATOR_REC        "REC"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_FILE_NEW             "Create a new document\nNew"
     ID_FILE_OPEN            "Open an existing document\nOpen"
@@ -856,13 +805,13 @@ BEGIN
     ID_FILE_PRINT_PREVIEW   "Display full pages\nPrint Preview"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_APP_ABOUT            "About JPEGsnoop\nAbout"
     ID_APP_EXIT             "Quit JPEGsnoop\nExit"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_FILE_MRU_FILE1       "Open this file"
     ID_FILE_MRU_FILE2       "Open this document"
@@ -882,18 +831,18 @@ BEGIN
     ID_FILE_MRU_FILE16      "Open this document"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_NEXT_PANE            "Switch to the next window pane\nNext Pane"
     ID_PREV_PANE            "Switch back to the previous window pane\nPrevious Pane"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_WINDOW_SPLIT         "Split the active window into panes\nSplit"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_EDIT_CLEAR           "Erase the selection\nErase"
     ID_EDIT_CLEAR_ALL       "Erase everything\nErase All"
@@ -910,20 +859,20 @@ BEGIN
     ID_EDIT_REDO            "Redo the previously undone action\nRedo"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_VIEW_TOOLBAR         "Show or hide the toolbar\nToggle ToolBar"
     ID_VIEW_STATUS_BAR      "Show or hide the status bar\nToggle StatusBar"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_OLE_INSERT_NEW       "Insert new embedded object\nNew Object"
     ID_OLE_EDIT_LINKS       "Edit linked objects\nEdit Links"
     ID_OLE_EDIT_CONVERT     "Convert object to different type\nConvert Object"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_OLE_VERB_FIRST       "Activate embedded or linked object"
     57873                   "Activate embedded or linked object"
@@ -931,7 +880,7 @@ BEGIN
     57875                   "Activate embedded or linked object"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     AFX_IDS_SCSIZE          "Change the window size"
     AFX_IDS_SCMOVE          "Change the window position"
@@ -942,19 +891,19 @@ BEGIN
     AFX_IDS_SCCLOSE         "Close the active window and prompts to save the documents"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     AFX_IDS_SCRESTORE       "Restore the window to normal size"
     AFX_IDS_SCTASKLIST      "Activate Task List"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     AFX_IDS_SAVEFILECOPY    "Save Log File..."
     AFX_IDS_PREVIEW_CLOSE   "Close print preview mode\nCancel Preview"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_TOOLS_DECODE         "Test decode"
     ID_FILE_OFFSET          "Start processing at an offset\nOffset"
@@ -969,12 +918,12 @@ BEGIN
     ID_OPTIONS_SCANDUMP     "Hex dump of scan data\nDump Scan"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_CAL_EXE_OPEN        "Open Executable file for Search"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_OPTIONS_HISTOYDUMP   "Display Luminance Histogram\nHisto Y"
     ID_FILE_REPROCESS       "Reprocess the current file\nReprocess"
@@ -983,7 +932,7 @@ BEGIN
     ID_OPTIONS_CHECKFORUPDATES "Check internet for updates\nUpdates"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_TOOLS_SEARCHEXECUTABLEFORDQT "Find DQT Table in Executable\nFind DQT"
     ID_TOOLS_MANAGELOCALDB  "Manage the local User signatures\nManage Sigs"
@@ -997,7 +946,7 @@ BEGIN
     ID_SCANSEGMENT_DUMP     "Dump hex of start of Scan Segment\nScan Dump"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     32800                   "Show RGB channel\nRGB"
     32801                   "Show YCC channel\nYCC"
@@ -1017,13 +966,13 @@ BEGIN
     32815                   "Set Image View zoom to 800%\n800%"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_SCANSEGMENT_NOIDCT   "No decode (DC component only)\nLow Res"
     ID_OVERLAYS_MCUGRID     "Display MCU Boundary grid\nMCU Grid"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_IMAGEZOOM_ZOOMIN     "Zoom In\nZoom In"
     ID_IMAGEZOOM_ZOOMOUT    "Zoom Out\nZoom Out"
@@ -1038,7 +987,7 @@ BEGIN
     ID_IMAGEZOOM_800        "Zoom 800%\nZoom 800%"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_TOOLS_DETAILEDSCANDECODE "Report detailed VLC decode\nDetailed Scan"
     ID_SCANSEGMENT_DETAILEDDECODE 
@@ -1046,13 +995,13 @@ BEGIN
     ID_SCANSEGMENT_HISTOGRAM "Calc and display RGB Histograms\nHisto RGB"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     ID_OPTIONS_HIDEUKNOWNEXIFTAGS "Hide Unknown EXIF Tags\nEXIF Tags"
     ID_FILE_BATCHPROCESS    "Start batch processing"
 END
 
-#endif    // English (U.S.) resources
+#endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

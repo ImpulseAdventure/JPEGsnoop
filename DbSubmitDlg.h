@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,13 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
+
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - Dialog box that enables user to submit a new signature to the database
+//
+// ==========================================================================
+
 
 #pragma once
 #include "afxwin.h"
@@ -38,13 +45,14 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
-	CString m_strSig;
-	CString m_strExifModel;
-	CString m_strExifSoftware;
-	CString m_strExifMake;
-	CString m_strQual;
-	CString m_strUserSoftware;
-	int m_nSource;
-	CString m_strNotes;
-	afx_msg void OnBnClickedOk();
+	CString			m_strSig;
+	CString			m_strExifModel;
+	CString			m_strExifSoftware;
+	CString			m_strExifMake;
+	CString			m_strQual;
+	CString			m_strUserSoftware;
+	int				m_nSource;
+	CString			m_strNotes;
+
+	afx_msg void	OnBnClickedOk();
 };

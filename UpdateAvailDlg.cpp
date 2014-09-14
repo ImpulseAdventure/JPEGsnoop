@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -61,5 +61,5 @@ END_MESSAGE_MAP()
 void CUpdateAvailDlg::OnBnClickedButton1()
 {
 	// Open website
-	ShellExecute(0, "open", IA_UPDATES_DL_PAGE, 0, 0, SW_SHOWNORMAL);
+	ShellExecute(0, _T("open"), IA_UPDATES_DL_PAGE, 0, 0, SW_SHOWNORMAL);
 }

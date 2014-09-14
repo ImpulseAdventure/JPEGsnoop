@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,46 +16,54 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+// ==========================================================================
+// CLASS DESCRIPTION:
+// - Class provides management of the signatures database
+// - Supports both built-in and user database entries
+//
+// ==========================================================================
+
+
 #pragma once
 
 #define DBEX_ENTRIES_MAX 300
-#define DB_VER_STR "02"
+#define DB_VER_STR "03"
 
-struct CompExcMmNoMkr {
-	char*		x_make;				//
-	char*		x_model;			//
+#include "snoop.h"
+
+// Signature exception structure with metadata fields
+struct CompExcMm {
+	LPTSTR		strXMake;			// EXIF Make
+	LPTSTR		strXModel;			// EXIF Model
 };
 
-struct CompExcMmIsEdit {
-	char*		x_make;				//
-	char*		x_model;			//
-};
 
 // Signature structure for hardcoded table
 struct CompSigConst {
-	unsigned	m_editor;			// 0=unset, 1=digicam, 2=software/editor
-	char*		x_make;				// Blank for editors (set to m_swdisp)
-	char*		x_model;			// Blank for editors
-	char*		um_qual;
-	char*		c_sig;				// Signature
-	char*		c_sigrot;			// Signature of rotated DQTs
-	char*		x_subsamp;			// Blank for editors
-	char*		m_swtrim;			// Blank for digicam
-	char*		m_swdisp;			// Blank for digicam
+	teEditor	eEditor;			// Digicam vs software/editor
+	LPTSTR		strXMake;			// Blank for editors (set to strMSwDisp)
+	LPTSTR		strXModel;			// Blank for editors
+	LPTSTR		strUmQual;
+	LPTSTR		strCSig;			// Signature
+	LPTSTR		strCSigRot;			// Signature of rotated DQTs
+	LPTSTR		strXSubsamp;		// Blank for editors
+	LPTSTR		strMSwTrim;			// Blank for digicam
+	LPTSTR		strMSwDisp;			// Blank for digicam
 };
+
 
 // Signature structure for runtime table (can use CStrings)
 struct CompSig {
-	unsigned	flag;			// 0=? 1=OK 9=DELETE
-	unsigned	m_editor;
-	CString		x_make;			// Blank for editors
-	CString		x_model;		// Blank for editors
-	CString		um_qual;
-	CString		c_sig;
-	CString		c_sigrot;
-	CString		x_subsamp;		// Blank for editors
-	CString		m_swtrim;		// Blank for digicam
-	CString		m_swdisp;		// Blank for digicam
+	bool		bValid;				// Set to FALSE for removal
+	teEditor	eEditor;
+	CString		strXMake;			// Blank for editors
+	CString		strXModel;			// Blank for editors
+	CString		strUmQual;
+	CString		strCSig;
+	CString		strCSigRot;
+	CString		strXSubsamp;		// Blank for editors
+	CString		strMSwTrim;			// Blank for digicam
+	CString		strMSwDisp;			// Blank for digicam
 };
 
 
@@ -70,28 +78,35 @@ public:
 	unsigned	GetNumSigsExtra();
 
 	unsigned	GetDBNumEntries();
-	bool		GetDBEntry(unsigned ind,CompSig* pEntry);
-	unsigned	IsDBEntryUser(unsigned ind);
+	bool		GetDBEntry(unsigned nInd,CompSig* pEntry);
+	unsigned	IsDBEntryUser(unsigned nInd);
+
+	void		SetEntryValid(unsigned nInd,bool bValid);
+
 	void		DatabaseExtraClean();
 	void		DatabaseExtraLoad();
 	void		DatabaseExtraStore();
-	void		DatabaseExtraMarkDelete(unsigned ind);
 
 	unsigned	DatabaseExtraGetNum();
-	CompSig		DatabaseExtraGet(unsigned ind);
+	CompSig		DatabaseExtraGet(unsigned nInd);
 
-	void		DatabaseExtraAdd(CString exif_make,CString exif_model,
-							   CString qual,CString sig,CString sigrot,CString css,
-							   unsigned user_source,CString user_software);
+	void		DatabaseExtraAdd(CString strExifMake,CString strExifModel,
+							   CString strQual,CString strSig,CString strSigRot,CString strCss,
+							   teSource eUserSource,CString strUserSoftware);
 
-	bool		SearchSignatureExactInternal(CString make, CString model, CString sig);
+	bool		BufReadNum(PBYTE pBuf,unsigned &nOut,unsigned nMaxBytes,unsigned &nOffsetBytes);
+	bool		BufReadStr(PBYTE pBuf,CString &strOut,unsigned nMaxBytes,bool bUni,unsigned &nOffsetBytes);
+	bool		BufWriteNum(PBYTE pBuf,unsigned nIn,unsigned nMaxBytes,unsigned &nOffsetBytes);
+	bool		BufWriteStr(PBYTE pBuf,CString strIn,unsigned nMaxBytes,bool bUni,unsigned &nOffsetBytes);
+
+	bool		SearchSignatureExactInternal(CString strMake, CString strModel, CString strSig);
 	bool		SearchCom(CString strCom);
 
 	bool		LookupExcMmNoMkr(CString strMake,CString strModel);
 	bool		LookupExcMmIsEdit(CString strMake,CString strModel);
 
 	unsigned	GetIjgNum();
-	char*		GetIjgEntry(unsigned ind);
+	LPTSTR		GetIjgEntry(unsigned nInd);
 
 	void		SetDbDir(CString strDbDir);
 
@@ -102,19 +117,17 @@ private:
 	unsigned					m_nSigListNum;
 	static const CompSigConst	m_sSigList[];			// Built-in entries
 
-	unsigned						m_nExcMmNoMkrListNum;
-	static const CompExcMmNoMkr		m_sExcMmNoMkrList[];
+	unsigned					m_nExcMmNoMkrListNum;
+	static const CompExcMm		m_sExcMmNoMkrList[];
 
-	unsigned						m_nExcMmIsEditListNum;
-	static const CompExcMmIsEdit	m_sExcMmIsEditList[];
+	unsigned					m_nExcMmIsEditListNum;
+	static const CompExcMm		m_sExcMmIsEditList[];
 	
 	unsigned					m_nSwIjgListNum;
-	static char*				m_sSwIjgList[];
-	unsigned					m_nSwLeadListNum;
-	static char*				m_sSwLeadList[];
+	static LPTSTR				m_sSwIjgList[];
 
-	unsigned					m_sXComSwListNum;
-	static char*				m_sXComSwList[];
+	unsigned					m_nXcomSwListNum;
+	static LPTSTR				m_sXComSwList[];
 
 	CString						m_strDbDir;				// Database directory
 

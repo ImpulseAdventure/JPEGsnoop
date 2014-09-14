@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,8 +16,19 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-// The following code is from Steve King's "Registry" project:
-// http://www.codeproject.com/KB/system/registryvars.aspx
+// ====================================================================================================
+// SOURCE CODE ACKNOWLEDGEMENT
+// ====================================================================================================
+// The following code is derived from the following project on CodeProject:
+//
+//		Title:		Another registry class
+//		Author:		SteveKing
+//		URL:		http://www.codeproject.com/Articles/2521/Another-registry-class
+//		Date:		Apr 25, 2003
+//		License:	CPOL (Code Project Open License)
+//
+// ====================================================================================================
+
 
 #include "stdafx.h"
 #include "Registry.h"

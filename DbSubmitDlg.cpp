@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2010 - Calvin Hass
+// Copyright (C) 2014 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -71,20 +71,24 @@ void CDbSubmitDlg::OnBnClickedOk()
 	UpdateData(TRUE);
 	// If "Software" selected, then make sure title is filled in!
 	if (m_nSource == 1) {
-		if (m_strUserSoftware == "") {
-			AfxMessageBox("You indicated that this file is processed. Please enter software name.");
+		if (m_strUserSoftware == _T("")) {
+			AfxMessageBox(_T("You indicated that this file is processed. Please enter software name."));
 			return;
 		}
 	} else if (m_nSource == 0) {
 		// File is apparently "original from digicam"
-		if ((m_strExifMake == "???") || (m_strExifModel == "???")) {
-			//CAL! FIXME
-			// Perhaps I shouldn't do this if the file is from an AVI frame.
-			// For now, I'm marking AVI files with the Extras field.
+		if ((m_strExifMake == _T("???")) || (m_strExifModel == _T("???"))) {
+			// FIXME:
+			// Determine how to handle this scenario. User indicated that the file
+			// is "original from digicam" but there is no make / model metadata
+			// present. In some cases this could simply be an extracted frame
+			// from an AVI file (in which case the AVI container is indicated in the
+			// Extras field).
 			//AfxMessageBox("You indicated that this file is original, but Make/Model is unspecified.");
 			//return;
 		}
 	}
+
 	// TODO: Add your control notification handler code here
 	OnOK();
 }
