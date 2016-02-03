@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -29,10 +29,7 @@
 
 #pragma once
 
-#include "JfifDecode.h"
-#include "ImgDecode.h"
-#include "WindowBuf.h"
-#include "DocLog.h"
+#include "JPEGsnoopCore.h"
 
 #include "FolderDlg.h"
 #include "BatchDlg.h"
@@ -40,7 +37,6 @@
 
 #define DOCLOG_MAX_LINES 30000
 
-#define ITER_TEST_MAX 2000 //800
 
 class CJPEGsnoopDoc : public CRichEditDoc
 {
@@ -62,7 +58,7 @@ public:
 
 // Implementation
 public:
-	virtual ~CJPEGsnoopDoc();
+	virtual			~CJPEGsnoopDoc();
 #ifdef _DEBUG
 	virtual void	AssertValid() const;
 	virtual void	Dump(CDumpContext& dc) const;
@@ -70,32 +66,17 @@ public:
 
 	void			SetupView(CRichEditView* pView);
 
-	void			AddLine(CString strTxt);
-	void			AddLineHdr(CString strTxt);
-	void			AddLineHdrDesc(CString strTxt);
-	void			AddLineWarn(CString strTxt);
-	void			AddLineErr(CString strTxt);
-	void			AddLineGood(CString strTxt);
 	int				AppendToLog(CString strTxt, COLORREF sColor);
 	int				InsertQuickLog();
 
-	void			DoMyLogSave(CString strLogName);
-
 	CStatusBar*		GetStatusBar();
 
-	void			DoBatchProcess(bool bAskSettings,CString strBatchDir,bool bRecSubdir,bool bExtractAll);
-	void			DoBatchRecurseLoop(CString strSrcRootName,CString strDstRootName,CString strPathName,bool bSubdirs,bool bExtractAll);
-	void			DoBatchRecurseSingle(CString strSrcRootName,CString strDstRootName,CString strPathName,bool bExtractAll);
-
+	void			DoBatchProcess(CString strBatchDir,bool bRecSubdir,bool bExtractAll);
 
 	BOOL			ReadLine(CString& strLine, int nLength, LONG lOffset = -1L);
-	BOOL			AnalyzeOpen();
-	void			AnalyzeClose();
-	void			AnalyzeFileDo();
-	BOOL			AnalyzeFile();
 
 	void			Reset();
-	void			Reprocess();
+	BOOL			Reprocess();
 
 
 
@@ -115,8 +96,6 @@ private:
 	CFile*			m_pFile;
 	ULONGLONG		m_lFileSize;
 
-	BOOL			m_bFileOpened;			// Have we opened up a file? (i.e. filename def'd)
-
 	// The following is a mirror of m_strPathName, but only set during Open
 	// This is used only during OnSaveDocument() to ensure that we are
 	// not overwriting our input file.
@@ -124,27 +103,37 @@ private:
 	
 	CRichEditView*	m_pView;				// Preserved reference to View
 
-	bool			m_bLogQuickMode;
-	CStringArray	m_saLogQuickTxt;
-	CUIntArray		m_naLogQuickCol;
-
-	CDocLog*		m_pLog;
-	CwindowBuf*		m_pWBuf;
-
+public:
+	// Allocate the processing core
+	// - Public access by CJPEGsnoopViewImg
+	CJPEGsnoopCore* m_pCore;
 
 public:
-	// Public members accessed from CJPEGsnoopViewImg
-	CjfifDecode*	m_pJfifDec;
-	CimgDecode*		m_pImgDec;
 
+	// Public accessors from CJPEGsnoopApp
+	void			J_ImgSrcChanged();
+
+	// Public accessors from CJPEGsnoopViewImg
+	void			I_ViewOnDraw(CDC* pDC,CRect rectClient,CPoint ptScrolledPos,CFont* pFont, CSize &szNewScrollSize);
+	void			I_GetPreviewPos(unsigned &nX,unsigned &nY);
+	void			I_GetPreviewSize(unsigned &nX,unsigned &nY);
+	float			I_GetPreviewZoom();
+
+
+	// Callback functions
+	static BYTE		CbWrap_B_Buf(void* pWrapClass,
+						unsigned long nNum,bool bBool);
+	static void		CbWrap_I_LookupFilePosPix(void* pWrapClass,
+						unsigned int nX, unsigned int nY, unsigned int &nByte, unsigned int &nBit);
 
 public:
-	void			DoExtractEmbeddedJPEG(bool bInteractive,bool bInsDhtAvi,CString strOutPath);
+	void			DoGuiExtractEmbeddedJPEG();
 private:
 	virtual void	DeleteContents();
-	void			DoDirectSave(CString strLogName);
+	void			RedrawLog();
 
 public:
+	// OnOpenDocument() is public for View:OnDropFiles()
 	virtual BOOL	OnOpenDocument(LPCTSTR lpszPathName);
 private:
 	virtual BOOL	OnSaveDocument(LPCTSTR lpszPathName);

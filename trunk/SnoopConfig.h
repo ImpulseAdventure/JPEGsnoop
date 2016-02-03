@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -24,6 +24,7 @@
 //
 // ==========================================================================
 
+#include "snoop.h"	// For DEBUG_LOG_OUT
 
 #pragma once
 
@@ -50,6 +51,12 @@ public:
 
 	CString		GetDefaultDbDir();	// Public use by CSettingsDlg
 
+public:
+	// Debug Log
+	// - Used if DEBUG_LOG_OUT
+	bool		DebugLogCreate();
+	bool		DebugLogAdd(CString strText);
+
 private:
 	CString		GetExeDir();
 	void		CreateDir(LPTSTR Path);
@@ -64,7 +71,7 @@ public:
 	// - They indicate a critical error
 	bool		bInteractive;			// Do we want user input (interactive mode)? (ie. show message boxes)
 
-	bool		bCmdLineGui;			// Do we want to show the GUI?
+	bool		bGuiMode;			// Do we want to show the GUI?
 	bool		bCmdLineOpenEn;			// input file specified
 	CString		strCmdLineOpenFname;		// input filename
 	bool		bCmdLineOutputEn;			// output file specified?
@@ -74,8 +81,17 @@ public:
 	CString		strCmdLineBatchDirName;	// directory path for batch job
 	bool		bCmdLineBatchRec;		// recursive subdir batch operation?
 
+	bool		bCmdLineBatchSrch;		// In batch process, perform search forward first?
+
 	bool		bCmdLineExtractEn;		// Do we extract all JPEGs from file?
 	bool		bCmdLineExtractDhtAvi;	// Do we force MotionJPEG DHT?
+
+	bool		bCmdLineDoneMsg;		// Indicate to user when command-line operations complete?
+
+	teOffsetMode	eCmdLineOffset;		// Offset operating mode
+	unsigned long	nCmdLineOffsetPos;	// File offset for DEC_OFFSET_POS mode
+
+	bool		bCmdLineHelp;			// Show command list
 
 	unsigned	nPosStart;				// Starting decode file offset
 
@@ -102,8 +118,13 @@ public:
 	bool		bDumpHistoY;			// Dump full Y DC Histogram
 	bool		bDbSubmitNet;			// Submit new entries to net?
 	bool		bExifHideUnknown;		// Hide unknown exif tags?
+	bool		bRelaxedParsing;		// Proceed despite bad marker / format?
 
 	unsigned	nErrMaxDecodeScan;		// Max # errs to show in scan decode
+
+	CString		strBatchLastInput;		// Last batch process input directory
+	CString		strBatchLastOutput;		// Last batch process output directory
+	CString		strBatchExtensions;		// Extension list for batch processing (eg. ".jpg,.jpeg")
 
 	bool		bCoachReprocessAuto;	// Coach msg: Need to reprocess or change to auto
 	bool		bCoachDecodeIdct;		// Coach msg: Warn about slow AC decode / lowres DC
@@ -113,4 +134,11 @@ public:
 
 	// Temporary status (not saved)
 	CString		strCurFname;			// Current filename (Debug use only)
+
+	// Debug log
+	// - Used if DEBUG_LOG_OUT
+	bool		bDebugLogEnable;
+	CString		strDebugLogFname;
+	CStdioFile*	fpDebugLog;
+
 };

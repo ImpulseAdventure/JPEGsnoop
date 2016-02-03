@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -26,8 +26,6 @@
 
 #pragma once
 
-#include "WindowBuf.h"
-#include "JfifDecode.h"
 
 // COverlayBufDlg dialog
 
@@ -37,9 +35,10 @@ class COverlayBufDlg : public CDialog
 
 public:
 	COverlayBufDlg(CWnd* pParent = NULL);   // standard constructor
-	COverlayBufDlg(CWnd* pParent, CwindowBuf* pWBuf,
+	COverlayBufDlg(CWnd* pParent, 
 		bool bEn, unsigned nOffset, unsigned nLen, CString sNewHex, CString sNewBin);
 	virtual ~COverlayBufDlg();
+
 
 // Dialog Data
 	enum { IDD = IDD_OVERLAYBUFDLG };
@@ -55,13 +54,21 @@ private:
 	virtual BOOL	OnInitDialog();
 
 public:
+	// Callback function for Buf()
+	void SetCbBuf(void* pClassCbBuf,
+					BYTE (*pCbBuf)(void* pClassCbBuf, unsigned long nNum, bool bBool));
+private:
+	// References to callback function for Buf()
+	void*			m_pClassCbBuf;
+	BYTE			(*m_pCbBuf)(void* pClassCbBuf, unsigned long nNum, bool bBool);
+
+public:
 	unsigned		m_nOffset;
 	unsigned		m_nLen;
 	bool			m_bApply;		// When OnOK(), indicate apply and redo dialog
 	BOOL			m_bEn;
 	CString			m_sValueNewHex;
 private:
-	CwindowBuf*		m_pWBuf;
 	CString			m_sOffset;
 	CString			m_sValueCurHex;
 	CString			m_sValueCurBin;

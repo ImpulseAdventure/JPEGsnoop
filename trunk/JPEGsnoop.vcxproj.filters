@@ -123,7 +123,16 @@
     <ClCompile Include="WindowBuf.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PsDecode.cpp">
+    <ClCompile Include="DecodeDicom.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DecodeDicomTags.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DecodePs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="JPEGsnoopCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -242,7 +251,13 @@
     <ClInclude Include="WindowBuf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PsDecode.h">
+    <ClInclude Include="DecodeDicom.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DecodePs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="JPEGsnoopCore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

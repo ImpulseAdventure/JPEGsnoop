@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -29,7 +29,6 @@
 IMPLEMENT_DYNAMIC(CBatchDlg, CDialog)
 CBatchDlg::CBatchDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CBatchDlg::IDD, pParent)
-	, m_strDir(_T(""))
 	, m_bProcessSubdir(FALSE)
 	, m_bExtractAll(FALSE)
 	, m_strDirSrc(_T(""))
@@ -68,6 +67,7 @@ void CBatchDlg::OnBnClickedBtnDirSrcBrowse()
 	// Save fields first
 	UpdateData(true);
 	// Now request new path
+	myFolderDlg.SetStartPath(m_strDirSrc);
 	myItemIdList = myFolderDlg.BrowseForFolder(_T("Select input image folder"),0,0,false);
 	strPath = myFolderDlg.GetPathName(myItemIdList);
 	if (!strPath.IsEmpty()) {
@@ -87,6 +87,7 @@ void CBatchDlg::OnBnClickedBtnDirDstBrowse()
 	// Save fields first
 	UpdateData(true);
 	// Now request new path
+	myFolderDlg.SetStartPath(m_strDirDst);
 	myItemIdList = myFolderDlg.BrowseForFolder(_T("Select output log folder"),0,0,false);
 	strPath = myFolderDlg.GetPathName(myItemIdList);
 	if (!strPath.IsEmpty()) {

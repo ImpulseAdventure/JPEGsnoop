@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -31,8 +31,6 @@
 #include "Dib.h"
 #include "snoop.h"
 
-#include "ImgDecode.h"
-
 // CJPEGsnoopViewImg view
 
 
@@ -58,7 +56,7 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 private:
-	CimgDecode*		GetImgDec();
+	CJPEGsnoopCore*	GetCore();
 	bool			InPreviewArea(CPoint point,CPoint &ptPix);
 	void			SetScrollCenter(float fZoomOld, float fZoomNew);
 	int				MeasureFontHeight(CFont* pFont, CDC* pDC);

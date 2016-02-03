@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -67,6 +67,10 @@ bool CDIB::CreateDIB(DWORD dwWidth,DWORD dwHeight,int nBits)
 
     m_pDIB = (LPBITMAPINFO)new BYTE[dwSize];
     if (!m_pDIB) return FALSE;
+
+	//CAL! Added
+	// Erase the DIB
+	memset(m_pDIB,0x00,dwSize);
 
     m_pDIB->bmiHeader.biSize = dwcBihSize;
     m_pDIB->bmiHeader.biWidth = dwWidth;

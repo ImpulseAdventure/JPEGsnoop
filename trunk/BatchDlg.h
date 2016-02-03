@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -53,7 +53,6 @@ public:
 	afx_msg void	OnBnClickedBtnDirSrcBrowse();
 	afx_msg void	OnBnClickedBtnDirDstBrowse();
 
-	CString			m_strDir;
 	BOOL			m_bProcessSubdir;
 	BOOL			m_bExtractAll;
 	CString			m_strDirSrc;

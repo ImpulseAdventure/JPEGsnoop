@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -28,61 +28,84 @@
 
 #include "DocLog.h"
 #include "ImgDecode.h"
-#include "PsDecode.h"
+#include "DecodePs.h"
+#include "DecodeDicom.h"
 #include "WindowBuf.h"
 #include "snoop.h"
 #include "SnoopConfig.h"
 
 #include "DbSigs.h"
 
+
+// Disable DICOM support until fully tested
+//#define SUPPORT_DICOM
+
 #define MAX_IFD_COMPS			150	// Maximum number of IFD entry components to display
 
-#define JFIF_SOI  0xD8
-#define JFIF_APP0 0xE0
-#define JFIF_APP1 0xE1
-#define JFIF_APP2 0xE2
-#define JFIF_APP3 0xE3
-#define JFIF_APP4 0xE4
-#define JFIF_APP5 0xE5
-#define JFIF_APP6 0xE6
-#define JFIF_APP7 0xE7
-#define JFIF_APP8 0xE8
-#define JFIF_APP9 0xE9
-#define JFIF_APP10 0xEA
-#define JFIF_APP11 0xEB
-#define JFIF_APP12 0xEC
-#define JFIF_APP13 0xED
-#define JFIF_APP14 0xEE
-#define JFIF_APP15 0xEF
-#define JFIF_DQT  0xDB
-#define JFIF_SOF0 0xC0
-#define JFIF_SOF1 0xC1
-#define JFIF_SOF2 0xC2
-#define JFIF_SOF3 0xC3
-#define JFIF_SOF5 0xC5
-#define JFIF_SOF6 0xC6
-#define JFIF_SOF7 0xC7
-#define JFIF_JPG  0xC8
-#define JFIF_SOF9 0xC9
-#define JFIF_SOF10 0xCA
-#define JFIF_SOF11 0xCB
-#define JFIF_SOF12 0xCC
-#define JFIF_SOF13 0xCD
-#define JFIF_SOF14 0xCE
-#define JFIF_SOF15 0xCF
-#define JFIF_COM  0xFE
-#define JFIF_DHT  0xC4
-#define JFIF_SOS  0xDA
-#define JFIF_DRI  0xDD
-#define JFIF_RST0 0xD0
-#define JFIF_RST1 0xD1
-#define JFIF_RST2 0xD2
-#define JFIF_RST3 0xD3
-#define JFIF_RST4 0xD4
-#define JFIF_RST5 0xD5
-#define JFIF_RST6 0xD6
-#define JFIF_RST7 0xD7
-#define JFIF_EOI  0xD9
+#define JFIF_SOF0	0xC0
+#define JFIF_SOF1	0xC1
+#define JFIF_SOF2	0xC2
+#define JFIF_SOF3	0xC3
+#define JFIF_SOF5	0xC5
+#define JFIF_SOF6	0xC6
+#define JFIF_SOF7	0xC7
+#define JFIF_JPG	0xC8
+#define JFIF_SOF9	0xC9
+#define JFIF_SOF10	0xCA
+#define JFIF_SOF11	0xCB
+#define JFIF_SOF13	0xCD
+#define JFIF_SOF14	0xCE
+#define JFIF_SOF15	0xCF
+#define JFIF_DHT	0xC4
+#define JFIF_DAC	0xCC
+#define JFIF_RST0	0xD0
+#define JFIF_RST1	0xD1
+#define JFIF_RST2	0xD2
+#define JFIF_RST3	0xD3
+#define JFIF_RST4	0xD4
+#define JFIF_RST5	0xD5
+#define JFIF_RST6	0xD6
+#define JFIF_RST7	0xD7
+#define JFIF_SOI	0xD8
+#define JFIF_EOI	0xD9
+#define JFIF_SOS	0xDA
+#define JFIF_DQT	0xDB
+#define JFIF_DNL	0xDC
+#define JFIF_DRI	0xDD
+#define JFIF_DHP	0xDE
+#define JFIF_EXP	0xDF
+#define JFIF_APP0	0xE0
+#define JFIF_APP1	0xE1
+#define JFIF_APP2	0xE2
+#define JFIF_APP3	0xE3
+#define JFIF_APP4	0xE4
+#define JFIF_APP5	0xE5
+#define JFIF_APP6	0xE6
+#define JFIF_APP7	0xE7
+#define JFIF_APP8	0xE8
+#define JFIF_APP9	0xE9
+#define JFIF_APP10	0xEA
+#define JFIF_APP11	0xEB
+#define JFIF_APP12	0xEC
+#define JFIF_APP13	0xED
+#define JFIF_APP14	0xEE
+#define JFIF_APP15	0xEF
+#define JFIF_JPG0	0xF0
+#define JFIF_JPG1	0xF1
+#define JFIF_JPG2	0xF2
+#define JFIF_JPG3	0xF3
+#define JFIF_JPG4	0xF4
+#define JFIF_JPG5	0xF5
+#define JFIF_JPG6	0xF6
+#define JFIF_JPG7	0xF7
+#define JFIF_JPG8	0xF8
+#define JFIF_JPG9	0xF9
+#define JFIF_JPG10	0xFA
+#define JFIF_JPG11	0xFB
+#define JFIF_JPG12	0xFC
+#define JFIF_JPG13	0xFD
+#define JFIF_COM	0xFE
+#define JFIF_TEM	0x01
 
 #define JFIF_DHT_FAKE		0x999999C4
 #define JFIF_DHT_FAKE_SZ	0x1A4
@@ -114,7 +137,7 @@ class CjfifDecode
 	CjfifDecode(CDocLog* pLog,CwindowBuf* pWBuf,CimgDecode* pImgDec);
 	~CjfifDecode();
 
-private:
+public:
 	void		Reset();
 
 	// --------------------------------------
@@ -132,6 +155,8 @@ public:
 										CString &strImgQualExif,CString &strSoftware,teDbAdd &eDbReqSuggest);
 	unsigned		GetDqtZigZagIndex(unsigned nInd,bool bZigZag);
 	unsigned		GetDqtQuantStd(unsigned nInd);
+
+	bool			GetDecodeStatus();
 
 private:
 
@@ -152,8 +177,11 @@ public:
 	void			ProcessFile(CFile* inFile);
 private:
 	unsigned		DecodeMarker();
+	bool			ExpectMarkerEnd(unsigned long nMarkerStart,unsigned nMarkerLen);
 	void			DecodeEmbeddedThumb();
 	bool			DecodeAvi();
+
+	bool			ValidateValue(unsigned &nVal,unsigned nMin,unsigned nMax,CString strName,bool bOverride,unsigned nOverrideVal);
 
 	// Marker specific parsing
 	bool			GetMarkerName(unsigned nCode,CString &markerStr);
@@ -240,7 +268,8 @@ private:
 	// General classes required for decoding
 	CwindowBuf*		m_pWBuf;
 	CimgDecode*		m_pImgDec;
-	CPsDecode*		m_pPsDec;
+	CDecodePs*		m_pPsDec;
+	CDecodeDicom*	m_pDecDicom;
 
 	// UI elements & log
 	CDocLog*		m_pLog;
@@ -287,6 +316,7 @@ private:
 	unsigned		m_nImgThumbSizeY;
 
 	bool			m_bImgProgressive;		// Progressive scan?
+	bool			m_bImgSofUnsupported;	// SOF mode unsupported - skip SOI content
 
 	CString			m_strComment;			// Comment string
 
@@ -317,7 +347,7 @@ private:
 	unsigned		m_nSofHorzSampFactMax_Hmax;
 	unsigned		m_nSofVertSampFactMax_Vmax;
 
-	// FIXME: Move to CPsDecode
+	// FIXME: Move to CDecodePs
 	unsigned		m_nImgQualPhotoshopSa;
 	unsigned		m_nImgQualPhotoshopSfw;
 

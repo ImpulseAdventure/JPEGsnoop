@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -36,16 +36,19 @@ COverlayBufDlg::COverlayBufDlg(CWnd* pParent /*=NULL*/)
 	, m_sValueNewHex(_T(""))
 	, m_nLen(0)
 	, m_bEn(FALSE)
-	, m_pWBuf(NULL)
 	, m_sValueCurBin(_T(""))
 {
 	// FIXME: Should probably mark this as invalid
 	m_bApply = false;
 	m_nOffset = 0;
+
+	// Initialize callback functions to NULL
+	m_pCbBuf = NULL;
+	m_pClassCbBuf = NULL;
 }
 
-COverlayBufDlg::COverlayBufDlg(CWnd* pParent, CwindowBuf* pWBuf, bool bEn, 
-					unsigned nOffset, unsigned nLen, CString sNewHex, CString sNewBin)
+COverlayBufDlg::COverlayBufDlg(CWnd* pParent,
+							   bool bEn, unsigned nOffset, unsigned nLen, CString sNewHex, CString sNewBin)
 	: CDialog(COverlayBufDlg::IDD, pParent)
 	, m_sOffset(_T(""))
 	, m_sValueCurHex(_T(""))
@@ -59,7 +62,9 @@ COverlayBufDlg::COverlayBufDlg(CWnd* pParent, CwindowBuf* pWBuf, bool bEn,
 	m_sValueNewHex = sNewHex;
 	m_sValueNewBin = sNewBin;
 
-	m_pWBuf = pWBuf;
+	// Initialize callback functions to NULL
+	m_pCbBuf = NULL;
+	m_pClassCbBuf = NULL;
 
 	m_bApply = false;
 
@@ -92,6 +97,17 @@ BEGIN_MESSAGE_MAP(COverlayBufDlg, CDialog)
 END_MESSAGE_MAP()
 
 
+// Set callback function for Buf()
+void COverlayBufDlg::SetCbBuf(void* pClassCbBuf,
+							  BYTE (*pCbBuf)(void* pClassCbBuf, unsigned long nNum, bool bBool)
+							  )
+{
+	// Save pointer to class and function
+	m_pClassCbBuf = pClassCbBuf;
+	m_pCbBuf = pCbBuf;
+}
+
+
 // COverlayBufDlg message handlers
 
 
@@ -99,42 +115,44 @@ END_MESSAGE_MAP()
 void COverlayBufDlg::OnBnClickedOvrLoad()
 {
 	// TODO: Add your control notification handler code here
-	CString strTmp;
-	unsigned cur_val[17];
+	CString		strTmp;
+	unsigned	anCurVal[17];
 
-	ASSERT(m_pWBuf);
+	ASSERT(m_pCbBuf);
+	if (!m_pCbBuf) {
+		return;
+	}
 
 	UpdateData();
-	m_nOffset = _tcstol(m_sOffset,NULL,16);
+	m_nOffset = _tcstoul(m_sOffset,NULL,16);
 
 	// get the data at the file position
-	for (unsigned i=0;i<16;i++) {
+	for (unsigned nInd=0;nInd<16;nInd++) {
 		// Request the "clean" data as otherwise we'll see the
 		// last overlay data, which might be confusing!
-
-		// FIXME:
-		if (m_pWBuf) {
-			cur_val[i] = m_pWBuf->Buf(m_nOffset+i,true);
+		if (m_pCbBuf) {
+			// Use callback function for Buf()
+			anCurVal[nInd] = m_pCbBuf(m_pClassCbBuf,m_nOffset+nInd,true);
 		} else {
-			cur_val[i] = 0; // FIXME:
+			anCurVal[nInd] = 0; // FIXME:
 
 		}
 	}
 
 	strTmp.Format(_T("0x %02X %02X %02X %02X %02X %02X %02X %02X ..."),
-		cur_val[0],cur_val[1],cur_val[2],cur_val[3],
-		cur_val[4],cur_val[5],cur_val[6],cur_val[7]);
+		anCurVal[0],anCurVal[1],anCurVal[2],anCurVal[3],
+		anCurVal[4],anCurVal[5],anCurVal[6],anCurVal[7]);
 	m_sValueCurHex = strTmp;
 
 	CString strTmpBin = _T("0b ");
-	strTmpBin += Dec2Bin(cur_val[0],8);	strTmpBin += _T(" ");
-	strTmpBin += Dec2Bin(cur_val[1],8);	strTmpBin += _T(" ");
-	strTmpBin += Dec2Bin(cur_val[2],8);	strTmpBin += _T(" ");
-	strTmpBin += Dec2Bin(cur_val[3],8);	strTmpBin += _T(" ");
-	strTmpBin += Dec2Bin(cur_val[4],8);	strTmpBin += _T(" ");
-	strTmpBin += Dec2Bin(cur_val[5],8);	strTmpBin += _T(" ");
-	strTmpBin += Dec2Bin(cur_val[6],8);	strTmpBin += _T(" ");
-	strTmpBin += Dec2Bin(cur_val[7],8);	strTmpBin += _T(" ...");
+	strTmpBin += Dec2Bin(anCurVal[0],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(anCurVal[1],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(anCurVal[2],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(anCurVal[3],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(anCurVal[4],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(anCurVal[5],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(anCurVal[6],8);	strTmpBin += _T(" ");
+	strTmpBin += Dec2Bin(anCurVal[7],8);	strTmpBin += _T(" ...");
 	m_sValueCurBin = strTmpBin;
 
 	UpdateData(false);
@@ -143,38 +161,16 @@ void COverlayBufDlg::OnBnClickedOvrLoad()
 void COverlayBufDlg::OnBnClickedOk()
 {
 	UpdateData();
-	m_nOffset = _tcstol(m_sOffset,NULL,16);
+	m_nOffset = _tcstoul(m_sOffset,NULL,16);
 
 	m_bApply = false;
 	OnOK();
 }
 
-/*
-CString COverlayBufDlg::Dec2Bin(unsigned nVal,unsigned nLen)
-{
-	unsigned	nBit;
-	unsigned	n1,n2,n3;
-	CString		strBin = _T("");
-	for (int nInd=nLen-1;nInd>=0;nInd--)
-	{
-		n1 = (1 << nInd);
-		n2 = ( nVal & n1 );
-		n3 = n2 >> nInd;
-		nBit = ( nVal & (1 << nInd) ) >> nInd;
-		nBit = n3;
-		strBin += (nBit==1)?"1":"0";
-		if ( ((nInd % 8) == 0) && (nInd != 0) ) {
-			strBin += _T(" ");
-		}
-	}
-	return strBin;
-}
-*/
-
 void COverlayBufDlg::OnBnClickedApply()
 {
 	UpdateData();
-	m_nOffset = _tcstol(m_sOffset,NULL,16);
+	m_nOffset = _tcstoul(m_sOffset,NULL,16);
 
 	m_bApply = true;
 	OnOK();

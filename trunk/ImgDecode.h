@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -53,6 +53,7 @@
 #define	COMP_IND_YCC_Y			1
 #define	COMP_IND_YCC_CB	 		2
 #define	COMP_IND_YCC_CR			3
+#define	COMP_IND_YCC_K			4
 #define	COMP_IND_CMYK_C			1
 #define	COMP_IND_CMYK_M	 		2
 #define	COMP_IND_CMYK_Y			3
@@ -81,6 +82,7 @@
 #define	DQT_DEST_Y			1
 #define	DQT_DEST_CB			2
 #define	DQT_DEST_CR			3
+#define	DQT_DEST_K			4
 
 #define	BLK_SZ_X			8			// JPEG block size (x)
 #define	BLK_SZ_Y			8			// JPEG block size (y)
@@ -101,12 +103,14 @@
 #define SCAN_COMP_Y				1
 #define SCAN_COMP_CB			2
 #define SCAN_COMP_CR			3
+#define SCAN_COMP_K				4
 
 
 
 // Number of image channels supported for image output
 #define NUM_CHAN_GRAYSCALE	1
 #define	NUM_CHAN_YCC		3
+#define	NUM_CHAN_YCCK		4
 
 // Image channel indices (after converting component index to channel index)
 #define CHAN_Y				0
@@ -293,7 +297,10 @@ public:
 	void		ReportHistogramY();
 	void		ReportColorStats();
 
+	bool		IsPreviewReady();
+
 	// Config
+	void		SetImageDimensions(unsigned nWidth,unsigned nHeight);
 	void		SetImageDetails(unsigned nDimX,unsigned nDimY,unsigned nCompsSOF,unsigned nCompsSOS,bool bRstEn,unsigned nRstInterval);
 	void		SetSofSampFactors(unsigned nCompInd, unsigned nSampFactH, unsigned nSampFactV);
 	void		ResetImageContent();
@@ -498,8 +505,11 @@ private:
 	bool				m_bScanBad;			// Any errors found?
 	unsigned			m_nScanErrMax;		// Max # scan decode errors shown
 
+public: //xxx hack
 	bool				m_bDibTempReady;
-	CDIB				m_pDibTemp;		// Temporary version for display
+	CDIB				m_pDibTemp;				// Temporary version for display
+	bool				m_bPreviewIsJpeg;		// Is the preview image from decoded JPEG?
+private:
 
 	bool				m_bDibHistRgbReady;
 	CDIB				m_pDibHistRgb;

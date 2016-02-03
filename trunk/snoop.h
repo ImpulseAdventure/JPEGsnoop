@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -32,7 +32,7 @@
 // - Note that when the version number is incremented, I need
 //   to also update the corresponding version numbers in the
 //   JPEGsnoop.rc resource under "Version.VS_VERSION_INFO".
-#define VERSION_STR _T("1.7.1")
+#define VERSION_STR _T("1.7.5")
 
 // Version number for the database signatures
 // - This version number has been provided in case I decide
@@ -41,6 +41,18 @@
 //   converter/import routine.
 #define DB_SIG_VER 0x01
 
+// Enable debug log?
+//#define DEBUG_LOG_OUT
+#define DEBUG_EN		0
+
+//#define DEBUG_YCCK
+
+// Disable code that isn't fully implemented yet
+//#define TODO
+
+// Enable Photoshop image/layer rendering
+// TODO: Not fully implemented yet
+#define PS_IMG_DEC_EN
 
 // User Local Database filename
 #define DAT_FILE _T("JPEGsnoop_db.dat")
@@ -80,6 +92,8 @@
 // Extra logging for debugging
 #define DEBUG_LOG
 
+// For errors (eg. in exceptions), define message buffer length
+#define	MAX_BUF_EX_ERR_MSG	512
 
 // Preview Modes
 enum tePreviewMode {
@@ -149,6 +163,7 @@ enum teLandscape {
 	ENUM_LANDSCAPE_NO,
 };
 
+typedef enum {DEC_OFFSET_START,DEC_OFFSET_SRCH1,DEC_OFFSET_SRCH2,DEC_OFFSET_POS} teOffsetMode;
 
 // Define a few coach messages
 

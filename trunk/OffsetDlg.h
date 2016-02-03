@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -50,12 +50,14 @@ public:
 	unsigned		GetOffset();
 
 private:
-	void			CalInitialDraw();
+	void			OffsetNum2Str();
+	bool			OffsetStr2Num();
 
 private:
 	afx_msg void	OnBnClickedOk();
 	afx_msg void	OnBnClickedBaseh();
 	afx_msg void	OnBnClickedBased();
+
 
 private:
 	unsigned		m_nOffsetVal;

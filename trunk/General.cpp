@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -156,6 +156,30 @@ CString ByteStr2Unicode(BYTE* pBuf, unsigned nBufLen)
 }
 */
 
+bool	Str2Uint32(CString strVal,unsigned nBase,unsigned &nVal)
+{
+	// Convert to unsigned 32b
+	strVal.MakeUpper();
+	if (nBase == 16) {
+		// Hex
+		if (strVal.Left(2) == _T("0X")) {
+			strVal = strVal.Mid(2,20);
+		}
+		if (strVal.SpanIncluding(_T("0123456789ABCDEF")) != strVal) {
+			return false;
+		}
+		nVal = _tcstoul(strVal,NULL,16);
+	} else if (nBase == 10) {
+		// Dec
+		if (strVal.SpanIncluding(_T("0123456789")) != strVal) {
+			return false;
+		}
+		nVal = _tcstoul(strVal,NULL,10);
+	} else {
+		return false;
+	}
+	return true;
+}
 
 // ---------------------------------------
 // Global constants
