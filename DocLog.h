@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@
 class CDocLog
 {
 public:
-	CDocLog(CDocument* pDoc);
+	CDocLog();
 	~CDocLog(void);
 
 	void		AddLine(CString str);
@@ -37,11 +37,33 @@ public:
 	void		AddLineWarn(CString str);
 	void		AddLineErr(CString str);
 	void		AddLineGood(CString str);
+
 	void		Enable();
 	void		Disable();
+	void		SetQuickMode(bool bQuick);
+	bool		GetQuickMode();
+
+	void		SetDoc(CDocument *pDoc);
+	void		Clear();
+
+	unsigned	GetNumLinesLocal();
+	bool		GetLineLogLocal(unsigned nLine,CString &strOut,COLORREF &sCol);
+
+	void		DoLogSave(CString strLogName);
 
 private:
-	CDocument*	m_pDoc;
-	bool		m_bEn;
+	unsigned	AppendToLogLocal(CString strTxt, COLORREF sColor);
+
+private:
+
+	bool			m_bUseDoc;		// Use Document or local buffer
+	CDocument*		m_pDoc;
+	bool			m_bEn;
+
+	// Local buffer
+	CStringArray	m_saLogQuickTxt;
+	CUIntArray		m_naLogQuickCol;
+
+	bool			m_bLogQuickMode;	// In m_bUseDoc=TRUE, do we write to local buffer instead?
 
 };

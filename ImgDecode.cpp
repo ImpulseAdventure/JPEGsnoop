@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -141,6 +141,15 @@ void CimgDecode::Reset()
 // - This constructor is called only once by Document class
 CimgDecode::CimgDecode(CDocLog* pLog, CwindowBuf* pWBuf)
 {
+	// Ideally this would be passed by constructor, but simply access
+	// directly for now.
+	CJPEGsnoopApp*	pApp;
+	pApp = (CJPEGsnoopApp*)AfxGetApp();
+    m_pAppConfig = pApp->m_pAppConfig;
+	ASSERT(m_pAppConfig);
+
+	if (DEBUG_EN) m_pAppConfig->DebugLogAdd(_T("CimgDecode::CimgDecode() Begin"));
+
 	m_bVerbose = false;
 
 	ASSERT(pLog);
@@ -150,6 +159,7 @@ CimgDecode::CimgDecode(CDocLog* pLog, CwindowBuf* pWBuf)
 
 	m_pStatBar = NULL;
 	m_bDibTempReady = false;
+	m_bPreviewIsJpeg = false;
 	m_bDibHistRgbReady = false;
 	m_bDibHistYReady = false;
 
@@ -164,24 +174,24 @@ CimgDecode::CimgDecode(CDocLog* pLog, CwindowBuf* pWBuf)
 	m_pPixValCb = NULL;
 	m_pPixValCr = NULL;
 
-	// Ideally this would be passed by constructor, but simply access
-	// directly for now.
-	CJPEGsnoopApp*	pApp;
-	pApp = (CJPEGsnoopApp*)AfxGetApp();
-    m_pAppConfig = pApp->m_pAppConfig;
-	ASSERT(m_pAppConfig);
+	if (DEBUG_EN) m_pAppConfig->DebugLogAdd(_T("CimgDecode::CimgDecode() Checkpoint 1"));
 
 	// Reset the image decoding state
 	Reset();
 
+	if (DEBUG_EN) m_pAppConfig->DebugLogAdd(_T("CimgDecode::CimgDecode() Checkpoint 2"));
 
 	m_nImgSizeXPartMcu = 0;
 	m_nImgSizeYPartMcu = 0;
 	m_nImgSizeX = 0;
 	m_nImgSizeY = 0;
 
-	m_nMcuWidth = 0;
-	m_nMcuHeight = 0;
+	// Temporary hack to avoid divide-by-0 when displaying PSD (instead of JPEG)
+	// FIXME:
+	//XXX m_nMcuWidth = 0;
+	//XXX m_nMcuHeight = 0;
+	m_nMcuWidth = 1;
+	m_nMcuHeight = 1;
 
 	// Detailed VLC Decode mode
 	m_bDetailVlc = false;
@@ -195,7 +205,10 @@ CimgDecode::CimgDecode(CDocLog* pLog, CwindowBuf* pWBuf)
 	// Set up the IDCT lookup tables
 	PrecalcIdct();
 
+	if (DEBUG_EN) m_pAppConfig->DebugLogAdd(_T("CimgDecode::CimgDecode() Checkpoint 3"));
+
 	GenLookupHuffMask();
+	if (DEBUG_EN) m_pAppConfig->DebugLogAdd(_T("CimgDecode::CimgDecode() Checkpoint 4"));
 
 
 
@@ -203,19 +216,24 @@ CimgDecode::CimgDecode(CDocLog* pLog, CwindowBuf* pWBuf)
 	// the JFIF Decoder. We can only reset them here during
 	// the constructor and later by explicit call by JFIF Decoder.
 	ResetState();
+	if (DEBUG_EN) m_pAppConfig->DebugLogAdd(_T("CimgDecode::CimgDecode() Checkpoint 5"));
 
 	// We don't call SetPreviewMode() here because it would
 	// automatically try to recalculate the view (but nothing ready yet)
 	m_nPreviewMode = PREVIEW_RGB;
 	SetPreviewZoom(false,false,true,PRV_ZOOM_12);
+	if (DEBUG_EN) m_pAppConfig->DebugLogAdd(_T("CimgDecode::CimgDecode() Checkpoint 6"));
 
 	m_bViewOverlaysMcuGrid = false;
 
 	// Start off with no YCC offsets for CalcChannelPreview()
 	SetPreviewYccOffset(0,0,0,0,0);
+	if (DEBUG_EN) m_pAppConfig->DebugLogAdd(_T("CimgDecode::CimgDecode() Checkpoint 7"));
 
 	SetPreviewMcuInsert(0,0,0);
+	if (DEBUG_EN) m_pAppConfig->DebugLogAdd(_T("CimgDecode::CimgDecode() Checkpoint 8"));
 
+	if (DEBUG_EN) m_pAppConfig->DebugLogAdd(_T("CimgDecode::CimgDecode() End"));
 }
 
 
@@ -494,7 +512,7 @@ bool CimgDecode::SetDqtTables(unsigned nCompId, unsigned nTbl)
 	} else {
 		// Should never get here unless the JFIF SOF table has a bad entry!
 		CString strTmp;
-		strTmp.Format(_T("ERROR: SetDqtTables(comp=%u, tbl=%u) out of indexed range"),
+		strTmp.Format(_T("ERROR: SetDqtTables(Comp ID=%u, Table=%u) out of indexed range"),
 			nCompId,nTbl);
 		m_pLog->AddLineErr(strTmp);
 		if (m_pAppConfig->bInteractive)
@@ -2709,6 +2727,13 @@ void CimgDecode::DecodeRestartDcState()
 	}
 }
 
+//TODO
+void CimgDecode::SetImageDimensions(unsigned nWidth,unsigned nHeight)
+{
+	m_rectImgBase = CRect(CPoint(0,0),CSize(nWidth,nHeight));
+}
+
+
 // Process the entire scan segment and optionally render the image
 // - Reset and clear the output structures
 // - Loop through each MCU and read each component
@@ -2764,7 +2789,9 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 	if ( (m_nNumSosComps != NUM_CHAN_GRAYSCALE) && (m_nNumSosComps != NUM_CHAN_YCC) ) {
 		strTmp.Format(_T("  NOTE: Number of SOS components not supported [%u]"),m_nNumSosComps);
 		m_pLog->AddLineWarn(strTmp);
+#ifndef DEBUG_YCCK
 		return;
+#endif
 	}
 
 	// Determine the maximum sampling factor and min sampling factor for this scan
@@ -2973,6 +3000,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 	// If a previous bitmap was created, deallocate it and start fresh
 	m_pDibTemp.Kill();
 	m_bDibTempReady = false;
+	m_bPreviewIsJpeg = false;
 
 	// Create the DIB
 	// Although we are creating a 32-bit DIB, it should also
@@ -3026,7 +3054,9 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 	if ( (m_nNumSofComps != NUM_CHAN_GRAYSCALE) && (m_nNumSofComps != NUM_CHAN_YCC) ) {
 		strTmp.Format(_T("  NOTE: Number of Image Components not supported [%u]"),m_nNumSofComps);
 		m_pLog->AddLineWarn(strTmp);
+#ifndef DEBUG_YCCK
 		return;
+#endif
 	}
 
 	// Check DQT tables
@@ -3035,6 +3065,9 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 	unsigned	nDqtTblY  =0;
 	unsigned	nDqtTblCr =0;
 	unsigned	nDqtTblCb =0;
+#ifdef DEBUG_YCCK
+	unsigned	nDqtTblK =0;
+#endif
 	bool		bDqtReady = true;
 	for (unsigned ind=1;ind<=m_nNumSosComps;ind++) {
 		if (m_anDqtTblSel[ind]<0) bDqtReady = false;
@@ -3051,12 +3084,20 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 		nDqtTblY  = m_anDqtTblSel[DQT_DEST_Y];
 		nDqtTblCb = m_anDqtTblSel[DQT_DEST_CB];
 		nDqtTblCr = m_anDqtTblSel[DQT_DEST_CR];
+#ifdef DEBUG_YCCK
+		if (m_nNumSosComps==4) {
+			nDqtTblK = m_anDqtTblSel[DQT_DEST_K];
+		}
+#endif
 	}
 
 	// Now check DHT tables
 	bool bDhtReady = true;
 	unsigned nDhtTblDcY,nDhtTblDcCb,nDhtTblDcCr;
 	unsigned nDhtTblAcY,nDhtTblAcCb,nDhtTblAcCr;
+#ifdef DEBUG_YCCK
+	unsigned nDhtTblDcK,nDhtTblAcK;
+#endif
 	for (unsigned nClass=DHT_CLASS_DC;nClass<=DHT_CLASS_AC;nClass++) {
 		for (unsigned nCompInd=1;nCompInd<=m_nNumSosComps;nCompInd++) {
 			if (m_anDhtTblSel[nClass][nCompInd]<0) bDhtReady = false;
@@ -3100,6 +3141,10 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 		nDhtTblAcCb = m_anDhtTblSel[DHT_CLASS_AC][COMP_IND_YCC_CB];
 		nDhtTblDcCr = m_anDhtTblSel[DHT_CLASS_DC][COMP_IND_YCC_CR];
 		nDhtTblAcCr = m_anDhtTblSel[DHT_CLASS_AC][COMP_IND_YCC_CR];
+#ifdef DEBUG_YCCK
+		nDhtTblDcK	= m_anDhtTblSel[DHT_CLASS_DC][COMP_IND_YCC_K];
+		nDhtTblAcK	= m_anDhtTblSel[DHT_CLASS_AC][COMP_IND_YCC_K];
+#endif
 	}
 
 	// Done checks
@@ -3385,6 +3430,111 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 
 
 			}
+#ifdef DEBUG_YCCK
+			else if (m_nNumSosComps == NUM_CHAN_YCCK) {
+
+				// --------------------------------------------------------------
+				nComp = SCAN_COMP_CB;
+
+				// Chrominance Cb
+				for (nCssIndV=0;nCssIndV<m_anSampPerMcuV[nComp];nCssIndV++) {
+					for (nCssIndH=0;nCssIndH<m_anSampPerMcuH[nComp];nCssIndH++) {
+
+						if (!bVlcDump) {
+							bDscRet = DecodeScanComp(nDhtTblDcCb,nDhtTblAcCb,nDqtTblCb,nMcuX,nMcuY);// Chr Cb DC+AC
+						} else {
+							bDscRet = DecodeScanCompPrint(nDhtTblDcCb,nDhtTblAcCb,nDqtTblCb,nMcuX,nMcuY);// Chr Cb DC+AC
+						}
+						if (m_nScanCurErr) CheckScanErrors(nMcuX,nMcuY,nCssIndH,nCssIndV,nComp);
+						if (!bDscRet && bDieOnFirstErr) return;
+
+						m_nDcChrCb += m_anDctBlock[DCT_COEFF_DC];
+
+
+						if (bVlcDump) {
+							//PrintDcCumVal(nMcuX,nMcuY,m_nDcChrCb);
+						}
+
+						// Now take a snapshot of the current cumulative DC value
+						m_anDcChrCbCss[nCssIndV*MAX_SAMP_FACT_H+nCssIndH] = m_nDcChrCb;
+
+						// Store fullres value
+						if (bDisplay)
+							SetFullRes(nMcuX,nMcuY,nComp,0,0,m_nDcChrCb);
+
+					}
+				}
+
+				// --------------------------------------------------------------
+				nComp = SCAN_COMP_CR;
+
+				// Chrominance Cr
+				for (nCssIndV=0;nCssIndV<m_anSampPerMcuV[nComp];nCssIndV++) {
+					for (nCssIndH=0;nCssIndH<m_anSampPerMcuH[nComp];nCssIndH++) {
+						if (!bVlcDump) {
+							bDscRet = DecodeScanComp(nDhtTblDcCr,nDhtTblAcCr,nDqtTblCr,nMcuX,nMcuY);// Chr Cr DC+AC
+						} else {
+							bDscRet = DecodeScanCompPrint(nDhtTblDcCr,nDhtTblAcCr,nDqtTblCr,nMcuX,nMcuY);// Chr Cr DC+AC
+						}
+						if (m_nScanCurErr) CheckScanErrors(nMcuX,nMcuY,nCssIndH,nCssIndV,nComp);
+						if (!bDscRet && bDieOnFirstErr) return;
+
+						m_nDcChrCr += m_anDctBlock[DCT_COEFF_DC];
+
+
+
+						if (bVlcDump) {
+							//PrintDcCumVal(nMcuX,nMcuY,m_nDcChrCr);
+						}
+
+						// Now take a snapshot of the current cumulative DC value
+						m_anDcChrCrCss[nCssIndV*MAX_SAMP_FACT_H+nCssIndH] = m_nDcChrCr;
+
+						// Store fullres value
+						if (bDisplay)
+							SetFullRes(nMcuX,nMcuY,nComp,0,0,m_nDcChrCr);
+
+					}
+				}
+
+				// --------------------------------------------------------------
+				// IGNORED
+				nComp = SCAN_COMP_K;
+
+				// Black K
+				for (nCssIndV=0;nCssIndV<m_anSampPerMcuV[nComp];nCssIndV++) {
+					for (nCssIndH=0;nCssIndH<m_anSampPerMcuH[nComp];nCssIndH++) {
+
+						if (!bVlcDump) {
+							bDscRet = DecodeScanComp(nDhtTblDcK,nDhtTblAcK,nDqtTblK,nMcuX,nMcuY);// K DC+AC
+						} else {
+							bDscRet = DecodeScanCompPrint(nDhtTblDcK,nDhtTblAcK,nDqtTblK,nMcuX,nMcuY);// K DC+AC
+						}
+						if (m_nScanCurErr) CheckScanErrors(nMcuX,nMcuY,nCssIndH,nCssIndV,nComp);
+						if (!bDscRet && bDieOnFirstErr) return;
+
+/*
+						m_nDcChrK += m_anDctBlock[DCT_COEFF_DC];
+
+
+						if (bVlcDump) {
+							//PrintDcCumVal(nMcuX,nMcuY,m_nDcChrCb);
+						}
+
+						// Now take a snapshot of the current cumulative DC value
+						m_anDcChrKCss[nCssIndV*MAX_SAMP_FACT_H+nCssIndH] = m_nDcChrK;
+
+						// Store fullres value
+						if (bDisplay)
+							SetFullRes(nMcuX,nMcuY,nComp,0,0,m_nDcChrK);
+*/
+
+					}
+				}
+
+
+			}
+#endif
 
 			// --------------------------------------------------------------------
 
@@ -3525,6 +3675,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 	// DIB is ready for display now
 	if (bDisplay) {
 		m_bDibTempReady = true;
+		m_bPreviewIsJpeg = true;
 	}
 
 
@@ -3537,11 +3688,11 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 		// TODO: Should we use m_nNumSofComps?
 		strTmp.Format(_T("  Compression stats:"));
 		m_pLog->AddLine(strTmp);
-		float compression_ratio = (float)(m_nDimX*m_nDimY*m_nNumSosComps*8) / (float)((m_anScanBuffPtr_pos[0]-m_nScanBuffPtr_start)*8);
-		strTmp.Format(_T("    Compression Ratio: %5.2f:1"),compression_ratio);
+		float nCompressionRatio = (float)(m_nDimX*m_nDimY*m_nNumSosComps*8) / (float)((m_anScanBuffPtr_pos[0]-m_nScanBuffPtr_start)*8);
+		strTmp.Format(_T("    Compression Ratio: %5.2f:1"),nCompressionRatio);
 		m_pLog->AddLine(strTmp);
-		float bits_per_pixel = (float)((m_anScanBuffPtr_pos[0]-m_nScanBuffPtr_start)*8) / (float)(m_nDimX*m_nDimY);
-		strTmp.Format(_T("    Bits per pixel:    %5.2f:1"),bits_per_pixel);
+		float nBitsPerPixel = (float)((m_anScanBuffPtr_pos[0]-m_nScanBuffPtr_start)*8) / (float)(m_nDimX*m_nDimY);
+		strTmp.Format(_T("    Bits per pixel:    %5.2f:1"),nBitsPerPixel);
 		m_pLog->AddLine(strTmp);
 		m_pLog->AddLine(_T(""));
 
@@ -3623,6 +3774,16 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 
 }
 
+//
+// Report if image preview is ready to display
+//
+// RETURN:
+// - True if image preview is ready
+//
+bool CimgDecode::IsPreviewReady()
+{
+	return m_bPreviewIsJpeg;
+}
 
 // Report out the color conversion statistics
 //
@@ -5051,11 +5212,15 @@ void CimgDecode::SetMarkerBlk(unsigned nBlkX,unsigned nBlkY)
 	nCssX = nBlkX % (m_nMcuWidth  / BLK_SZ_X);
 	nCssY = nBlkY % (m_nMcuHeight / BLK_SZ_X);
 
+	// Force text out to log
+	bool	bQuickModeSaved = m_pLog->GetQuickMode();
+	m_pLog->SetQuickMode(false);
 	strTmp.Format(_T("Position Marked @ MCU=[%4u,%4u](%u,%u) Block=[%4u,%4u] YCC=[%5d,%5d,%5d]"),
 		nMcuX,nMcuY,nCssX,nCssY,nBlkX,nBlkY,nY,nCb,nCr);
-
 	m_pLog->AddLine(strTmp);
 	m_pLog->AddLine(_T(""));
+	m_pLog->SetQuickMode(bQuickModeSaved);
+
 
 	m_aptMarkersBlk[m_nMarkersBlkNum].x = nBlkX;
 	m_aptMarkersBlk[m_nMarkersBlkNum].y = nBlkY;
@@ -5275,22 +5440,28 @@ void CimgDecode::ViewOnDraw(CDC* pDC,CRect rectClient,CPoint ptScrolledPos,
 	if (m_bDibTempReady) {
 
 		// Print label
-		strTitle = _T("Image (");
-		switch (m_nPreviewMode) {
-			case PREVIEW_RGB:	strTitle += _T("RGB"); break;
-			case PREVIEW_YCC:	strTitle += _T("YCC"); break;
-			case PREVIEW_R:		strTitle += _T("R"); break;
-			case PREVIEW_G:		strTitle += _T("G"); break;
-			case PREVIEW_B:		strTitle += _T("B"); break;
-			case PREVIEW_Y:		strTitle += _T("Y"); break;
-			case PREVIEW_CB:	strTitle += _T("Cb"); break;
-			case PREVIEW_CR:	strTitle += _T("Cr"); break;
-			default:			strTitle += _T("???"); break;
-		}
-		if (m_bDecodeScanAc) {
-			strTitle += _T(", DC+AC)");
+
+		if (!m_bPreviewIsJpeg) {
+			// For all non-JPEG images, report with simple title
+			strTitle = _T("Image");
 		} else {
-			strTitle += _T(", DC)");
+			strTitle = _T("Image (");
+			switch (m_nPreviewMode) {
+				case PREVIEW_RGB:	strTitle += _T("RGB"); break;
+				case PREVIEW_YCC:	strTitle += _T("YCC"); break;
+				case PREVIEW_R:		strTitle += _T("R"); break;
+				case PREVIEW_G:		strTitle += _T("G"); break;
+				case PREVIEW_B:		strTitle += _T("B"); break;
+				case PREVIEW_Y:		strTitle += _T("Y"); break;
+				case PREVIEW_CB:	strTitle += _T("Cb"); break;
+				case PREVIEW_CR:	strTitle += _T("Cr"); break;
+				default:			strTitle += _T("???"); break;
+			}
+			if (m_bDecodeScanAc) {
+				strTitle += _T(", DC+AC)");
+			} else {
+				strTitle += _T(", DC)");
+			}
 		}
 
 		
@@ -5345,24 +5516,32 @@ void CimgDecode::ViewOnDraw(CDC* pDC,CRect rectClient,CPoint ptScrolledPos,
 		// Use a common DIB instead of creating/swapping tmp / ycc and rgb.
 		// This way we can also have more flexibility in modifying RGB & YCC displays.
 		// Time calling CalcChannelPreview() seems small, so no real impact.
+
+		// Image member usage:
+		// m_pDibTemp:
+
 		m_pDibTemp.CopyDIB(pDC,m_rectImgReal.left,m_rectImgReal.top,m_nZoom);
 
-
 		// Now create overlays
-		CPen* pPen = pDC->SelectObject(&penRed);
 
-		// Draw boundary for end of valid data (inside partial MCU)
-		int nXZoomed = (int)(m_nDimX*m_nZoom);
-		int nYZoomed = (int)(m_nDimY*m_nZoom);
+		// Only draw overlay (eg. actual image boundary overlay) if the values
+		// have been set properly. Note that PSD decode currently sets these
+		// values to zero.
+		if ((m_nDimX != 0) && (m_nDimY != 0)) {
+			CPen* pPen = pDC->SelectObject(&penRed);
 
-		pDC->MoveTo(m_rectImgReal.left+nXZoomed,m_rectImgReal.top);
-		pDC->LineTo(m_rectImgReal.left+nXZoomed,m_rectImgReal.top+nYZoomed);
+			// Draw boundary for end of valid data (inside partial MCU)
+			int nXZoomed = (int)(m_nDimX*m_nZoom);
+			int nYZoomed = (int)(m_nDimY*m_nZoom);
 
-		pDC->MoveTo(m_rectImgReal.left,m_rectImgReal.top+nYZoomed);
-		pDC->LineTo(m_rectImgReal.left+nXZoomed,m_rectImgReal.top+nYZoomed);
+			pDC->MoveTo(m_rectImgReal.left+nXZoomed,m_rectImgReal.top);
+			pDC->LineTo(m_rectImgReal.left+nXZoomed,m_rectImgReal.top+nYZoomed);
 
+			pDC->MoveTo(m_rectImgReal.left,m_rectImgReal.top+nYZoomed);
+			pDC->LineTo(m_rectImgReal.left+nXZoomed,m_rectImgReal.top+nYZoomed);
 
-		pDC->SelectObject(pPen);
+			pDC->SelectObject(pPen);
+		}
 
 		// Before we frame the region, let's draw any remaining overlays
 

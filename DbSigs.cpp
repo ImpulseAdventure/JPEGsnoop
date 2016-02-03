@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,6 @@
 
 #include "Signatures.inl"
 
-#define	MAX_BUF_EX_ERR_MSG	512
 #define	MAX_BUF_SET_FILE	131072
 
 
@@ -55,6 +54,8 @@ CDbSigs::CDbSigs()
 {
 	// Count the built-in database
 	bool bDone;
+
+	m_bFirstRun = false;
 
 	bDone = false;
 	m_nSigListNum = 0;
@@ -119,6 +120,13 @@ CDbSigs::CDbSigs()
 
 CDbSigs::~CDbSigs()
 {
+}
+
+// Is this the first time running the application?
+// If so, we skip certain warning messages (such as lack of existing user DB file)
+void CDbSigs::SetFirstRun(bool bFirstRun)
+{
+	m_bFirstRun = bFirstRun;
 }
 
 unsigned CDbSigs::GetNumSigsInternal()
@@ -292,6 +300,7 @@ void CDbSigs::DatabaseExtraLoad()
 	PBYTE		pBuf = NULL;
 	unsigned	nBufLenBytes = 0;
 	unsigned	nBufOffset = 0;
+	CString		strError;
 
 	ASSERT(m_strDbDir != _T(""));
 	if (m_strDbDir == _T("")) {
@@ -299,6 +308,7 @@ void CDbSigs::DatabaseExtraLoad()
 	}
 
 	// Retrieve from environment user profile path.
+	// FIXME: Increase maximum file path size
 	TCHAR szFilePathName[200];
 	_stprintf_s(szFilePathName,_T("%s\\%s"),(LPCTSTR)m_strDbDir,DAT_FILE);
 
@@ -310,14 +320,25 @@ void CDbSigs::DatabaseExtraLoad()
 	}
 	catch (CFileException* e)
 	{
-		CString		strError;
 		TCHAR		msg[MAX_BUF_EX_ERR_MSG];
 		e->GetErrorMessage(msg,MAX_BUF_EX_ERR_MSG);
 		e->Delete();
-		strError.Format(_T("ERROR: Couldn't open file: [%s]"),(LPCTSTR)msg);
-		OutputDebugString(strError);
-		AfxMessageBox(strError);
+
+		// To avoid any user confusion, we disable this warning message if this
+		// is the first time the program has been run (when we would expect that the user
+		// database is not present). After first run, the user database will have been
+		// created.
+		// Take from SnoopConfig.bEulaAccepted
+		if (!m_bFirstRun) {
+			strError.Format(_T("Couldn't find User Signature Database\n\n[%s]\n\nCreating default database"),(LPCTSTR)msg);
+			OutputDebugString(strError);
+			AfxMessageBox(strError);
+		}
 		pInFile = NULL;
+
+		// Now create default database file in current DB location
+		DatabaseExtraStore();
+
 		return;
 	}
 
@@ -353,7 +374,7 @@ void CDbSigs::DatabaseExtraLoad()
 
 	unsigned	nNumLoad = 0;				// Number of entries to read
 	CompSig		sDbLocalEntry;				// Temp entry for load
-	bool		bDbLocalEntryFound;		// Temp entry already in built-in DB?
+	bool		bDbLocalEntryFound;			// Temp entry already in built-in DB?
 	bool		bDbLocalTrimmed = false;	// Did we trim down the DB?
 
 
@@ -379,7 +400,25 @@ void CDbSigs::DatabaseExtraLoad()
 	}
 
 	if (!bFileOk) {
-		AfxMessageBox(_T("WARNING: Database file corrupt. Proceeding with defaults."));
+		strError.Format(_T("WARNING: User Signature Database corrupt\n[%s]\nProceeding with defaults."),
+			(LPCTSTR)szFilePathName);
+		OutputDebugString(strError);
+		AfxMessageBox(strError);
+		// Close the file to ensure no sharing violation
+		if (pInFile) {
+			pInFile->Close();
+			delete pInFile;
+			pInFile = NULL;
+		}
+		// Copy old config file
+		TCHAR szFilePathNameBak[200];
+		_stprintf_s(szFilePathNameBak,_T("%s\\%s.bak"),(LPCTSTR)m_strDbDir,DAT_FILE);
+		CopyFile(szFilePathName,szFilePathNameBak,false);
+		// Now rewrite file in latest version
+		DatabaseExtraStore();
+		// Notify user
+		strTmp.Format(_T("Created default User Signature Database. Backup of old DB in [%s]"),szFilePathNameBak);
+		AfxMessageBox(strTmp);
 		return;
 	}
 	
@@ -536,8 +575,8 @@ void CDbSigs::DatabaseExtraLoad()
 			// Now rewrite file in latest version
 			DatabaseExtraStore();
 			// Notify user
-			strTmp.Format(_T("Upgraded signature database. Backup in:\n%s"),szFilePathNameBak);
-			AfxMessageBox(strTmp);
+			strError.Format(_T("Upgraded User Signature Database. Backup in:\n%s"),szFilePathNameBak);
+			AfxMessageBox(strError);
 		}
 	}
 }

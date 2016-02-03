@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -28,11 +28,16 @@
 CSnoopConfig::CSnoopConfig(void)
 {
 
+	// Debug log
+	strDebugLogFname = _T(".\\JPEGsnoop-debug.log");
+	fpDebugLog = NULL;
+	bDebugLogEnable = false;
+
 	// Default to showing message dialogs
 	bInteractive = true;
 
 	// Command-line modes
-	bCmdLineGui = true;
+	bGuiMode = true;
 	bCmdLineOpenEn = false;
 	strCmdLineOpenFname = _T("");
 	bCmdLineOutputEn = false;	// No output file specified
@@ -42,6 +47,13 @@ CSnoopConfig::CSnoopConfig(void)
 	bCmdLineBatchRec = false;
 	bCmdLineExtractEn = false;
 	bCmdLineExtractDhtAvi = false;
+	bCmdLineBatchSrch = false;
+	bCmdLineDoneMsg = false;
+
+	eCmdLineOffset = DEC_OFFSET_START;
+	nCmdLineOffsetPos = 0;
+
+	bCmdLineHelp = false;
 
 	nPosStart = 0;
 
@@ -72,8 +84,13 @@ CSnoopConfig::CSnoopConfig(void)
 	bDbSubmitNet = true;			// Default to submit new DB entries to web
 
 	bExifHideUnknown = true;		// Default to hiding unknown EXIF tags
+	bRelaxedParsing = false;		// Normal parsing stops on bad marker
 
 	nErrMaxDecodeScan = 20;
+
+	strBatchLastInput = _T("C:\\");			// Default batch processing directory (input)
+	strBatchLastOutput = _T("C:\\");		// Default batch processing directory (output)
+	strBatchExtensions = _T(".jpg,.jpeg");	// Default batch extension list
 
 	bDecodeColorConvert = true;		// Perform color convert after scan decode
 
@@ -85,6 +102,7 @@ CSnoopConfig::CSnoopConfig(void)
 
 	// --------------------------------
 
+	
 	// Determine operating system
 	// Particularly for: WinHTTP functions
     OSVERSIONINFO osvi;
@@ -158,6 +176,8 @@ void CSnoopConfig::RegistryLoad()
 		strDbDir = regUserDbPath;
 	}
 
+
+
 	//////////////////
 
 	CString strCurDate;
@@ -199,8 +219,13 @@ void CSnoopConfig::RegistryLoad()
 
 	RegistryLoadBool(_T("General\\DbSubmitNet"),    999,   bDbSubmitNet);
 	RegistryLoadBool(_T("General\\ExifHideUnk"),    999,   bExifHideUnknown);
+	RegistryLoadBool(_T("General\\RelaxedParsing"), 999,   bRelaxedParsing);
 
 	RegistryLoadUint(_T("Report\\ErrMaxDecodeScan"), 999,  nErrMaxDecodeScan);
+
+	RegistryLoadStr( _T("General\\BatchLastInput"),  _T(""), strBatchLastInput);
+	RegistryLoadStr( _T("General\\BatchLastOutput"), _T(""), strBatchLastOutput);
+	RegistryLoadStr( _T("General\\BatchExtensions"), _T(""), strBatchExtensions);
 
 	RegistryLoadBool(_T("Coach\\ReprocessAuto"),    999,   bCoachReprocessAuto);
 	RegistryLoadBool(_T("Coach\\DecodeIdct"),       999,   bCoachDecodeIdct);
@@ -241,8 +266,13 @@ void CSnoopConfig::RegistryStore()
 
 	RegistryStoreBool( _T("General\\DbSubmitNet"),    bDbSubmitNet);
 	RegistryStoreBool( _T("General\\ExifHideUnk"),    bExifHideUnknown);
+	RegistryStoreBool( _T("General\\RelaxedParsing"), bRelaxedParsing);
 
 	RegistryStoreUint( _T("Report\\ErrMaxDecodeScan"), nErrMaxDecodeScan);
+
+	RegistryStoreStr( _T("General\\BatchLastInput"),  strBatchLastInput);
+	RegistryStoreStr( _T("General\\BatchLastOutput"), strBatchLastOutput);
+	RegistryStoreStr( _T("General\\BatchExtensions"), strBatchExtensions);
 
 	RegistryStoreBool( _T("Coach\\ReprocessAuto"),    bCoachReprocessAuto);
 	RegistryStoreBool( _T("Coach\\DecodeIdct"),       bCoachDecodeIdct);
@@ -495,3 +525,161 @@ void CSnoopConfig::CreateDir(LPTSTR Path)
 	CreateDirectory(DirName, NULL);
 }
 
+
+
+// Create a new debug log if the control key is pressed during startup
+//
+// Note that we do not keep the log file open to help ensure that
+// all debug entries are flushed to the file (in case of an
+// an application crash).
+//
+bool CSnoopConfig::DebugLogCreate()
+{
+#ifdef DEBUG_LOG_OUT
+
+	if (strDebugLogFname == _T("")) {
+		return false;
+	}
+
+	// Detect control keys
+	// - VK_CONTROL = Control key
+	// - VK_SHIFT   = Shift
+	// - VK_MENU    = Alt?
+	if (GetAsyncKeyState(VK_CONTROL)) {
+		AfxMessageBox(_T("Debug Log Enabled"));
+		bDebugLogEnable = true;
+	} else {
+		return true;
+	}
+
+	ASSERT(fpDebugLog == NULL);
+
+	try
+	{
+		// Open specified file
+		fpDebugLog = new CStdioFile(strDebugLogFname, CFile::modeCreate| CFile::modeWrite | CFile::typeText | CFile::shareDenyNone);
+	}
+	catch (CFileException* e)
+	{
+		TCHAR msg[MAX_BUF_EX_ERR_MSG];
+		CString strError;
+		e->GetErrorMessage(msg,MAX_BUF_EX_ERR_MSG);
+		e->Delete();
+		strError.Format(_T("ERROR: Couldn't open debug log file for write [%s]: [%s]"),
+			(LPCTSTR)strDebugLogFname, (LPCTSTR)msg);
+		AfxMessageBox(strError);
+		fpDebugLog = NULL;
+
+		return false;
+	}
+
+	CString		strLine;
+	strLine.Format(_T("JPEGsnoop version [%s]\r\n"),VERSION_STR);
+	fpDebugLog->WriteString(strLine);
+	fpDebugLog->WriteString(_T("-----\r\n"));
+
+	// Close the file
+	if (fpDebugLog) {
+		fpDebugLog->Close();
+		delete fpDebugLog;
+		fpDebugLog = NULL;
+	}
+
+	// Extra code to record OS version
+	OSVERSIONINFO osvi;
+    ZeroMemory(&osvi, sizeof(OSVERSIONINFO));
+    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+    GetVersionEx(&osvi);
+	strLine.Format(_T("OS: PlatformId = %u"),osvi.dwPlatformId);
+	if (DEBUG_EN) DebugLogAdd(strLine);
+	strLine.Format(_T("OS: MajorVersion = %u"),osvi.dwMajorVersion);
+	if (DEBUG_EN) DebugLogAdd(strLine);
+	strLine.Format(_T("OS: MinorVersion = %u"),osvi.dwMinorVersion);
+	if (DEBUG_EN) DebugLogAdd(strLine);
+	strLine.Format(_T("OS: BuildNumber = %u"),osvi.dwBuildNumber);
+	if (DEBUG_EN) DebugLogAdd(strLine);
+	strLine.Format(_T("OS: OSVersionInfoSize = %u"),osvi.dwOSVersionInfoSize);
+	if (DEBUG_EN) DebugLogAdd(strLine);
+	if (DEBUG_EN) DebugLogAdd(_T("\n"));
+
+#endif
+	return true;
+}
+
+// If the debug log has been enabled, append the string parameter
+// to the log file.
+//
+// Note that we do not keep the log file open to help ensure that
+// all debug entries are flushed to the file (in case of an
+// an application crash).
+//
+bool CSnoopConfig::DebugLogAdd(CString strText)
+{
+#ifdef DEBUG_LOG_OUT
+
+	if (!bDebugLogEnable) {
+		return true;
+	}
+
+	if (strDebugLogFname == _T("")) {
+		return false;
+	}
+
+	ASSERT(fpDebugLog == NULL);
+
+	try
+	{
+		// Open specified file but append
+		fpDebugLog = new CStdioFile(strDebugLogFname, CFile::modeCreate| CFile::modeWrite | CFile::typeText | CFile::shareDenyNone |
+			CFile::modeNoTruncate);
+	}
+	catch (CFileException* e)
+	{
+		TCHAR msg[MAX_BUF_EX_ERR_MSG];
+		CString strError;
+		e->GetErrorMessage(msg,MAX_BUF_EX_ERR_MSG);
+		e->Delete();
+		strError.Format(_T("ERROR: Couldn't open debug log file for append [%s]: [%s]"),
+			(LPCTSTR)strDebugLogFname, (LPCTSTR)msg);
+		AfxMessageBox(strError);
+		fpDebugLog = NULL;
+
+		return false;
+	}
+
+	// Now seek to the end of the file
+	fpDebugLog->SeekToEnd();
+
+	CString		strLine;
+
+	// Get current time
+/*
+	time_t		sTime;
+	struct tm	sNow;
+	unsigned	nTmYear,nTmMon,nTmDay;
+	unsigned	nTmHour,nTmMin,nTmSec;
+	localtime_s(&sNow,&sTime);
+	nTmYear = sNow.tm_year + 1900;
+	nTmMon = sNow.tm_mon + 1;
+	nTmDay = sNow.tm_mday;
+	nTmHour = sNow.tm_hour;
+	nTmMin = sNow.tm_min;
+	nTmSec = sNow.tm_sec;
+
+
+	// Generate log line
+	//strLine.Format(_T("[%4u/%2u/%2u %2u:%2u:%2u] %s\r\n"),nTmYear,nTmMon,nTmDay,nTmHour,nTmMin,nTmSec,strText);
+*/
+	strLine.Format(_T("%s\n"),strText);
+	fpDebugLog->WriteString(strLine);
+
+	// Close the file
+	if (fpDebugLog) {
+		fpDebugLog->Close();
+		delete fpDebugLog;
+		fpDebugLog = NULL;
+	}
+
+#endif
+	return true;
+}

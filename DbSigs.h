@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -109,6 +109,7 @@ public:
 	LPTSTR		GetIjgEntry(unsigned nInd);
 
 	void		SetDbDir(CString strDbDir);
+	void		SetFirstRun(bool bFirstRun);
 
 private:
 	CompSig						m_sSigListExtra[DBEX_ENTRIES_MAX];	// Extra entries
@@ -130,6 +131,8 @@ private:
 	static LPTSTR				m_sXComSwList[];
 
 	CString						m_strDbDir;				// Database directory
+
+	bool						m_bFirstRun;			// First time running app?
 
 };
 

@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -449,9 +449,10 @@ void FileTiff::WriteFile(CString sFnameOut,bool bModeYcc,bool bMode16b,void* pBi
 	}
 	catch (CFileException* e)
 	{
-		TCHAR msg[512];
+		TCHAR msg[MAX_BUF_EX_ERR_MSG];
 		CString strError;
-		e->GetErrorMessage(msg,sizeof(msg));
+		e->GetErrorMessage(msg,MAX_BUF_EX_ERR_MSG);
+		e->Delete();
 		strError.Format(_T("ERROR: Couldn't open file for write [%s]: [%s]"),
 			(LPCTSTR)sFnameOut, msg);
 		AfxMessageBox(strError);

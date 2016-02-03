@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -129,6 +129,7 @@ void CwindowBuf::BufFileUnset()
 // Search for a value in the buffer from a given starting position
 // and direction, limited to a maximum search depth
 // - Search value can be 8-bit, 16-bit or 32-bit
+// - Update progress in lengthy searches
 //
 // INPUT:
 // - nStartPos			Starting byte offset for search
@@ -151,11 +152,27 @@ bool CwindowBuf::BufSearch(unsigned long nStartPos, unsigned nSearchVal, unsigne
 	// Save the current position
 	unsigned long   nCurPos;
 	unsigned        nCurVal;
+	CString			strStatus;
+	time_t			tmLast = clock();
 
 	nCurPos = nStartPos;
 	bool bDone = false;
 	bool bFound = false;
 	while (!bDone) {
+
+		// Update progress in status bar
+		// - Note that we only check timer when step counter has
+		//   reached a certain threshold. This limits the overhead
+		//   associated with the timer comparison
+		if ( ((nCurPos%(16*1024))==0) && (m_pStatBar)) {
+			time_t tmNow = clock();
+			if ((tmNow-tmLast) > (CLOCKS_PER_SEC / 8) ) {
+				tmLast = tmNow;
+				float	fProgress = (nCurPos*100.0f)/m_nPosEof;
+				strStatus.Format(_T("Searching %3.f%% (%lu of %lu)..."),fProgress,nCurPos,m_nPosEof);
+				m_pStatBar->SetPaneText(0,strStatus);
+			}
+		}
 
 		if (bDirFwd) {
 			nCurPos++;
@@ -194,8 +211,9 @@ bool CwindowBuf::BufSearch(unsigned long nStartPos, unsigned nSearchVal, unsigne
 	return bFound;
 }
 
+//SetStatusText
+
 // Establish local copy of status bar pointer
-//
 void CwindowBuf::SetStatusBar(CStatusBar* pStatBar)
 {
 	m_pStatBar = pStatBar;
@@ -204,6 +222,7 @@ void CwindowBuf::SetStatusBar(CStatusBar* pStatBar)
 // Search for a variable-length byte string in the buffer from a given starting position
 // and direction, limited to a maximum search depth
 // - Search string is array of unsigned bytes
+// - Update progress in lengthy searches
 //
 // INPUT:
 // - nStartPos			Starting byte offset for search
@@ -234,7 +253,8 @@ bool CwindowBuf::BufSearchX(unsigned long nStartPos, BYTE* anSearchVal, unsigned
 	unsigned long	nMatchStartPos = 0;
 	bool			bMatchStart = false;
 	bool			bMatchOn = false;
-
+	CString			strStatus;
+	time_t			tmLast = clock();
 
 	nCurPosOffset = 0;
 	nCurPos = nStartPos;
@@ -255,11 +275,17 @@ bool CwindowBuf::BufSearchX(unsigned long nStartPos, BYTE* anSearchVal, unsigned
 			}
 		}
 
-		if ((nCurPos % 1024)==0) {
-			CString strTmp;
-			if (m_pStatBar) {
-				strTmp.Format(_T("Searching %3u%% (%lu of %lu)..."),(nCurPos*100/m_nPosEof),nCurPos,m_nPosEof);
-				m_pStatBar->SetPaneText(0,strTmp);
+		// Update progress in status bar
+		// - Note that we only check timer when step counter has
+		//   reached a certain threshold. This limits the overhead
+		//   associated with the timer comparison
+		if ( ((nCurPos%(16*1024))==0) && (m_pStatBar)) {
+			time_t tmNow = clock();
+			if ((tmNow-tmLast) > (CLOCKS_PER_SEC / 8) ) {
+				tmLast = tmNow;
+				float	fProgress = (nCurPos*100.0f)/m_nPosEof;
+				strStatus.Format(_T("Searching %3.f%% (%lu of %lu)..."),fProgress,nCurPos,m_nPosEof);
+				m_pStatBar->SetPaneText(0,strStatus);
 			}
 		}
 
@@ -794,15 +820,17 @@ CString CwindowBuf::BufReadStr(unsigned long nPosition)
 	// Try to read a NULL-terminated string from file offset "nPosition"
 	// up to a maximum of MAX_BUF_READ_STR bytes. Result is max length MAX_BUF_READ_STR
 	CString			strRd = _T("");
-	char			cRd;
+	unsigned char	cRd;
 	bool			bDone = false;
 	unsigned		nIndex = 0;
 
 	while (!bDone)
 	{
 		cRd = (char)Buf(nPosition+nIndex);
-
-		strRd += cRd;
+		// Only add if printable
+		if (isprint(cRd)) {
+			strRd += cRd;
+		}
 		nIndex++;
 		if (cRd == 0) {
 			bDone = true;
@@ -833,7 +861,7 @@ CString CwindowBuf::BufReadUniStr(unsigned long nPosition)
 	// Try to read a NULL-terminated string from file offset "nPosition"
 	// up to a maximum of MAX_BUF_READ_STR bytes. Result is max length MAX_BUF_READ_STR
 	CString			strRd;
-	char			cRd;
+	unsigned char	cRd;
 	bool			bDone = false;
 	unsigned		nIndex = 0;
 
@@ -930,18 +958,19 @@ CString CwindowBuf::BufReadStrn(unsigned long nPosition,unsigned nLen)
 {
 	// Try to read a fixed-length string from file offset "nPosition"
 	// up to a maximum of "nLen" bytes. Result is length "nLen"
-	CString			strRd;
-	char			cRd;
+	CString			strRd = _T("");
+	unsigned char	cRd;
 	bool			bDone = false;
 
 	if (nLen > 0) {
 		for (unsigned nInd=0;((!bDone)&&(nInd<nLen));nInd++)
 		{
 			cRd = (char)Buf(nPosition+nInd);
+			if (isprint(cRd)) {
+				strRd += cRd;
+			}
 			if (cRd == char(0)) {
 				bDone = true;
-			} else {
-				strRd += cRd;
 			}
 		}
 		return strRd;

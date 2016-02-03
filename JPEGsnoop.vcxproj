@@ -18,13 +18,13 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v110_xp</PlatformToolset>
     <UseOfMfc>Static</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>v110_xp</PlatformToolset>
     <UseOfMfc>Static</UseOfMfc>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -89,6 +89,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <AssemblerOutput>All</AssemblerOutput>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -97,6 +98,8 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <TargetMachine>MachineX86</TargetMachine>
       <AdditionalDependencies>Wininet.lib</AdditionalDependencies>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapExports>true</MapExports>
     </Link>
     <Midl>
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
@@ -116,6 +119,9 @@
     <ClCompile Include="DbSigs.cpp" />
     <ClCompile Include="DbSubmitDlg.cpp" />
     <ClCompile Include="DecodeDetailDlg.cpp" />
+    <ClCompile Include="DecodeDicom.cpp" />
+    <ClCompile Include="DecodeDicomTags.cpp" />
+    <ClCompile Include="DecodePs.cpp" />
     <ClCompile Include="Dib.cpp" />
     <ClCompile Include="DocLog.cpp" />
     <ClCompile Include="ExportDlg.cpp" />
@@ -127,6 +133,7 @@
     <ClCompile Include="ImgDecode.cpp" />
     <ClCompile Include="JfifDecode.cpp" />
     <ClCompile Include="JPEGsnoop.cpp" />
+    <ClCompile Include="JPEGsnoopCore.cpp" />
     <ClCompile Include="JPEGsnoopDoc.cpp" />
     <ClCompile Include="JPEGsnoopView.cpp" />
     <ClCompile Include="JPEGsnoopViewImg.cpp" />
@@ -137,7 +144,6 @@
     <ClCompile Include="NoteDlg.cpp" />
     <ClCompile Include="OffsetDlg.cpp" />
     <ClCompile Include="OverlayBufDlg.cpp" />
-    <ClCompile Include="PsDecode.cpp" />
     <ClCompile Include="Registry.cpp" />
     <ClCompile Include="SettingsDlg.cpp" />
     <ClCompile Include="SnoopConfig.cpp" />
@@ -158,6 +164,8 @@
     <ClInclude Include="DbSigs.h" />
     <ClInclude Include="DbSubmitDlg.h" />
     <ClInclude Include="DecodeDetailDlg.h" />
+    <ClInclude Include="DecodeDicom.h" />
+    <ClInclude Include="DecodePs.h" />
     <ClInclude Include="Dib.h" />
     <ClInclude Include="DocLog.h" />
     <ClInclude Include="ExportDlg.h" />
@@ -169,6 +177,7 @@
     <ClInclude Include="ImgDecode.h" />
     <ClInclude Include="JfifDecode.h" />
     <ClInclude Include="JPEGsnoop.h" />
+    <ClInclude Include="JPEGsnoopCore.h" />
     <ClInclude Include="JPEGsnoopDoc.h" />
     <ClInclude Include="JPEGsnoopView.h" />
     <ClInclude Include="JPEGsnoopViewImg.h" />
@@ -179,7 +188,6 @@
     <ClInclude Include="NoteDlg.h" />
     <ClInclude Include="OffsetDlg.h" />
     <ClInclude Include="OverlayBufDlg.h" />
-    <ClInclude Include="PsDecode.h" />
     <ClInclude Include="Registry.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SettingsDlg.h" />

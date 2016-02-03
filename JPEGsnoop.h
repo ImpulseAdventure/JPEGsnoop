@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -39,9 +39,15 @@
 
 #include "afxwinappex.h"	//xxx
 
+#include "JPEGsnoopCore.h"
+
 // CJPEGsnoopApp:
 // See JPEGsnoop.cpp for the implementation of this class
 //
+
+// Define global variable for application log
+extern CDocLog*	glb_pDocLog;
+
 
 class CJPEGsnoopApp : public CWinApp
 {
@@ -62,6 +68,11 @@ public:
 private:
 	void			MyOnFileOpen();
 	void			MyOnFileNew();
+
+	void			DoCmdLineCore();
+	void			CmdLineHelp();
+	void			CmdLineMessage(CString strMsg);
+	void			CmdLineDoneMessage();
 
 	void			CheckUpdates(bool bForceNow);
 	bool			CheckUpdatesWww();
@@ -116,6 +127,9 @@ public:
 private:
 	bool			m_bFatal;		// Fatal error occurred (e.g. mem alloc)
 
+public:
+	afx_msg void OnOptionsRelaxedparsing();
+	afx_msg void OnUpdateOptionsRelaxedparsing(CCmdUI *pCmdUI);
 };
 
 extern CJPEGsnoopApp theApp;

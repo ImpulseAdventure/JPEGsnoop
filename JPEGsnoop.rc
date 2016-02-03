@@ -187,6 +187,7 @@ BEGIN
         MENUITEM "Hide Unknown EXIF Tags",      ID_OPTIONS_HIDEUKNOWNEXIFTAGS
         MENUITEM "Maker Notes",                 ID_OPTIONS_MAKERNOTES
         MENUITEM "Signature Search",            ID_OPTIONS_SIGNATURESEARCH
+        MENUITEM "Relaxed Parsing",             ID_OPTIONS_RELAXEDPARSING
         MENUITEM SEPARATOR
         POPUP "Scan Segment"
         BEGIN
@@ -300,7 +301,7 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,12,6,20,20
     LTEXT           "JPEGsnoop",IDC_STATIC,42,6,39,8,SS_NOPREFIX
-    LTEXT           "Copyright © 2014 Calvin Hass",IDC_STATIC,42,18,124,8
+    LTEXT           "Copyright © 2015 Calvin Hass",IDC_STATIC,42,18,124,8
     DEFPUSHBUTTON   "OK",IDOK,185,7,50,16,WS_GROUP
     LTEXT           "www.impulseadventure.com/photo/",IDC_URL,24,66,117,8
     LTEXT           "Documentation and Updates for JPEGsnoop",IDC_URL_DOC,24,48,169,8
@@ -387,11 +388,11 @@ CAPTION "Starting File Offset"
 FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,206,7,50,14
+    CONTROL         "Decimal",IDC_BASED,"Button",BS_AUTORADIOBUTTON,69,28,40,10
+    CONTROL         "Hex",IDC_BASEH,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,69,14,29,10
+    EDITTEXT        IDC_OFFSETVAL,117,17,82,14,ES_AUTOHSCROLL
     PUSHBUTTON      "Cancel",IDCANCEL,206,24,50,14
     LTEXT           "Offset (Bytes):",IDC_STATIC,14,15,50,8
-    CONTROL         "Hex",IDC_BASEH,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,69,14,29,10
-    CONTROL         "Decimal",IDC_BASED,"Button",BS_AUTORADIOBUTTON,69,28,40,10
-    EDITTEXT        IDC_OFFSETVAL,117,17,82,14,ES_AUTOHSCROLL
 END
 
 IDD_SETTINGSDLG DIALOGEX 0, 0, 316, 217
@@ -582,8 +583,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,7,1,0
- PRODUCTVERSION 1,7,1,0
+ FILEVERSION 1,7,6,0
+ PRODUCTVERSION 1,7,6,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -600,12 +601,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "ImpulseAdventure"
             VALUE "FileDescription", "JPEGsnoop"
-            VALUE "FileVersion", "1.7.1.0"
+            VALUE "FileVersion", "1.7.6.0"
             VALUE "InternalName", "JPEGsnoop.exe"
-            VALUE "LegalCopyright", "(c) 2014 Calvin Hass.  All rights reserved."
+            VALUE "LegalCopyright", "(c) 2015 Calvin Hass.  All rights reserved."
             VALUE "OriginalFilename", "JPEGsnoop.exe"
             VALUE "ProductName", "JPEGsnoop"
-            VALUE "ProductVersion", "1.7.1.0"
+            VALUE "ProductVersion", "1.7.6.0"
         END
     END
     BLOCK "VarFileInfo"

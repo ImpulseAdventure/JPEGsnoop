@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include "ImgDecode.h"
-
 // CLookupDlg dialog
 
 class CLookupDlg : public CDialog
@@ -35,7 +33,7 @@ class CLookupDlg : public CDialog
 
 public:
 	CLookupDlg(CWnd* pParent = NULL);   // standard constructor
-	CLookupDlg(CWnd* pParent, CimgDecode* pImgDec, unsigned nSizeX, unsigned nSizeY);
+	CLookupDlg(CWnd* pParent, unsigned nSizeX, unsigned nSizeY);
 	virtual ~CLookupDlg();
 
 // Dialog Data
@@ -49,6 +47,16 @@ protected:
 private:
 	afx_msg void	OnBnClickedBtnCalc();
 
+public:
+	// Callback function for LookupFilePosPix()
+	void SetCbLookup(void* pClassCbLookup,
+					void (*pCbLookup)(void* pClassCbBuf, unsigned nX,unsigned nY,unsigned &nByte,unsigned &nBit));
+private:
+	// References to callback function for LookupFilePosPix()
+	void*			m_pClassCbLookup;
+	void			(*m_pCbLookup)(void* pClassCbLookup,unsigned nX,unsigned nY,unsigned &nByte,unsigned &nBit);
+
+private:
 	UINT			m_nPixX;
 	UINT			m_nPixY;
 	CString			m_strOffset;
@@ -59,6 +67,4 @@ private:
 
 	CString			m_strRngX;
 	CString			m_strRngY;
-
-	CimgDecode*		m_pImgDec;
 };

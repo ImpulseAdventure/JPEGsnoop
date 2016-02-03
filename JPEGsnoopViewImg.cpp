@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,6 @@
 #include "JPEGsnoop.h"
 #include "JPEGsnoopDoc.h"
 #include "JPEGsnoopViewImg.h"
-#include ".\jpegsnoopviewimg.h"
 
 
 // CJPEGsnoopViewImg
@@ -64,10 +63,23 @@ BEGIN_MESSAGE_MAP(CJPEGsnoopViewImg, CScrollView)
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
 	ON_WM_RBUTTONUP()
-ON_WM_MOUSEWHEEL()
-ON_WM_MOUSEMOVE()
-ON_WM_ERASEBKGND()
+	ON_WM_MOUSEWHEEL()
+	ON_WM_MOUSEMOVE()
+	ON_WM_ERASEBKGND()
 END_MESSAGE_MAP()
+
+
+CJPEGsnoopCore* CJPEGsnoopViewImg::GetCore()
+{
+	CJPEGsnoopDoc* pDoc = (CJPEGsnoopDoc*)GetDocument();
+	ASSERT_VALID(pDoc);
+	if (!pDoc)
+		return NULL;
+
+	// TODO: add draw code for native data here
+	CJPEGsnoopCore*		pCore		= pDoc->m_pCore;
+	return pCore;
+}
 
 
 // CJPEGsnoopViewImg drawing
@@ -96,7 +108,9 @@ void CJPEGsnoopViewImg::OnDraw(CDC* pDC)
 		return;
 
 	// TODO: add draw code for native data here
-	CimgDecode*		pImgDec		= pDoc->m_pImgDec;
+	CJPEGsnoopCore*	pCore = GetCore();
+	if (!pCore)
+		return;
 
 	CPoint	ScrolledPos = GetScrollPosition();
 	CRect	rectClient;
@@ -104,7 +118,7 @@ void CJPEGsnoopViewImg::OnDraw(CDC* pDC)
     
 	GetClientRect(&rectClient);
 
-	pImgDec->ViewOnDraw(pDC,rectClient,ScrolledPos,m_pFont,szNewScrollSize);
+	pCore->I_ViewOnDraw(pDC,rectClient,ScrolledPos,m_pFont,szNewScrollSize);
 	SetScrollSizes(MM_TEXT, szNewScrollSize);
 
 }
@@ -127,18 +141,6 @@ void CJPEGsnoopViewImg::Dump(CDumpContext& dc) const
 // CJPEGsnoopViewImg message handlers
 
 
-CimgDecode* CJPEGsnoopViewImg::GetImgDec()
-{
-	CJPEGsnoopDoc* pDoc = (CJPEGsnoopDoc*)GetDocument();
-	ASSERT_VALID(pDoc);
-	if (!pDoc)
-		return NULL;
-
-	// TODO: add draw code for native data here
-	CimgDecode*		pImgDec		= pDoc->m_pImgDec;
-	return pImgDec;
-}
-
 
 // FIXME: Migrate into ImgDec!
 bool CJPEGsnoopViewImg::InPreviewArea(CPoint point,CPoint &ptPix)
@@ -151,10 +153,10 @@ bool CJPEGsnoopViewImg::InPreviewArea(CPoint point,CPoint &ptPix)
 	unsigned	nPixX;		// 8x8 block number (not MCU unless CSS=1x1)
 	unsigned	nPixY;
 
-	CimgDecode*	pImgDec = GetImgDec();
+	CJPEGsnoopCore*	pCore = GetCore();
 
-	fZoom = pImgDec->GetPreviewZoom();
-	pImgDec->GetPreviewPos(nImgPosX,nImgPosY);
+	fZoom = pCore->I_GetPreviewZoom();
+	pCore->I_GetPreviewPos(nImgPosX,nImgPosY);
 
 	ASSERT(fZoom != 0);
 
@@ -177,7 +179,7 @@ bool CJPEGsnoopViewImg::InPreviewArea(CPoint point,CPoint &ptPix)
 
 	// Note that m_nPreviewSize already includes effects of zoom level
 	unsigned	nPreviewSzX,nPreviewSzY;
-	pImgDec->GetPreviewSize(nPreviewSzX,nPreviewSzY);
+	pCore->I_GetPreviewSize(nPreviewSzX,nPreviewSzY);
 	if ( ((pix_x >= 0) && ((unsigned)pix_x < nPreviewSzX)) &&
 		 ((pix_y >= 0) && ((unsigned)pix_y < nPreviewSzY)) )
 	{
@@ -203,7 +205,7 @@ void CJPEGsnoopViewImg::SetScrollCenter(float fZoomOld, float fZoomNew)
 
 	ASSERT(fZoomOld != 0);
 	ASSERT(fZoomNew != 0);
-	GetImgDec()->GetPreviewPos(nImgPosX,nImgPosY);
+	GetCore()->I_GetPreviewPos(nImgPosX,nImgPosY);
 
 	CPoint	ScrolledPos = GetScrollPosition();
 	ScrolledPos.Offset(-(int)nImgPosX,-(int)nImgPosY);
@@ -250,16 +252,19 @@ void CJPEGsnoopViewImg::OnLButtonUp(UINT nFlags, CPoint point)
 	CPoint ptMcu;
 	CPoint ptBlk;
 
-	if (InPreviewArea(point,ptPix)) {
+	// Need to ensure that the Preview image was based on a JPEG with
+	// MCU/Block map info
+	//if (InPreviewArea(point,ptPix)) {
+	if ( (GetCore()->I_IsPreviewReady() && InPreviewArea(point,ptPix)) ) {
 		
 		// Set the marker
-		ptBlk = GetImgDec()->PixelToBlk(ptPix);
-		GetImgDec()->SetMarkerBlk(ptBlk.x,ptBlk.y);
+		ptBlk = GetCore()->I_PixelToBlk(ptPix);
+		GetCore()->I_SetMarkerBlk(ptBlk.x,ptBlk.y);
 
 		//Invalidate();
 
 	} else {
-		GetImgDec()->SetStatusText(_T(""));
+		GetCore()->I_SetStatusText(_T(""));
 	}
 	
 	
@@ -297,34 +302,36 @@ void CJPEGsnoopViewImg::OnMouseMove(UINT nFlags, CPoint point)
 	int		nY1,nCb1,nCr1;
 
 	// FIXME: Migrate the following into ImgDec!
-	if (InPreviewArea(point,ptPix)) {
+	// Need to ensure that the Preview image was based on a JPEG with
+	// MCU/Block map info
+	if ( (GetCore()->I_IsPreviewReady() && InPreviewArea(point,ptPix)) ) {
 
-		ptMcu = GetImgDec()->PixelToMcu(ptPix);
-		GetImgDec()->LookupFilePosMcu(ptMcu.x,ptMcu.y,nByte,nBit);
+		ptMcu = GetCore()->I_PixelToMcu(ptPix);
+		GetCore()->I_LookupFilePosMcu(ptMcu.x,ptMcu.y,nByte,nBit);
 
-		ptBlk = GetImgDec()->PixelToBlk(ptPix);
-		GetImgDec()->LookupBlkYCC(ptBlk.x,ptBlk.y,nY1,nCb1,nCr1);
+		ptBlk = GetCore()->I_PixelToBlk(ptPix);
+		GetCore()->I_LookupBlkYCC(ptBlk.x,ptBlk.y,nY1,nCb1,nCr1);
 
 /*
 		strTmp.Format(_T("MCU [%04u,%04u] File: 0x%08X:%u\tYCC=[%05d,%05d,%05d]"),
 			ptMcu.x,ptMcu.y,nByte,nBit,
 			nY1,nCb1,nCr1);
-		GetImgDec()->SetStatusText(strTmp);
+		GetCore()->I_SetStatusText(strTmp);
 */
 		strTmp.Format(_T("MCU [%04u,%04u]"),ptMcu.x,ptMcu.y);
-		GetImgDec()->SetStatusMcuText(strTmp);
+		GetCore()->I_SetStatusMcuText(strTmp);
 
 		strTmp.Format(_T("File: 0x%08X:%u"),nByte,nBit);
-		GetImgDec()->SetStatusFilePosText(strTmp);
+		GetCore()->I_SetStatusFilePosText(strTmp);
 
 		strTmp.Format(_T("YCC DC=[%05d,%05d,%05d]"),nY1,nCb1,nCr1);
-		GetImgDec()->SetStatusYccText(strTmp);
+		GetCore()->I_SetStatusYccText(strTmp);
 
 	} else {
-//		GetImgDec()->SetStatusText(_T(""));
-		GetImgDec()->SetStatusMcuText(_T(""));
-		GetImgDec()->SetStatusFilePosText(_T(""));
-		GetImgDec()->SetStatusYccText(_T(""));
+//		GetCore()->I_SetStatusText(_T(""));
+		GetCore()->I_SetStatusMcuText(_T(""));
+		GetCore()->I_SetStatusFilePosText(_T(""));
+		GetCore()->I_SetStatusYccText(_T(""));
 	}
 
 	CScrollView::OnMouseMove(nFlags, point);

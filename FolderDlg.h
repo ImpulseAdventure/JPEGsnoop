@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -91,6 +91,10 @@ public:
 	static CString GetPathName(LPCITEMIDLIST pidl);
 	static CString GetDisplayNameOf(IShellFolder* psf, LPCITEMIDLIST pidl, DWORD uFlags);
 	static void FreePIDL(LPCITEMIDLIST pidl);
+
+	void SetStartPath(CString strPath); //CAL!
+private:
+	CString		m_strStartPath;	//CAL!
 
 protected:
 	BROWSEINFO m_brinfo;						 // internal structure for SHBrowseForFolder

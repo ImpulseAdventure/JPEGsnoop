@@ -3,6 +3,58 @@
 //   by Calvin Hass
 // ==================================
 
+1.7.6 (12/23/15)
+	- Fixed command-line histogram output mode (-histo_y)
+	- Fixed command-line help for 'dhtexp'
+
+1.7.5 (11/29/15)
+	> Migrated all SnoopCore functionality out of JPEGsnoopDoc
+	- Added "-offset*" command-line flags
+	- Photoshop (PSD) image rendering
+
+1.7.4-beta5b (02/04/15)
+	- Added batch progress report to window
+
+1.7.4-beta5a (02/02/15)
+	> Rewrote JPEGsnoopDoc to use JPEGsnoopCore instead of JFIF Dec, Img Dec and WBuf
+	- Added "-done" command-line flag
+
+1.7.4-beta5 (02/02/15)
+	> Rewrote command-line interface to use core processing code
+
+1.7.4-beta4	(01/28/15)
+	> Added more Debug Log mode output checkpoints
+	- Added more Photoshop PSD decode capability (layer info)
+	- Fixed user DB warning message
+	> WIP: output image preview from Photoshop decode (#define PS_IMG_DEC_EN, default off)
+	> Fixed cases where mouse position fetched from preview when JPEG wasn't decoded
+
+1.7.4-beta3	(10/06/14)
+	> Improved error reporting (SOF)
+	- Batch processing settings now saved (only directories at this point)
+	> Added Debug Log mode (hold down Control when launching app) (#define DEBUG_LOG_OUT)
+	> Added initial code for YCCK (#define DEBUG_YCCK)
+
+1.7.4-beta2	(10/05/14)
+	- Range checking is more robust for parsing corrupt files
+	- Added ITU-T standard parameter names to output
+
+1.7.4-beta1	(10/05/14)
+	- Added "Relaxed Parsing" mode
+
+1.7.3		(09/28/14)
+	- Fixed Win XP launch problem [SF-bug-023]
+	- Improved error handling with missing User Database
+	- Fixed command-line filenames with leading '-'
+	> Added DICOM parsing (disabled for this release)
+
+1.7.2		(09/18/14)
+	- Extended file size support up to 4GB
+	> Fixed file too large checks (was 128MB)
+	> Fixed offset dialog data validation
+	- Added parsing of DAC, DNL, EXP, SOFn
+	- Added progress reporting in lengthy search operations
+
 1.7.1		(09/14/14)
 	- Fixed Search Executable for DQT function
 	- Disabled warning dialogs in batch and command-line "-nogui" modes

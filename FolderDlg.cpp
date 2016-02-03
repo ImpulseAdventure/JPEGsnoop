@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -80,6 +80,9 @@ CFolderDialog::CFolderDialog(CWnd* pWnd)
 //CAL!	m_brinfo.hwndOwner=pWnd->m_hWnd;		 // use parent window
 	m_bFilter = FALSE;						 // default: no filtering
 	SHGetDesktopFolder(&m_shfRoot);		 // get root IShellFolder
+
+	//CAL! Add support for start path
+	m_strStartPath = "";
 }
 
 //////////////////
@@ -127,6 +130,12 @@ CString CFolderDialog::GetPathName(LPCITEMIDLIST pidl)
 	SHGetPathFromIDList(pidl, buf);
 	path.ReleaseBuffer();
 	return path;
+}
+
+//CAL! Added
+void CFolderDialog::SetStartPath(CString strPath)
+{
+	m_strStartPath = strPath;
 }
 
 //////////////////
@@ -182,6 +191,15 @@ int CFolderDialog::OnMessage(UINT msg, LPARAM lp)
 	switch (msg) {
 	case BFFM_INITIALIZED:
 		OnInitialized();
+		//CAL!
+		// Add support for initial start directory
+		if (!m_strStartPath.IsEmpty()) {
+			LPARAM	lpStartPath;
+			lpStartPath = (LPARAM)(m_strStartPath.GetBuffer(1));
+			m_strStartPath.ReleaseBuffer();
+			::SendMessage(this->m_hWnd,BFFM_SETSELECTION,TRUE,lpStartPath);
+		}
+		//CAL!
 		return 0;
 	case BFFM_IUNKNOWN:
 		OnIUnknown((IUnknown*)lp);

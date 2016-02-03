@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -38,11 +38,13 @@ CLookupDlg::CLookupDlg(CWnd* pParent /*=NULL*/)
 	, m_strRngY(_T(""))
 	, m_nSizeX(0)
 	, m_nSizeY(0)
-	, m_pImgDec(NULL)
 {
+	// Initialize callback functions to NULL
+	m_pCbLookup = NULL;
+	m_pClassCbLookup = NULL;
 }
 
-CLookupDlg::CLookupDlg(CWnd* pParent,CimgDecode* pImgDec, unsigned nSizeX, unsigned nSizeY)
+CLookupDlg::CLookupDlg(CWnd* pParent, unsigned nSizeX, unsigned nSizeY)
 	: CDialog(CLookupDlg::IDD, pParent)
 	, m_nPixX(0)
 	, m_nPixY(0)
@@ -54,7 +56,10 @@ CLookupDlg::CLookupDlg(CWnd* pParent,CimgDecode* pImgDec, unsigned nSizeX, unsig
 {
 	m_strRngX.Format(_T("(0..%u)"),m_nSizeX-1);
 	m_strRngY.Format(_T("(0..%u)"),m_nSizeY-1);
-	m_pImgDec = pImgDec;
+
+	// Initialize callback functions to NULL
+	m_pCbLookup = NULL;
+	m_pClassCbLookup = NULL;
 }
 
 CLookupDlg::~CLookupDlg()
@@ -77,12 +82,23 @@ BEGIN_MESSAGE_MAP(CLookupDlg, CDialog)
 END_MESSAGE_MAP()
 
 
+// Set callback function for Buf()
+void CLookupDlg::SetCbLookup(void* pClassCbLookup,
+							  void (*pCbLookup)(void* pClassCbLookup, unsigned nX,unsigned nY,unsigned &nByte,unsigned &nBit)
+							  )
+{
+	// Save pointer to class and function
+	m_pClassCbLookup = pClassCbLookup;
+	m_pCbLookup = pCbLookup;
+}
+
 // CLookupDlg message handlers
 
 void CLookupDlg::OnBnClickedBtnCalc()
 {
-	ASSERT (m_pImgDec);
-	unsigned nByte,nBit;
+	ASSERT(m_pCbLookup);
+	unsigned nByte = 0;
+	unsigned nBit = 0;
 	UpdateData();
 
 	if (m_nPixX > m_nSizeX-1) {
@@ -90,8 +106,9 @@ void CLookupDlg::OnBnClickedBtnCalc()
 	} else if (m_nPixY > m_nSizeY-1) {
 		AfxMessageBox(_T("Pixel Y coord out of range"));
 	} else {
-		if (m_pImgDec) {
-			m_pImgDec->LookupFilePosPix(m_nPixX,m_nPixY,nByte,nBit);
+		if (m_pCbLookup) {
+			// Use callback function for lookup
+			m_pCbLookup(m_pClassCbLookup,m_nPixX,m_nPixY,nByte,nBit);
 			m_strOffset.Format(_T("0x%08X : %u"),nByte,nBit);
 			UpdateData(FALSE);
 		}

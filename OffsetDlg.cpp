@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2014 - Calvin Hass
+// Copyright (C) 2015 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -39,37 +39,15 @@ COffsetDlg::~COffsetDlg()
 {
 }
 
-void COffsetDlg::CalInitialDraw()
-{
-	CString valStr;
 
-	if (m_nBaseMode == 0) {
-		// Hex
-		valStr.Format(_T("0x%08X"),m_nOffsetVal);
-		m_sOffsetVal = valStr;
-	} else {
-		// Dec
-		valStr.Format(_T("%u"),m_nOffsetVal);
-		m_sOffsetVal = valStr;
-	}
-
-	//UpdateData(false);
-}
-
+// Set the initial file offset
 void COffsetDlg::SetOffset(unsigned nPos)
 {
-	CString valStr;
-
 	m_nOffsetVal = nPos;
-
-	// Assume that m_nOffsetVal came directly from caller,
-	// so we want to update our controls assuming that
-	// we are in Hex mode by default.
-	valStr.Format(_T("0x%08X"),m_nOffsetVal);
-	m_sOffsetVal = valStr;
-	CalInitialDraw();
+	OffsetNum2Str();
 }
 
+// Fetch the current offset value from the dialog
 unsigned COffsetDlg::GetOffset()
 {
 	return m_nOffsetVal;
@@ -79,8 +57,6 @@ unsigned COffsetDlg::GetOffset()
 void COffsetDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
-	//DDX_Control(pDX, IDC_BASEH, btnBaseHex);
-	//DDX_Control(pDX, IDC_BASED, btnBaseDec);
 	DDX_Text(pDX, IDC_OFFSETVAL, m_sOffsetVal);
 	DDX_Radio(pDX, IDC_BASEH, m_nRadioBaseMode);
 }
@@ -96,107 +72,116 @@ END_MESSAGE_MAP()
 // COffsetDlg message handlers
 
 
+// Convert internal offset number to dialog string
+void COffsetDlg::OffsetNum2Str()
+{
+	CString strVal;
 
+	if (m_nBaseMode == 0) {
+		// Hex
+		strVal.Format(_T("0x%08X"),m_nOffsetVal);
+		m_sOffsetVal = strVal;
+	} else {
+		// Dec
+		strVal.Format(_T("%u"),m_nOffsetVal);
+		m_sOffsetVal = strVal;
+	}
+
+}
+
+// Convert the current dialog offset string into
+// the internal offset value. If data validation
+// fails, then display a dialog box.
+//
+// RETURN:
+// - True if validation OK
+//
+bool COffsetDlg::OffsetStr2Num()
+{
+	CString		strVal;
+
+
+	if (m_nBaseMode == 0) {
+		// Hex
+		if (!Str2Uint32(m_sOffsetVal,16,m_nOffsetVal)) {
+			AfxMessageBox(_T("Invalid hex string"));
+			return false;
+		}
+	} else {
+		// Decimal
+		if (!Str2Uint32(m_sOffsetVal,10,m_nOffsetVal)) {
+			AfxMessageBox(_T("Invalid decimal string"));
+			return false;
+		}
+	}
+	return true;
+
+}
+
+// Change dialog mode to hex
+// - If in decimal mode, convert from decimal to hex
+// - Report data validation error
 void COffsetDlg::OnBnClickedBaseh()
 {
-	CString valStr;
+	CString		strVal;
+	bool		bOk;
 
-	// Set to Hex
-	//btnBaseHex.SetCheck(true);
-	//btnBaseDec.SetCheck(false);
-
+	UpdateData(true);
 	if (m_nBaseMode == 0) {
 		// If it was hex before, don't do anything
 	} else {
-		// If it was dec before, convert it!
+		// If it was decimal before, convert it!
+		bOk = OffsetStr2Num();
 		m_nBaseMode = 0;
-		UpdateData();
-		m_nOffsetVal = _tstoi(m_sOffsetVal);
-		valStr.Format(_T("0x%08X"),m_nOffsetVal);
-		m_sOffsetVal = valStr;
-		UpdateData(false);
+		if (!bOk) {
+			// There was a validation error
+			// - Force the value to zero
+			// TODO: Would be nice if we could instead
+			// prevent the radio button from transitioning state.
+			m_nOffsetVal = 0;
+		}
 	}
+	OffsetNum2Str();
+	UpdateData(false);
 }
 
+// Change dialog mode to decimal
+// - If in hex mode, convert from hex to decimal
+// - Report data validation error
 void COffsetDlg::OnBnClickedBased()
 {
-	CString valStr;
+	CString strVal;
+	bool	bOk;
 
-	// Set to Dec
-	//btnBaseHex.SetCheck(false);
-	//btnBaseDec.SetCheck(true);
-
+	UpdateData(true);
 	if (m_nBaseMode == 1) {
-		// If it was dec before, don't do anything
+		// If it was decimal before, don't do anything
 	} else {
 		// If it was hex before, convert it!
+		bOk = OffsetStr2Num();
 		m_nBaseMode = 1;
-		UpdateData();
-		m_nOffsetVal = _tcstol(m_sOffsetVal,NULL,16);
-		valStr.Format(_T("%u"),m_nOffsetVal);
-		m_sOffsetVal = valStr;
-		UpdateData(false);
+		if (!bOk) {
+			// There was a validation error
+			// - Force the value to zero
+			// TODO: Would be nice if we could instead
+			// prevent the radio button from transitioning state.
+			m_nOffsetVal = 0;
+		}
 	}
+	OffsetNum2Str();
+	UpdateData(false);
 }
 
 void COffsetDlg::OnBnClickedOk()
 {
-	bool		valid = false;
-	unsigned	ind_start = 0;
-	unsigned	ind_max;
-	TCHAR		ch;
-	unsigned	val_new;
-	CString		strTmp;
-
-	// Store the new local value (decimal) just before
-	// we return to the caller
+	// Store the new local value before we return to dialog caller
 	UpdateData();
-	val_new = 0;
-	ind_max = (unsigned)_tcslen(m_sOffsetVal);
 
-	if (m_nBaseMode == 0) {
-		// Hex mode
-		if (!_tcsnccmp(m_sOffsetVal,_T("0x"),2)) {
-			ind_start = 2;
-		}
-		valid = true;
-		for (unsigned i=ind_start;i<ind_max;i++) {
-			ch = toupper(m_sOffsetVal.GetAt(i));
-			if (!isdigit(ch) && !(ch >= 'A' && ch <= 'F')) {
-				valid = false;
-				strTmp.Format(_T("ERROR: Invalid hex digit [%c]"),ch);
-				AfxMessageBox(strTmp);
-			}
-		}
-		if (valid) {
-			val_new = _tcstol(m_sOffsetVal,NULL,16);
-		}
-	} else {
-		// Decimal mode
-		valid = true;
-		for (unsigned i=0;i<ind_max;i++) {
+	bool bOk = OffsetStr2Num();
 
-			ch = m_sOffsetVal.GetAt(i);
-			if (!isdigit(ch)) {
-				valid = false;
-				strTmp.Format(_T("ERROR: Invalid decimal digit [%c]"),ch);
-				AfxMessageBox(strTmp);
-			}
-		}
-
-		if (valid) {
-			if (_tstoi(m_sOffsetVal) >= 0) {
-				val_new = _tstoi(m_sOffsetVal);
-			} else {
-				AfxMessageBox(_T("ERROR: Offset must be >= 0"));
-				valid = false;
-			}
-		}
-	}
-
-	if (valid) {
-		m_nOffsetVal = val_new;
-		// Call the normal processing now
+	// Only leave the dialog if the data validation was successful
+	if (bOk) {
 		OnOK();
 	}
+
 }
