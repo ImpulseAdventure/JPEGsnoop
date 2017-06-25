@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -554,6 +554,8 @@ BOOL CJPEGsnoopDoc::ReadLine(CString& strLine,
 //
 void CJPEGsnoopDoc::DoBatchProcess(CString strBatchDir,bool bRecSubdir,bool bExtractAll)
 {
+	bRecSubdir;		// Unreferenced param
+
 	CFolderDialog		myFolderDlg(NULL);
 	CString				strRootDir;
 	CString				strDir;
@@ -789,6 +791,9 @@ void CJPEGsnoopDoc::OnToolsAddcameratodb()
 		strUserSoftware = submitDlg.m_strUserSoftware;
 		strUserNotes = submitDlg.m_strNotes;
 
+		// FIXME: We should not be comparing the radio button index (nUserSrcPre) with the ENUM!
+		// When we make this fix, also add in new param "js_ver" for JPEGsnoop version and
+		// update signature version to "03" from "02".
 		switch (nUserSrcPre) {
 			case ENUM_SOURCE_CAM:
 				eUserSrc = ENUM_SOURCE_CAM;
@@ -1112,7 +1117,7 @@ void CJPEGsnoopDoc::OnFileSaveAs()
 	m_bRTF = false;
 	m_strPathName = m_strPathName + _T(".txt");
 
-	bool status = 0;
+	//bool status = 0;
 	/*
 	TCHAR aszFilter[] =
 		_T("Log - Plain Text (*.txt)|*.txt|")\
@@ -1229,7 +1234,7 @@ void CJPEGsnoopDoc::OnToolsSearchexecutablefordqt()
 	// Don't need to do AnalyzeOpen() because a file pointer to
 	// the executable is created here.
 
-	bool bStatus = 0;
+	//bool bStatus = 0;
 	TCHAR astrFilter[] =
 		_T("Executable (*.exe)|*.exe|")\
 		_T("DLL Library (*.dll)|*.dll|")\
@@ -1319,13 +1324,13 @@ void CJPEGsnoopDoc::OnToolsSearchexecutablefordqt()
 	pExeBuf->BufFileSet(pFileExe);
 	pExeBuf->BufLoadWindow(0);
 
-	bool			bDoneFile = false;
-	long			nFileInd = 0;
+	//bool			bDoneFile = false;
+	//long			nFileInd = 0;
 	unsigned		nEntriesWidth;
 	bool			bEntriesByteSwap;
 	unsigned long	nFoundPos=0;
 	bool			bFound = false;
-	bool			bFoundEntry = false;
+	//bool			bFoundEntry = false;
 
 	BYTE			abSearchMatrix[(64*4)+4];
 	unsigned		nSearchMatrixLen;
@@ -1448,7 +1453,7 @@ void CJPEGsnoopDoc::OnToolsSearchexecutablefordqt()
 					// ensure explicit array bounds are clear.
 					if (nEntriesWidth == 1) {
 						if (bBaseline) {
-							abSearchMatrix[(nInd*1)] = nVal;
+							abSearchMatrix[(nInd*1)] = (nVal & 0xFF);
 						} else {
 							// Shouldn't get here. 2 byte value in 1 byte search
 							// Supposed to exit earlier
@@ -1582,11 +1587,11 @@ void CJPEGsnoopDoc::DoGuiExtractEmbeddedJPEG()
 	bool			bAllOk = true;
 	CExportDlg		dlgExport;
 	CString			strTmp;
-	unsigned int	nFileSize = 0;
+	//unsigned int	nFileSize = 0;
 
 	// Original function params
-	bool			bInteractive = true;
-	bool			bInsDhtAvi = false;
+	//bool			bInteractive = true;
+	//bool			bInsDhtAvi = false;
 	CString			strOutPath = _T("");
 
 	bool			bOverlayEn = false;
@@ -1778,7 +1783,7 @@ void CJPEGsnoopDoc::OnToolsFileoverlay()
 			{
 				strTmpByte = strValNew.Mid(nInd*2,2);
 				nTmpByte = _tcstoul(strTmpByte,NULL,16);
-				anValData[nInd] = nTmpByte;
+				anValData[nInd] = (nTmpByte & 0xFF);
 			}
 
 			if (dlgOverlay.m_bEn) {
@@ -2044,7 +2049,7 @@ void CJPEGsnoopDoc::OnToolsExporttiff()
 
 	short			nValMinY,nValMinCb,nValMinCr;
 	short			nValMaxY,nValMaxCb,nValMaxCr;
-	nValMaxY  = (short)0x0000; // - 32768
+	nValMaxY  = (short)0x0000; // - 32768	// FIXME: cast doesn't look right
 	nValMinY  = (short)0xFFFF; // + 32767
 	nValMaxCb = (short)0x0000; // - 32768
 	nValMinCb = (short)0xFFFF; // + 32767
