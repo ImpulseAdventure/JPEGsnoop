@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -418,7 +418,22 @@ void CJPEGsnoopCore::DoLogSave(CString strLogName)
 	for (unsigned nLine=0;nLine<nQuickLines;nLine++)
 	{
 		glb_pDocLog->GetLineLogLocal(nLine,strLine,sCol);
-		pLog->WriteString(strLine);
+
+		// NOTE: At this time, batch file processing uses an 8-bit text file output format
+		// rather than the Unicode-supporting CRichEdit that is used when we manually
+		// save the log file.
+		//
+		// If we pass extended characters to WriteString() when the CStdioFile has been
+		// opened as CFile::typeText, the extended characters will terminate the lines
+		// early.
+		//
+		// Therefore, we will convert all extended characters back to ASCII here.
+		//
+		// TODO: Revise this logic so that we can have more foreign-character support
+		// in the batch output files.
+		CW2A	strAscii(strLine);
+		CString	strConv(strAscii);
+		pLog->WriteString(strConv);
 	}
 
 	// Close the file
@@ -551,7 +566,7 @@ void CJPEGsnoopCore::GenBatchFileListRecurse(CString strSrcRootName,CString strD
 //
 void CJPEGsnoopCore::GenBatchFileListSingle(CString strSrcRootName,CString strDstRootName,CString strPathName,bool bExtractAll)
 {
-	bool		bDoSubmit = false;
+	//bool		bDoSubmit = false;
 	unsigned	nInd;
 
 	CString		strFnameSrc;
@@ -769,6 +784,12 @@ void CJPEGsnoopCore::DoBatchFileProcess(unsigned nFileInd,bool bWriteLog,bool bE
 	strFnameDst = m_asBatchDest.GetAt(nFileInd);
 	strFnameLog = m_asBatchOutputs.GetAt(nFileInd);
 
+	// Indicate that the file source has changed so that any image decoding is enabled
+	J_ImgSrcChanged();
+
+	// Save the current filename into the temporary config space
+	// This is only done to assist debugging reporting
+	m_pAppConfig->strCurFname = strFnameFile;
 
 	// Handle the different file offset / search modes
 	bStatus = DoAnalyzeOffset(strFnameFile);
