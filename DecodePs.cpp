@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -97,7 +97,7 @@ bool CDecodePs::DecodePsd(unsigned long nPos,CDIB* pDibTemp,unsigned &nWidth,uns
 	unsigned	nVer;
 
 	strSig = m_pWBuf->BufReadStrn(nPos,4); nPos+=4;
-	nVer = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVer = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	if ((strSig == _T("8BPS")) && (nVer == 1)) {
 		m_bPsd = true;
 		m_pLog->AddLine(_T(""));
@@ -250,7 +250,7 @@ bool CDecodePs::LookupIptcField(unsigned nRecord,unsigned nDataSet,unsigned &nFl
 //
 CString	CDecodePs::DecodeIptcValue(teIptcType eIptcType,unsigned nFldCnt,unsigned long nPos)
 {
-	unsigned	nFldInd = 0;
+	//unsigned	nFldInd = 0;
 	unsigned	nInd;
 	unsigned	nVal;
 	CString		strField = _T("");
@@ -382,7 +382,7 @@ CString CDecodePs::PhotoshopParseGetLStrAsc(unsigned long &nPos)
 {
 	unsigned	nStrLen;
 	CString		strVal = _T("");
-	nStrLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nStrLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	if (nStrLen!=0) {
 		strVal = m_pWBuf->BufReadStrn(nPos,nStrLen);
 		nPos += nStrLen;
@@ -407,7 +407,7 @@ CString CDecodePs::PhotoshopParseGetBimLStrUni(unsigned long nPos,unsigned &nPos
 	unsigned	nStrLenActual,nStrLenTrunc;
 	BYTE		anStrBuf[(PS_MAX_UNICODE_STRLEN+1)*2];
 	wchar_t		acStrBuf[(PS_MAX_UNICODE_STRLEN+1)];
-	unsigned	nChVal;
+	BYTE		nChVal;
 	nPosOffset = 0;
 	nStrLenActual = m_pWBuf->BufX(nPos+nPosOffset,4,PS_BSWAP);
 	nPosOffset+=4;
@@ -652,7 +652,7 @@ CString CDecodePs::PhotoshopParseLookupEnum(teBimEnumField eEnumField,unsigned n
 	// If enum wasn't found, then replace by hex value
 	if (!bFound) {
 		CString strWord = PhotoshopDispHexWord(nVal);
-		strVal.Format(_T("? [%s]"),strWord);
+		strVal.Format(_T("? [%s]"),(LPCTSTR)strWord);
 	}
 	return strVal;
 }
@@ -705,15 +705,15 @@ void CDecodePs::PhotoshopParseReportFldFloatPt(unsigned nIndent,CString strField
 	// indicate how floating points are stored.
 	union tUnionTmp
 	{
-		char		nVal[4];
+		BYTE		nVal[4];
 		float		fVal;
 	};
 	tUnionTmp	myUnion;	
 	// NOTE: Empirically determined the byte order for double representation
-	myUnion.nVal[3] = (nVal & 0xFF000000)>>24;
-	myUnion.nVal[2] = (nVal & 0x00FF0000)>>16;
-	myUnion.nVal[1] = (nVal & 0x0000FF00)>>8;
-	myUnion.nVal[0] = (nVal & 0x000000FF)>>0;
+	myUnion.nVal[3] = static_cast<BYTE>((nVal & 0xFF000000)>>24);
+	myUnion.nVal[2] = static_cast<BYTE>((nVal & 0x00FF0000)>>16);
+	myUnion.nVal[1] = static_cast<BYTE>((nVal & 0x0000FF00)>>8);
+	myUnion.nVal[0] = static_cast<BYTE>((nVal & 0x000000FF)>>0);
 	fVal = myUnion.fVal;
 
 	strIndent = PhotoshopParseIndent(nIndent);
@@ -737,19 +737,19 @@ void CDecodePs::PhotoshopParseReportFldDoublePt(unsigned nIndent,CString strFiel
 	// indicate how double points are stored.
 	union tUnionTmp
 	{
-		char		nVal[8];
+		BYTE		nVal[8];
 		double		dVal;
 	};
 	tUnionTmp	myUnion;	
 	// NOTE: Empirically determined the byte order for double representation
-	myUnion.nVal[7] = (nVal1 & 0xFF000000)>>24;
-	myUnion.nVal[6] = (nVal1 & 0x00FF0000)>>16;
-	myUnion.nVal[5] = (nVal1 & 0x0000FF00)>>8;
-	myUnion.nVal[4] = (nVal1 & 0x000000FF)>>0;
-	myUnion.nVal[3] = (nVal2 & 0xFF000000)>>24;
-	myUnion.nVal[2] = (nVal2 & 0x00FF0000)>>16;
-	myUnion.nVal[1] = (nVal2 & 0x0000FF00)>>8;
-	myUnion.nVal[0] = (nVal2 & 0x000000FF)>>0;
+	myUnion.nVal[7] = static_cast<BYTE>((nVal1 & 0xFF000000)>>24);
+	myUnion.nVal[6] = static_cast<BYTE>((nVal1 & 0x00FF0000)>>16);
+	myUnion.nVal[5] = static_cast<BYTE>((nVal1 & 0x0000FF00)>>8);
+	myUnion.nVal[4] = static_cast<BYTE>((nVal1 & 0x000000FF)>>0);
+	myUnion.nVal[3] = static_cast<BYTE>((nVal2 & 0xFF000000)>>24);
+	myUnion.nVal[2] = static_cast<BYTE>((nVal2 & 0x00FF0000)>>16);
+	myUnion.nVal[1] = static_cast<BYTE>((nVal2 & 0x0000FF00)>>8);
+	myUnion.nVal[0] = static_cast<BYTE>((nVal2 & 0x000000FF)>>0);
 	dVal = myUnion.dVal;
 
 	strIndent = PhotoshopParseIndent(nIndent);
@@ -789,21 +789,21 @@ void CDecodePs::PhotoshopParseThumbnailResource(unsigned long &nPos,unsigned nIn
 {
 	unsigned	nVal;
 
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Format"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Width of thumbnail"),nVal,_T("pixels"));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Height of thumbnail"),nVal,_T("pixels"));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Widthbytes"),nVal,_T("bytes"));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Total size"),nVal,_T("bytes"));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Size after compression"),nVal,_T("bytes"));
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Bits per pixel"),nVal,_T("bits"));
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Number of planes"),nVal,_T(""));
 
 	PhotoshopParseReportFldOffset(nIndent,_T("JFIF data"),nPos);
@@ -824,15 +824,15 @@ void CDecodePs::PhotoshopParseVersionInfo(unsigned long &nPos,unsigned nIndent)
 	CString		strVal;
 	unsigned	nPosOffset;
 
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Version"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("hasRealMergedData"),nVal,_T(""));
 	strVal = PhotoshopParseGetBimLStrUni(nPos,nPosOffset); nPos+=nPosOffset;
 	PhotoshopParseReportFldStr(nIndent,_T("Writer name"),strVal);
 	strVal = PhotoshopParseGetBimLStrUni(nPos,nPosOffset); nPos+=nPosOffset;
 	PhotoshopParseReportFldStr(nIndent,_T("Reader name"),strVal);
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("File version"),nVal,_T(""));
 }
 
@@ -848,13 +848,13 @@ void CDecodePs::PhotoshopParsePrintScale(unsigned long &nPos,unsigned nIndent)
 	unsigned	nVal;
 	CString		strVal;
 
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldEnum(nIndent,_T("Style"),BIM_T_ENUM_PRINT_SCALE_STYLE,nVal);
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldFloatPt(nIndent,_T("X location"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldFloatPt(nIndent,_T("Y location"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldFloatPt(nIndent,_T("Scale"),nVal,_T(""));
 }
 
@@ -870,7 +870,7 @@ void CDecodePs::PhotoshopParseGlobalAngle(unsigned long &nPos,unsigned nIndent)
 	unsigned	nVal;
 	CString		strVal;
 
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Global Angle"),nVal,_T("degrees"));
 }
 
@@ -886,7 +886,7 @@ void CDecodePs::PhotoshopParseGlobalAltitude(unsigned long &nPos,unsigned nInden
 	unsigned	nVal;
 	CString		strVal;
 
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Global Altitude"),nVal,_T(""));
 }
 
@@ -902,23 +902,23 @@ void CDecodePs::PhotoshopParsePrintFlags(unsigned long &nPos,unsigned nIndent)
 	unsigned	nVal;
 	CString		strVal;
 
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Labels"),nVal);
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Crop marks"),nVal);
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Color bars"),nVal);
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Registration marks"),nVal);
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Negative"),nVal);
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Flip"),nVal);
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Interpolate"),nVal);
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Caption"),nVal);
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Print flags"),nVal);
 }
 
@@ -934,15 +934,15 @@ void CDecodePs::PhotoshopParsePrintFlagsInfo(unsigned long &nPos,unsigned nInden
 	unsigned	nVal;
 	CString		strVal;
 
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Version"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Center crop marks"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Reserved"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Bleed width value"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Bleed width scale"),nVal,_T(""));
 }
 
@@ -958,7 +958,7 @@ void CDecodePs::PhotoshopParseCopyrightFlag(unsigned long &nPos,unsigned nIndent
 	unsigned	nVal;
 	CString		strVal;
 
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Copyright flag"),nVal);
 }
 
@@ -974,10 +974,10 @@ void CDecodePs::PhotoshopParsePixelAspectRatio(unsigned long &nPos,unsigned nInd
 	unsigned	nVal,nVal1,nVal2;
 	CString		strVal;
 
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Version"),nVal,_T(""));
-	nVal1 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-	nVal2 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal1 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+	nVal2 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldDoublePt(nIndent,_T("X/Y Ratio"),nVal1,nVal2,_T(""));
 }
 
@@ -993,7 +993,7 @@ void CDecodePs::PhotoshopParseDocSpecificSeed(unsigned long &nPos,unsigned nInde
 	unsigned	nVal;
 	CString		strVal;
 
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Base value"),nVal,_T(""));
 }
 
@@ -1009,13 +1009,13 @@ void CDecodePs::PhotoshopParseGridGuides(unsigned long &nPos,unsigned nIndent)
 	unsigned	nVal;
 	CString		strVal;
 
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Version"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Grid Horizontal"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Grid Vertical"),nVal,_T(""));
-	unsigned nNumGuides = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nNumGuides = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Number of Guide Resources"),nNumGuides,_T(""));
 
 	if (nNumGuides>0)
@@ -1024,9 +1024,9 @@ void CDecodePs::PhotoshopParseGridGuides(unsigned long &nPos,unsigned nIndent)
 		strVal.Format(_T("Guide #%u:"),nInd);
 		PhotoshopParseReportNote(nIndent,strVal);
 
-		nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent+1,_T("Location"),nVal,_T(""));
-		nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+		nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 		PhotoshopParseReportFldEnum(nIndent+1,_T("Direction"),BIM_T_ENUM_GRID_GUIDE_DIR,nVal);
 	}
 	if (nNumGuides>0)
@@ -1045,17 +1045,17 @@ void CDecodePs::PhotoshopParseResolutionInfo(unsigned long &nPos,unsigned nInden
 	unsigned	nVal,nUnit;
 	CString		strVal,strUnit;
 
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-	nUnit = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+	nUnit = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	strUnit = PhotoshopParseLookupEnum(BIM_T_ENUM_RESOLUTION_INFO_RES_UNIT,nUnit);
 	PhotoshopParseReportFldFixPt(nIndent,_T("Horizontal resolution"),nVal,strUnit);
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldEnum(nIndent,_T("Width unit"),BIM_T_ENUM_RESOLUTION_INFO_WIDTH_UNIT,nVal);
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-	nUnit = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+	nUnit = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	strUnit = PhotoshopParseLookupEnum(BIM_T_ENUM_RESOLUTION_INFO_RES_UNIT,nUnit);
 	PhotoshopParseReportFldFixPt(nIndent,_T("Vertical resolution"),nVal,strUnit);
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldEnum(nIndent,_T("Height unit"),BIM_T_ENUM_RESOLUTION_INFO_WIDTH_UNIT,nVal);
 }
 
@@ -1071,7 +1071,7 @@ void CDecodePs::PhotoshopParseLayerStateInfo(unsigned long &nPos,unsigned nInden
 	unsigned	nVal;
 	CString		strVal;
 
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Target layer"),nVal,_T(""));
 }
 
@@ -1100,7 +1100,7 @@ void CDecodePs::PhotoshopParseLayerGroupInfo(unsigned long &nPos,unsigned nInden
 	for (unsigned nInd=0;nInd<nNumLayers;nInd++) {
 		strVal.Format(_T("Layer #%u:"),nInd);
 		PhotoshopParseReportNote(nIndent,strVal);
-		nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+		nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent+1,_T("Layer Group"),nVal,_T(""));
 	}
 }
@@ -1129,7 +1129,7 @@ void CDecodePs::PhotoshopParseLayerGroupEnabled(unsigned long &nPos,unsigned nIn
 	for (unsigned nInd=0;nInd<nNumLayers;nInd++) {
 		strVal.Format(_T("Layer #%u:"),nInd);
 		PhotoshopParseReportNote(nIndent,strVal);
-		nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+		nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent+1,_T("Layer Group Enabled ID"),nVal,_T(""));
 	}
 }
@@ -1146,10 +1146,10 @@ void CDecodePs::PhotoshopParseLayerSelectId(unsigned long &nPos,unsigned nIndent
 	unsigned	nVal;
 	CString		strVal;
 
-	unsigned nNumLayer = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	unsigned nNumLayer = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Num selected"),nNumLayer,_T(""));
 	for (unsigned nInd=0;nInd<nNumLayer;nInd++) {
-		nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent+1,_T("Layer ID"),nVal,_T(""));
 	}
 }
@@ -1175,25 +1175,25 @@ void CDecodePs::PhotoshopParseFileHeader(unsigned long &nPos,unsigned nIndent,ts
 	CString strSig = m_pWBuf->BufReadStrn(nPos,4); nPos+=4;
 	PhotoshopParseReportFldStr(nIndent,_T("Signature"),strSig);
 	
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Version"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Reserved1"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Reserved2"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Num channels in image"),nVal,_T(""));
 	psImageInfo->nNumChans = nVal;
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Image height"),nVal,_T("pixels"));
 	psImageInfo->nImageHeight = nVal;
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Image width"),nVal,_T("pixels"));
 	psImageInfo->nImageWidth = nVal;
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Depth"),nVal,_T("bits per pixel"));
 	psImageInfo->nDepthBpp = nVal;
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldEnum(nIndent,_T("Color mode"),BIM_T_ENUM_FILE_HDR_COL_MODE,nVal);
 
 }
@@ -1212,7 +1212,7 @@ void CDecodePs::PhotoshopParseColorModeSection(unsigned long &nPos,unsigned nInd
 	PhotoshopParseReportNote(nIndent,_T("Color Mode Data Section:"));
 	nIndent++;
 
-	unsigned nColModeLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nColModeLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Length"),nColModeLen,_T(""));
 	if (nColModeLen != 0) {
 		PhotoshopParseReportFldOffset(nIndent,_T("Color data"),nPos);
@@ -1240,7 +1240,7 @@ bool CDecodePs::PhotoshopParseLayerMaskInfo(unsigned long &nPos,unsigned nIndent
 	PhotoshopParseReportNote(nIndent,_T("Layer and Mask Information Section:"));
 	nIndent++;
 
-	unsigned		nLayerMaskLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned		nLayerMaskLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	unsigned long	nPosStart = nPos;
 	unsigned long	nPosEnd = nPosStart + nLayerMaskLen;
 	PhotoshopParseReportFldNum(nIndent,_T("Length"),nLayerMaskLen,_T(""));
@@ -1285,7 +1285,7 @@ bool CDecodePs::PhotoshopParseLayerInfo(unsigned long &nPos,unsigned nIndent,CDI
 	PhotoshopParseReportNote(nIndent,_T("Layer Info:"));
 	nIndent++;
 
-	unsigned nLayerLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nLayerLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Length"),nLayerLen,_T(""));
 	if (nLayerLen == 0) {
 		return bDecOk;
@@ -1303,7 +1303,7 @@ bool CDecodePs::PhotoshopParseLayerInfo(unsigned long &nPos,unsigned nIndent,CDI
 	// - If it is a negative number, its absolute value is the number of layers and the
 	//   first alpha channel contains the transparency data for the merged result.
 	// Therefore, we'll treat it as signed short and take absolute value
-	unsigned short	nLayerCountU = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	unsigned short	nLayerCountU = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	signed short	nLayerCountS = (signed short)nLayerCountU;
 	unsigned		nLayerCount = abs(nLayerCountS);
 	PhotoshopParseReportFldNum(nIndent,_T("Layer count"),nLayerCount,_T(""));
@@ -1433,10 +1433,10 @@ bool CDecodePs::PhotoshopParseLayerRecord(unsigned long &nPos,unsigned nIndent,t
 
 	unsigned	nRect1,nRect2,nRect3,nRect4;
 
-	nRect1 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-	nRect2 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-	nRect3 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-	nRect4 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nRect1 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+	nRect2 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+	nRect3 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+	nRect4 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Rect Top"),nRect1,_T(""));
 	PhotoshopParseReportFldNum(nIndent,_T("Rect Left"),nRect2,_T(""));
 	PhotoshopParseReportFldNum(nIndent,_T("Rect Bottom"),nRect3,_T(""));
@@ -1446,7 +1446,7 @@ bool CDecodePs::PhotoshopParseLayerRecord(unsigned long &nPos,unsigned nIndent,t
 	pLayerInfo->nWidth = nRect4-nRect2;
 	//nHeight = nRect3-nRect1;
 
-	unsigned nNumChans = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	unsigned nNumChans = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Number of channels"),nNumChans,_T(""));
 
 	//nChans = nNumChans;
@@ -1459,9 +1459,9 @@ bool CDecodePs::PhotoshopParseLayerRecord(unsigned long &nPos,unsigned nIndent,t
 	ASSERT(pLayerInfo->pnChanID);
 
 	for (unsigned nChanInd=0;nChanInd<nNumChans;nChanInd++) {
-		unsigned nChanID = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
-		unsigned nChanDataLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-		CString strField,strVal;
+		unsigned nChanID = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
+		unsigned nChanDataLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+		CString strField;
 		strField.Format(_T("Channel index #%u"),nChanInd);
 		strVal.Format(_T("ID=%5u DataLength=0x%08X"),nChanID,nChanDataLen);
 		PhotoshopParseReportFldStr(nIndent,strField,strVal);
@@ -1470,14 +1470,14 @@ bool CDecodePs::PhotoshopParseLayerRecord(unsigned long &nPos,unsigned nIndent,t
 	}
 	CString strBlendModeSig = m_pWBuf->BufReadStrn(nPos,4); nPos+=4;
 	PhotoshopParseReportFldStr(nIndent,_T("Blend mode signature"),strBlendModeSig);
-	unsigned nBlendModeKey = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nBlendModeKey = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldEnum(nIndent,_T("Blend mode key"),BIM_T_ENUM_BLEND_MODE_KEY,nBlendModeKey);
-	unsigned nOpacity = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	unsigned nOpacity = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Opacity"),nOpacity,_T("(0=transparent ... 255=opaque)"));
-	unsigned nClipping = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
-	unsigned nFlags = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
-	unsigned nFiller = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
-	unsigned nExtraDataLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);	// unsigned nClipping
+	m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);	// unsigned nFlags
+	m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);	// unsigned nFiller
+	unsigned nExtraDataLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	unsigned long nPosExtra = nPos;
 	if (bDecOk)
 		bDecOk &= PhotoshopParseLayerMask(nPos,nIndent);
@@ -1485,7 +1485,7 @@ bool CDecodePs::PhotoshopParseLayerRecord(unsigned long &nPos,unsigned nIndent,t
 		bDecOk &= PhotoshopParseLayerBlendingRanges(nPos,nIndent);
 
 	if (bDecOk) {
-		unsigned nLayerNameLen = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+		unsigned nLayerNameLen = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 		CString strLayerName = m_pWBuf->BufReadStrn(nPos,nLayerNameLen); nPos+=nLayerNameLen;
 		// According to spec, length is padded to multiple of 4 bytes,
 		unsigned nSkip = 0;
@@ -1517,55 +1517,55 @@ bool CDecodePs::PhotoshopParseLayerMask(unsigned long &nPos,unsigned nIndent)
 	PhotoshopParseReportNote(nIndent,_T("Layer Mask / Adjustment layer data:"));
 	nIndent++;
 
-	unsigned nLayerMaskLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nLayerMaskLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	if (nLayerMaskLen == 0) {
 		return bDecOk;
 	}
 
 	unsigned	nRectA1,nRectA2,nRectA3,nRectA4;
 	unsigned	nRectB1,nRectB2,nRectB3,nRectB4;
-	nRectA1 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-	nRectA2 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-	nRectA3 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-	nRectA4 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nRectA1 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+	nRectA2 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+	nRectA3 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+	nRectA4 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 
 	unsigned	nTmp;
-	unsigned nDefaultColor = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
-	unsigned nFlags = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);	// unsigned nDefaultColor
+	unsigned nFlags = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 
 	//FIXME: Is this correct?
 	if (nLayerMaskLen == 20) {
-		unsigned nPad = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+		m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);	// unsigned nPad
 	}
 
 	if (nFlags & (1<<4)) {
-		unsigned nMaskParams = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+		unsigned nMaskParams = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 		if (nMaskParams & (1<<0)) {
 			// User mask density, 1 byte
-			nTmp = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+			nTmp = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 		}
 		if (nMaskParams & (1<<1)) {
 			// User mask feather, 8 bytes, double
-			nTmp = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-			nTmp = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+			nTmp = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+			nTmp = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		}
 		if (nMaskParams & (1<<2)) {
 			// Vector mask density, 1 byte
-			nTmp = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+			nTmp = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 		}
 		if (nMaskParams & (1<<3)) {
 			// Vector mask feather, 8 bytes, double
-			nTmp = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-			nTmp = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+			nTmp = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+			nTmp = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		}
 
-		unsigned nPadding = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
-		unsigned nRealFlags = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
-		unsigned nRealUserMaskBackground = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
-		nRectB1 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-		nRectB2 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-		nRectB3 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-		nRectB4 = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);	// unsigned nPadding
+		m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);	// unsigned nRealFlags
+		m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);	// unsigned nRealUserMaskBackground
+		nRectB1 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+		nRectB2 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+		nRectB3 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
+		nRectB4 = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 
 	}
 
@@ -1587,19 +1587,19 @@ bool CDecodePs::PhotoshopParseLayerBlendingRanges(unsigned long &nPos,unsigned n
 	PhotoshopParseReportNote(nIndent,_T("Layer blending ranges data:"));
 	nIndent++;
 
-	unsigned nLayerBlendLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nLayerBlendLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	if (nLayerBlendLen == 0) {
 		return bDecOk;
 	}
 
-	unsigned nCompGrayBlendSrc = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-	unsigned nCompGrayBlendDstRng = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);	// unsigned nCompGrayBlendSrc
+	m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);	// unsigned nCompGrayBlendDstRng
 	unsigned	nNumChans;
 	nNumChans = (nLayerBlendLen - 8) /8;
 
 	for (unsigned nChanInd=0;nChanInd<nNumChans;nChanInd++) {
-		unsigned nSrcRng = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-		unsigned nDstRng = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);	// unsigned nSrcRng
+		m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);	// unsigned nDstRng
 	}
 	return bDecOk;
 }
@@ -1617,7 +1617,7 @@ bool CDecodePs::PhotoshopParseChannelImageData(unsigned long &nPos,unsigned nInd
 {
 	bool	bDecOk = true;
 
-	unsigned nCompressionMethod = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	unsigned nCompressionMethod = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent+1,_T("Compression method"),nCompressionMethod,_T(""));
 
 
@@ -1634,7 +1634,7 @@ bool CDecodePs::PhotoshopParseChannelImageData(unsigned long &nPos,unsigned nInd
 		anRowLen = new unsigned [nHeight];
 		ASSERT(anRowLen);
 		for (unsigned nRow=0;nRow<nHeight;nRow++) {
-			anRowLen[nRow] = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+			anRowLen[nRow] = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 		}
 	
 		// Read the compressed data
@@ -1676,7 +1676,7 @@ bool CDecodePs::PhotoshopDecodeRowUncomp(unsigned long &nPos,unsigned nWidth,uns
 	unsigned		nPixByte;
 
 	for (unsigned nCol=0;(bDecOk)&&(nCol<nWidth);nCol++) {
-		nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+		nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 
 #ifdef PS_IMG_DEC_EN
 		if (pDibBits) {
@@ -1726,14 +1726,14 @@ bool CDecodePs::PhotoshopDecodeRowRle(unsigned long &nPos,unsigned nWidth,unsign
 		// the current RLE encoded entry
 		nRowOffsetDecompLast = nRowOffsetDecomp;
 
-		nRleRun = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+		nRleRun = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 		nRleRunS = (signed char)(nRleRun);
 		nRowOffsetComp++;
 
 		if (nRleRunS<0) {
 			// Replicate the next byte
 			nRleRunCnt = 1-nRleRunS;
-			nRleVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+			nRleVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 			nRowOffsetComp++;
 			nRowOffsetDecomp += nRleRunCnt;
 
@@ -1762,7 +1762,7 @@ bool CDecodePs::PhotoshopDecodeRowRle(unsigned long &nPos,unsigned nWidth,unsign
 			// Copy the next bytes as-is
 			nRleRunCnt = 1+nRleRunS;
 			for (unsigned nRunInd=0;nRunInd<nRleRunCnt;nRunInd++) {
-				nRleVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+				nRleVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 				nRowOffsetComp++;
 				nRowOffsetDecomp++;
 
@@ -1827,7 +1827,7 @@ bool CDecodePs::PhotoshopParseImageData(unsigned long &nPos,unsigned nIndent,tsI
 	unsigned	nNumChans = psImageInfo->nNumChans;
 	//----
 
-	unsigned nCompressionMethod = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	unsigned nCompressionMethod = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent+1,_T("Compression method"),nCompressionMethod,_T(""));
 
 	// -----------------------------------------------------
@@ -1848,7 +1848,7 @@ bool CDecodePs::PhotoshopParseImageData(unsigned long &nPos,unsigned nIndent,tsI
 		anRowLen = new unsigned [nNumChans*nHeight];
 		ASSERT(anRowLen);
 		for (unsigned nRow=0;nRow<(nNumChans*nHeight);nRow++) {
-			anRowLen[nRow] = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+			anRowLen[nRow] = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 		}
 	
 		// Read the compressed data
@@ -1907,18 +1907,19 @@ bool CDecodePs::PhotoshopParseGlobalLayerMaskInfo(unsigned long &nPos,unsigned n
 	PhotoshopParseReportNote(nIndent,_T("Global layer mask info:"));
 	nIndent++;
 
-	unsigned nInfoLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nInfoLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	if (nInfoLen == 0) {
 		return bDecOk;
 	}
 	unsigned long nPosStart = nPos;
-	unsigned nOverlayColorSpace = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
-	unsigned nColComp1 = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
-	unsigned nColComp2 = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
-	unsigned nColComp3 = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
-	unsigned nColComp4 = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
-	unsigned nOpacity = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
-	unsigned nKind = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);	// unsigned nOverlayColorSpace
+	m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);	// unsigned nColComp1
+	m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);	// unsigned nColComp2
+	m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);	// unsigned nColComp3
+	m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);	// unsigned nColComp4
+	m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);	// unsigned nOpacity
+	m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);	// unsigned nKind
+
 	// Variable Filler: zeros
 	//nPos += nInfoLen - 17;
 	nPos = nPosStart + nInfoLen;
@@ -1987,13 +1988,13 @@ bool CDecodePs::PhotoshopParseAddtlLayerInfo(unsigned long &nPos,unsigned nInden
 
 	unsigned nLen;
 	if (!bLen8B) {
-		nLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	} else {
 		// DUMMY for now
 		//FIXME: Untested
-		nLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		ASSERT(nLen == 0);
-		nLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	}
 	PhotoshopParseReportFldNum(nIndent,_T("Length"),nLen,_T(""));
 	if (nLen > 0) {
@@ -2065,7 +2066,7 @@ bool CDecodePs::PhotoshopParseImageResourcesSection(unsigned long &nPos,unsigned
 	unsigned long	nPosSectionStart = 0;
 	unsigned long	nPosSectionEnd = 0;
 
-	unsigned nImgResLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nImgResLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Length"),nImgResLen,_T(""));
 
 	nPosSectionStart = nPos;
@@ -2090,7 +2091,7 @@ bool CDecodePs::PhotoshopParseImageResourcesSection(unsigned long &nPos,unsigned
 bool CDecodePs::PhotoshopParseImageResourceBlock(unsigned long &nPos,unsigned nIndent)
 {
 	CString		strVal;
-	bool		bDecOk = true;
+	//bool		bDecOk = true;
 
 	//PhotoshopParseReportNote(nIndent,_T("Image Resource Block:"));
 	//nIndent++;
@@ -2123,16 +2124,16 @@ bool CDecodePs::PhotoshopParseImageResourceBlock(unsigned long &nPos,unsigned nI
 		return false;;
 	}
 
-	unsigned nBimId = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	unsigned nBimId = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 
-	unsigned nResNameLen = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	unsigned nResNameLen = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	CString strResName = m_pWBuf->BufReadStrn(nPos,nResNameLen); nPos+=nResNameLen;
 
 	// If size wasn't even, pad here
 	if ((1+nResNameLen)%2!=0) {
 		nPos+=1;
 	}
-	unsigned nBimLen = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nBimLen = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 
 	CString		strTmp;
 	CString		strBimName;
@@ -2339,22 +2340,22 @@ void CDecodePs::PhotoshopParseSliceHeader(unsigned long &nPos,unsigned nIndent,u
 	PhotoshopParseReportNote(nIndent,_T("Slice Header:"));
 	nIndent++;
 
-	unsigned nSliceVer = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nSliceVer = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Version"),nSliceVer,_T(""));
 
 	if (nSliceVer == 6) {
-		nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent,_T("Bound Rect (top)"),nVal,_T(""));
-		nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent,_T("Bound Rect (left)"),nVal,_T(""));
-		nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent,_T("Bound Rect (bottom)"),nVal,_T(""));
-		nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent,_T("Bound Rect (right)"),nVal,_T(""));
 		strVal = PhotoshopParseGetBimLStrUni(nPos,nPosOffset);
 		nPos+=nPosOffset;
 		PhotoshopParseReportFldStr(nIndent,_T("Name of group of slices"),strVal);
-		unsigned nNumSlices = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		unsigned nNumSlices = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent,_T("Number of slices"),nNumSlices,_T(""));
 
 		// Slice resource block
@@ -2370,7 +2371,7 @@ void CDecodePs::PhotoshopParseSliceHeader(unsigned long &nPos,unsigned nIndent,u
 			PhotoshopParseReportNote(nIndent,_T("-----"));
 
 	} else if ((nSliceVer == 7) || (nSliceVer == 8)) {
-		nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent,_T("Descriptor version"),nVal,_T(""));
 		PhotoshopParseDescriptor(nPos,nIndent);
 	}
@@ -2398,27 +2399,27 @@ void CDecodePs::PhotoshopParseSliceResource(unsigned long &nPos,unsigned nIndent
 	PhotoshopParseReportNote(nIndent,_T("Slice Resource:"));
 	nIndent++;
 	
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("ID"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Group ID"),nVal,_T(""));
-	unsigned nOrigin = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nOrigin = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Origin"),nOrigin,_T(""));
 	if (nOrigin==1) {
-		nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent,_T("Associated Layer ID"),nVal,_T(""));
 	}
 	strVal = PhotoshopParseGetBimLStrUni(nPos,nPosOffset); nPos+=nPosOffset;
 	PhotoshopParseReportFldStr(nIndent,_T("Name"),strVal);
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Type"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Position (top)"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Position (left)"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Position (bottom)"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Position (right)"),nVal,_T(""));
 	strVal = PhotoshopParseGetBimLStrUni(nPos,nPosOffset); nPos+=nPosOffset;
 	PhotoshopParseReportFldStr(nIndent,_T("URL"),strVal);
@@ -2428,21 +2429,21 @@ void CDecodePs::PhotoshopParseSliceResource(unsigned long &nPos,unsigned nIndent
 	PhotoshopParseReportFldStr(nIndent,_T("Message"),strVal);
 	strVal = PhotoshopParseGetBimLStrUni(nPos,nPosOffset); nPos+=nPosOffset;
 	PhotoshopParseReportFldStr(nIndent,_T("Alt Tag"),strVal);
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Cell text is HTML"),nVal);
 	strVal = PhotoshopParseGetBimLStrUni(nPos,nPosOffset); nPos+=nPosOffset;
 	PhotoshopParseReportFldStr(nIndent,_T("Cell text"),strVal);
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Horizontal alignment"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Vertical alignment"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Alpha color"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Red"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Green"),nVal,_T(""));
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Blue"),nVal,_T(""));
 
 	// Per standard, we are only supposed to parse additional fields
@@ -2454,7 +2455,7 @@ void CDecodePs::PhotoshopParseSliceResource(unsigned long &nPos,unsigned nIndent
 	// after reading the descriptor version?)
 	if (nPos <= nPosEnd) {
 
-		nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+		nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 		PhotoshopParseReportFldNum(nIndent,_T("Descriptor version"),nVal,_T(""));
 
 		PhotoshopParseDescriptor(nPos,nIndent);
@@ -2476,13 +2477,15 @@ void CDecodePs::PhotoshopParseSliceResource(unsigned long &nPos,unsigned nIndent
 //
 void CDecodePs::PhotoshopParseJpegQuality(unsigned long &nPos,unsigned nIndent,unsigned long nPosEnd)
 {
+	nPosEnd;	// Unreferenced param
+
 	unsigned	nVal;
 	CString		strVal;
 	unsigned	nSaveFormat;
 
 	// Save As Quality
 	// Index 0: Quality level
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	switch(nVal) {
 		case 0xFFFD: m_nQualitySaveAs = 1; break;
 		case 0xFFFE: m_nQualitySaveAs = 2; break;
@@ -2507,7 +2510,7 @@ void CDecodePs::PhotoshopParseJpegQuality(unsigned long &nPos,unsigned nIndent,u
 	//   to this IRB?
 
 	// Index 1: Format
-	nSaveFormat = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nSaveFormat = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	switch(nSaveFormat) {
 		case 0x0000: strVal = _T("Standard"); break;
 		case 0x0001: strVal = _T("Optimized"); break;
@@ -2518,7 +2521,7 @@ void CDecodePs::PhotoshopParseJpegQuality(unsigned long &nPos,unsigned nIndent,u
 
 	// Index 2: Progressive Scans
 	// - Only meaningful if Progressive mode
-	nVal = m_pWBuf->BufX(nPos,2,PS_BSWAP); nPos+=2;
+	nVal = m_pWBuf->BufRdAdv2(nPos,PS_BSWAP);
 	switch(nVal) {
 		case 0x0001: strVal = _T("3 Scans"); break;
 		case 0x0002: strVal = _T("4 Scans"); break;
@@ -2528,7 +2531,7 @@ void CDecodePs::PhotoshopParseJpegQuality(unsigned long &nPos,unsigned nIndent,u
 	PhotoshopParseReportFldStr(nIndent,_T("Photoshop Save Progressive Scans"),strVal);
 
 	// Not sure what this byte is for
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("???"),nVal,_T(""));
 
 }
@@ -2544,40 +2547,32 @@ void CDecodePs::PhotoshopParseJpegQuality(unsigned long &nPos,unsigned nIndent,u
 void CDecodePs::PhotoshopParseHandleOsType(CString strOsType,unsigned long &nPos,unsigned nIndent)
 {
 	if        (strOsType==_T("obj ")) {
-		unsigned nDummy=1;
 		//PhotoshopParseReference(nPos,nIndent);
 	} else if (strOsType==_T("Objc")) {
 		PhotoshopParseDescriptor(nPos,nIndent);
 	} else if (strOsType==_T("VlLs")) {
 		PhotoshopParseList(nPos,nIndent);
 	} else if (strOsType==_T("doub")) {
-		unsigned nDummy=1;
 		//PhotoshopParseDouble(nPos,nIndent);
 	} else if (strOsType==_T("UntF")) {
-		unsigned nDummy=1;
 		//PhotoshopParseUnitFloat(nPos,nIndent);
 	} else if (strOsType==_T("TEXT")) {
 		PhotoshopParseStringUni(nPos,nIndent);
 	} else if (strOsType==_T("enum")) {
 		PhotoshopParseEnum(nPos,nIndent);
 	} else if (strOsType==_T("long")) {
-		unsigned nDummy=1;
 		PhotoshopParseInteger(nPos,nIndent);
 	} else if (strOsType==_T("bool")) {
 		PhotoshopParseBool(nPos,nIndent);
 	} else if (strOsType==_T("GlbO")) {
 		PhotoshopParseDescriptor(nPos,nIndent);
 	} else if (strOsType==_T("type")) {
-		unsigned nDummy=1;
 		//PhotoshopParseClass(nPos,nIndent);
 	} else if (strOsType==_T("GlbC")) {
-		unsigned nDummy=1;
 		//PhotoshopParseClass(nPos,nIndent);
 	} else if (strOsType==_T("alis")) {
-		unsigned nDummy=1;
 		//PhotoshopParseAlias(nPos,nIndent);
 	} else if (strOsType==_T("tdta")) {
-		unsigned nDummy=1;
 		//PhotoshopParseRawData(nPos,nIndent);
 	} else {
 
@@ -2616,7 +2611,7 @@ void CDecodePs::PhotoshopParseDescriptor(unsigned long &nPos,unsigned nIndent)
 	strVal = PhotoshopParseGetLStrAsc(nPos);
 	PhotoshopParseReportFldStr(nIndent,_T("classID"),strVal);
 
-	unsigned nDescNumItems = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nDescNumItems = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Num items in descriptor"),nDescNumItems,_T(""));
 
 	if (nDescNumItems>0)
@@ -2652,7 +2647,7 @@ void CDecodePs::PhotoshopParseList(unsigned long &nPos,unsigned nIndent)
 	CString		strVal;
 	CString		strLine;
 
-	unsigned nNumItems = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	unsigned nNumItems = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Num items in list"),nNumItems,_T(""));
 
 	if (nNumItems>0)
@@ -2685,7 +2680,7 @@ void CDecodePs::PhotoshopParseInteger(unsigned long &nPos,unsigned nIndent)
 	unsigned	nVal;
 	CString		strVal;
 	CString		strLine;
-	nVal = m_pWBuf->BufX(nPos,4,PS_BSWAP); nPos+=4;
+	nVal = m_pWBuf->BufRdAdv4(nPos,PS_BSWAP);
 	PhotoshopParseReportFldNum(nIndent,_T("Value"),nVal,_T(""));
 }
 
@@ -2701,7 +2696,7 @@ void CDecodePs::PhotoshopParseBool(unsigned long &nPos,unsigned nIndent)
 	unsigned	nVal;
 	CString		strVal;
 	CString		strLine;
-	nVal = m_pWBuf->BufX(nPos,1,PS_BSWAP); nPos+=1;
+	nVal = m_pWBuf->BufRdAdv1(nPos,PS_BSWAP);
 	PhotoshopParseReportFldBool(nIndent,_T("Value"),nVal);
 }
 
