@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -251,7 +251,7 @@ bool CwindowBuf::BufSearchX(unsigned long nStartPos, BYTE* anSearchVal, unsigned
 	unsigned long	nCurPosOffset;
 
 	unsigned long	nMatchStartPos = 0;
-	bool			bMatchStart = false;
+	//bool			bMatchStart = false;
 	bool			bMatchOn = false;
 	CString			strStatus;
 	time_t			tmLast = clock();
@@ -517,6 +517,8 @@ bool CwindowBuf::OverlayInstall(unsigned nOvrInd, BYTE* pOverlay,unsigned nLen,u
 								unsigned nMcuX,unsigned nMcuY,unsigned nMcuLen,unsigned nMcuLenIns,
 								int nAdjY,int nAdjCb,int nAdjCr)
 {
+	nOvrInd;	// Unreferenced param
+
 	// Ensure that the overlay is allocated, and allocate it
 	// if required. Fail out if we can't add (or run out of space)
 	if (!OverlayAlloc(m_nOverlayNum)) {
@@ -726,7 +728,6 @@ inline BYTE CwindowBuf::Buf(unsigned long nOffset,bool bClean)
 unsigned CwindowBuf::BufX(unsigned long nOffset,unsigned nSz,bool nByteSwap)
 {
 	long nWinRel;
-	unsigned val = 0;
 
 	ASSERT(m_pBufFile);
 
@@ -802,6 +803,32 @@ unsigned CwindowBuf::BufX(unsigned long nOffset,unsigned nSz,bool nByteSwap)
 	}
 }
 
+unsigned char CwindowBuf::BufRdAdv1(unsigned long &nOffset,bool bByteSwap)
+{
+	unsigned char	nRet;
+	nRet = static_cast<unsigned char>(BufX(nOffset,1,bByteSwap));
+	nOffset += 1;
+	return nRet;
+}
+
+unsigned short CwindowBuf::BufRdAdv2(unsigned long &nOffset,bool bByteSwap)
+{
+	unsigned short	nRet;
+	nRet = static_cast<unsigned short>(BufX(nOffset,2,bByteSwap));
+	nOffset += 2;
+	return nRet;
+}
+
+unsigned CwindowBuf::BufRdAdv4(unsigned long &nOffset,bool bByteSwap)
+{
+	unsigned		nRet;
+	nRet = BufX(nOffset,4,bByteSwap);
+	nOffset += 4;
+	return nRet;
+}
+
+
+
 
 // Read a null-terminated string from the buffer/cache at the
 // indicated file offset.
@@ -826,7 +853,7 @@ CString CwindowBuf::BufReadStr(unsigned long nPosition)
 
 	while (!bDone)
 	{
-		cRd = (char)Buf(nPosition+nIndex);
+		cRd = Buf(nPosition+nIndex);
 		// Only add if printable
 		if (isprint(cRd)) {
 			strRd += cRd;
@@ -867,7 +894,7 @@ CString CwindowBuf::BufReadUniStr(unsigned long nPosition)
 
 	while (!bDone)
 	{
-		cRd = (char)Buf(nPosition+nIndex);
+		cRd = Buf(nPosition+nIndex);
 
 		// Make sure it is a printable char!
 		// FIXME: No, we can't check for this as it will cause
@@ -965,7 +992,7 @@ CString CwindowBuf::BufReadStrn(unsigned long nPosition,unsigned nLen)
 	if (nLen > 0) {
 		for (unsigned nInd=0;((!bDone)&&(nInd<nLen));nInd++)
 		{
-			cRd = (char)Buf(nPosition+nInd);
+			cRd = Buf(nPosition+nInd);
 			if (isprint(cRd)) {
 				strRd += cRd;
 			}
