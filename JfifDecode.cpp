@@ -454,7 +454,7 @@ void CjfifDecode::ClearDQT()
 // - m_abImgDqtSet[]
 // - m_strImgQuantCss
 //
-void CjfifDecode::SetDQTQuick(unsigned anDqt0[64],unsigned anDqt1[64])
+void CjfifDecode::SetDQTQuick(unsigned short anDqt0[64],unsigned short anDqt1[64])
 {
 	m_eImgLandscape = ENUM_LANDSCAPE_YES;
 	for (unsigned ind=0;ind<MAX_DQT_COEFF;ind++)
@@ -1331,7 +1331,7 @@ bool CjfifDecode::DecodeMakerSubType()
 	{
 		strTmp = _T("");
 		for (unsigned nInd=0;nInd<5;nInd++) {
-			strTmp += (char)Buf(m_nPos+nInd);
+			strTmp += Buf(m_nPos+nInd);
 		}
 
 		if (strTmp == _T("Nikon")) {
@@ -1346,7 +1346,7 @@ bool CjfifDecode::DecodeMakerSubType()
 				m_nImgExifMakeSubtype = 3;
 				m_nPos += 18;
 			} else {
-				CString strTmp = _T("ERROR: Unknown Nikon Makernote Type");
+				strTmp = _T("ERROR: Unknown Nikon Makernote Type");
 				m_pLog->AddLineErr(strTmp);
 				if (m_pAppConfig->bInteractive)
 					AfxMessageBox(strTmp);
@@ -1367,7 +1367,7 @@ bool CjfifDecode::DecodeMakerSubType()
 		strTmp = _T("");
 		for (unsigned ind=0;ind<8;ind++) {
 			if (Buf(m_nPos+ind) != 0)
-				strTmp += (char)Buf(m_nPos+ind);
+				strTmp += Buf(m_nPos+ind);
 		}
 		if ( (strTmp == _T("SIGMA")) ||
 			(strTmp == _T("FOVEON"))  )
@@ -1376,7 +1376,7 @@ bool CjfifDecode::DecodeMakerSubType()
 			// Now skip over the 8-chars and 2 unknown chars
 			m_nPos += 10;
 		} else {
-			CString strTmp = _T("ERROR: Unknown SIGMA Makernote identifier");
+			strTmp = _T("ERROR: Unknown SIGMA Makernote identifier");
 			m_pLog->AddLineErr(strTmp);
 			if (m_pAppConfig->bInteractive)
 				AfxMessageBox(strTmp);
@@ -1389,7 +1389,7 @@ bool CjfifDecode::DecodeMakerSubType()
 		strTmp = _T("");
 		for (unsigned ind=0;ind<8;ind++) {
 			if (Buf(m_nPos+ind) != 0)
-				strTmp += (char)Buf(m_nPos+ind);
+				strTmp += Buf(m_nPos+ind);
 		}
 		if (strTmp == _T("FUJIFILM"))
 		{
@@ -1398,7 +1398,7 @@ bool CjfifDecode::DecodeMakerSubType()
 			// FIXME: Do I need to dereference this pointer?
 			m_nPos += 12;
 		} else {
-			CString strTmp = _T("ERROR: Unknown FUJIFILM Makernote identifier");
+			strTmp = _T("ERROR: Unknown FUJIFILM Makernote identifier");
 			m_pLog->AddLineErr(strTmp);
 			if (m_pAppConfig->bInteractive)
 				AfxMessageBox(strTmp);
@@ -1411,7 +1411,7 @@ bool CjfifDecode::DecodeMakerSubType()
 		strTmp = _T("");
 		for (unsigned ind=0;ind<12;ind++) {
 			if (Buf(m_nPos+ind) != 0)
-				strTmp += (char)Buf(m_nPos+ind);
+				strTmp += Buf(m_nPos+ind);
 		}
 		if (strTmp == _T("SONY DSC "))
 		{
@@ -1419,7 +1419,7 @@ bool CjfifDecode::DecodeMakerSubType()
 			// Now skip over the 9-chars and 3 null chars
 			m_nPos += 12;
 		} else {
-			CString strTmp = _T("ERROR: Unknown SONY Makernote identifier");
+			strTmp = _T("ERROR: Unknown SONY Makernote identifier");
 			m_pLog->AddLineErr(strTmp);
 			if (m_pAppConfig->bInteractive)
 				AfxMessageBox(strTmp);
@@ -1535,7 +1535,9 @@ bool CjfifDecode::PrintValGPS(unsigned nCount, float fCoord1, float fCoord2, flo
 //
 bool CjfifDecode::DecodeValGPS(unsigned nPos,CString &strCoord)
 {
-	float		fCoord1,fCoord2,fCoord3;
+	float		fCoord1=0;
+	float		fCoord2=0;
+	float		fCoord3=0;
 	bool		bRet;
 
 	bRet = true;
@@ -1782,12 +1784,12 @@ unsigned CjfifDecode::DecodeExifIfd(CString strIfd,unsigned nPosExifStart,unsign
 	BOOL			bExtraDecode;
 
 	// Primary IFD variables
-	char		acIfdValOffsetStr[5];
-	unsigned	nIfdDirLen;
-	unsigned	nIfdTagVal;
-	unsigned	nIfdFormat;
-	unsigned	nIfdNumComps;
-	bool		nIfdTagUnknown;
+	unsigned char	acIfdValOffsetStr[5];
+	unsigned		nIfdDirLen;
+	unsigned		nIfdTagVal;
+	unsigned		nIfdFormat;
+	unsigned		nIfdNumComps;
+	bool			nIfdTagUnknown;
 
 
 	unsigned	nCompsToDisplay;			// Maximum number of values to capture for display
@@ -1951,7 +1953,7 @@ unsigned CjfifDecode::DecodeExifIfd(CString strIfd,unsigned nPosExifStart,unsign
 
 		// ... first as a string (just in case length <=4)
 		for (unsigned i=0;i<4;i++) {
-			acIfdValOffsetStr[i] = (char)Buf(m_nPos+i);
+			acIfdValOffsetStr[i] = Buf(m_nPos+i);
 		}
 		acIfdValOffsetStr[4] = '\0';
 
@@ -2509,10 +2511,10 @@ unsigned CjfifDecode::DecodeExifIfd(CString strIfd,unsigned nPosExifStart,unsign
 			// Actual string
 			strValOut = _T("\"");
 			bool bDone = false;
-			char cTmp;
+			unsigned char cTmp;
 
 			for (unsigned vInd=0;(vInd<nIfdNumComps-8)&&(!bDone);vInd++) {
-				cTmp = (char)Buf(nPosExifStart+nIfdOffset+8+vInd);
+				cTmp = Buf(nPosExifStart+nIfdOffset+8+vInd);
 				if (cTmp == 0) { bDone = true; } else {	strValOut += cTmp;	}
 			}
 			strValOut += _T("\"");
@@ -2913,8 +2915,7 @@ unsigned CjfifDecode::DecodeApp13Ps()
 	CString			strBimName;
 	bool			bDone = false;
 
-	unsigned		nVal = 0x8000;
-	unsigned		nSaveFormat = 0;
+	//unsigned		nVal = 0x8000;
 
 	CString			strVal;
 	CString			strByte;
@@ -3403,7 +3404,7 @@ void CjfifDecode::DecodeDHT(bool bInject)
 	unsigned	nTmpVal;
 	CString		strTmp,strFull;
 	unsigned	nPosEnd;
-	unsigned	nPosSaved;
+	unsigned	nPosSaved = 0;
 
 	bool		bRet;
 
@@ -3525,7 +3526,6 @@ void CjfifDecode::DecodeDHT(bool bInject)
 		unsigned int nDhtLookupInd = 0;
 
 		// Now print out the actual binary strings!
-		unsigned long	nBitVal = 0;
 		unsigned int	nCodeVal = 0;
 		nDhtInd = 0;
 		if (m_pAppConfig->bOutputDHTexpand) {
@@ -3763,6 +3763,8 @@ unsigned CjfifDecode::DecodeMarker()
 	CString			strFull;				// Used for concatenation
 	unsigned		nLength;				// General purpose
 	unsigned		nTmpVal;
+	BYTE			nTmpVal1;
+	unsigned short	nTmpVal2;
 	unsigned		nCode;
 	unsigned long	nPosEnd;
 	unsigned long	nPosSaved;				// General-purpose saved position in file
@@ -3978,9 +3980,13 @@ unsigned CjfifDecode::DecodeMarker()
 
 			m_nPos++;
 
+			// NOTE: This code currently treats the strings from the XMP section
+			// as single byte characters. In reality, it should probably be
+			// updated to support unicode properly.
+
 			unsigned nPosMarkerEnd = nPosSaved+nLength-1;
 			unsigned sXmpLen = nPosMarkerEnd-m_nPos;
-			char cXmpChar;
+			unsigned char cXmpChar;
 			bool bNonSpace;
 			CString strLine;
 
@@ -3990,8 +3996,8 @@ unsigned CjfifDecode::DecodeMarker()
 
 			for (unsigned nInd=0;nInd<sXmpLen;nInd++) {
 
-				// Get the next char
-				cXmpChar = (char)m_pWBuf->Buf(m_nPos+nInd);
+				// Get the next char (8-bit byte)
+				cXmpChar = m_pWBuf->Buf(m_nPos+nInd);
 
 				// Detect a non-space in line
 				if ((cXmpChar != 0x20) && (cXmpChar != 0x0A)) {
@@ -4278,9 +4284,9 @@ unsigned CjfifDecode::DecodeMarker()
 				} else if ((i % 8) == 0) {
 					strFull += _T(" ");
 				}
-				nTmpVal = Buf(m_nPos+i);
-				if (_istprint(nTmpVal)) {
-					strTmp.Format(_T("%c"),nTmpVal);
+				nTmpVal1 = Buf(m_nPos+i);
+				if (_istprint(nTmpVal1)) {
+					strTmp.Format(_T("%c"),nTmpVal1);
 					strFull += strTmp;
 				} else {
 					strFull += _T(".");
@@ -4569,13 +4575,13 @@ unsigned CjfifDecode::DecodeMarker()
 
 			for (unsigned nCoeffInd=0;nCoeffInd<MAX_DQT_COEFF;nCoeffInd++)
 			{
-				nTmpVal = Buf(m_nPos++);
+				nTmpVal2 = Buf(m_nPos++);
 				if (nDqtPrecision_Pq == 1) {
 					// 16-bit DQT entries!
-					nTmpVal <<= 8;
-					nTmpVal += Buf(m_nPos++);
+					nTmpVal2 <<= 8;
+					nTmpVal2 += Buf(m_nPos++);
 				}
-				m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]] = nTmpVal;
+				m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]] = nTmpVal2;
 
 
 				/* scaling factor in percent */
@@ -5077,9 +5083,9 @@ unsigned CjfifDecode::DecodeMarker()
 		m_strComment = _T("");
 		for (unsigned ind=0;ind<nLength-2;ind++)
 		{
-			nTmpVal = Buf(m_nPos++);
-			if (_istprint(nTmpVal)) {
-				strTmp.Format(_T("%c"),nTmpVal);
+			nTmpVal1 = Buf(m_nPos++);
+			if (_istprint(nTmpVal1)) {
+				strTmp.Format(_T("%c"),nTmpVal1);
 				m_strComment += strTmp;
 			} else {
 				m_strComment += _T(".");
@@ -6559,22 +6565,24 @@ void CjfifDecode::SendSubmit(CString strExifMake, CString strExifModel, CString 
 
 
 		strFormDataPre.Format(strFormat,
-			DB_SUBMIT_WWW_VER,strExifMake,strExifModel,
-			strQual,strDqt0,strDqt1,strDqt2,strDqt3,strCss,strSig,strSigRot,fQFact0,fQFact1,nImgW,nImgH,
-			strExifSoftware,strComment,
-			eMaker,eUserSource,strUserSoftware,
-			strExtra,strUserNotes,
-			strSigThumb,strSigThumbRot,nExifLandscape,nThumbX,nThumbY);
+			(LPCTSTR)DB_SUBMIT_WWW_VER,(LPCTSTR)strExifMake,(LPCTSTR)strExifModel,
+			(LPCTSTR)strQual,(LPCTSTR)strDqt0,(LPCTSTR)strDqt1,(LPCTSTR)strDqt2,(LPCTSTR)strDqt3,
+			(LPCTSTR)strCss,(LPCTSTR)strSig,(LPCTSTR)strSigRot,fQFact0,fQFact1,nImgW,nImgH,
+			(LPCTSTR)strExifSoftware,(LPCTSTR)strComment,
+			eMaker,eUserSource,(LPCTSTR)strUserSoftware,
+			(LPCTSTR)strExtra,(LPCTSTR)strUserNotes,
+			(LPCTSTR)strSigThumb, (LPCTSTR)strSigThumbRot,nExifLandscape,nThumbX,nThumbY);
 
 		//*** Need to sanitize data for URL submission!
 		// Search for "&", "?", "="
 		strFormData.Format(strFormat,
-			DB_SUBMIT_WWW_VER,curls.Encode(strExifMake),curls.Encode(strExifModel),
-			strQual,strDqt0,strDqt1,strDqt2,strDqt3,strCss,strSig,strSigRot,fQFact0,fQFact1,nImgW,nImgH,
-			curls.Encode(strExifSoftware),curls.Encode(strComment),
-			eMaker,eUserSource,curls.Encode(strUserSoftware),
-			curls.Encode(strExtra),curls.Encode(strUserNotes),
-			strSigThumb,strSigThumbRot,nExifLandscape,nThumbX,nThumbY);
+			(LPCTSTR)DB_SUBMIT_WWW_VER,(LPCTSTR)curls.Encode(strExifMake),(LPCTSTR)curls.Encode(strExifModel),
+			(LPCTSTR)strQual,(LPCTSTR)strDqt0,(LPCTSTR)strDqt1,(LPCTSTR)strDqt2,(LPCTSTR)strDqt3,
+			(LPCTSTR)strCss,(LPCTSTR)strSig,(LPCTSTR)strSigRot,fQFact0,fQFact1,nImgW,nImgH,
+			(LPCTSTR)curls.Encode(strExifSoftware),(LPCTSTR)curls.Encode(strComment),
+			eMaker,eUserSource,(LPCTSTR)curls.Encode(strUserSoftware),
+			(LPCTSTR)curls.Encode(strExtra),(LPCTSTR)curls.Encode(strUserNotes),
+			(LPCTSTR)strSigThumb,(LPCTSTR)strSigThumbRot,nExifLandscape,nThumbX,nThumbY);
 		nFormDataLen = strFormData.GetLength();
 
 
@@ -7231,7 +7239,7 @@ bool CjfifDecode::DecodeAvi()
 			m_nPos = nChunkDataStart + nChunkSize + (nChunkSize%2);
 		} else if (strHeader == _T("idx1")) {
 			// Index
-			unsigned nIdx1Entries = nChunkSize / (4*4);
+			//unsigned nIdx1Entries = nChunkSize / (4*4);
 
 			m_nPos = nChunkDataStart + nChunkSize + (nChunkSize%2);
 
@@ -7306,7 +7314,7 @@ void CjfifDecode::ProcessFile(CFile* inFile)
 	ULONGLONG	nPosFileEnd;
 	nPosFileEnd = inFile->GetLength();
 	if (nPosFileEnd > 0xFFFFFFFFUL) {
-		CString strTmp = _T("File too large. Skipping.");
+		strTmp = _T("File too large. Skipping.");
 		m_pLog->AddLineErr(strTmp);
 		if (m_pAppConfig->bInteractive)
 			AfxMessageBox(strTmp);

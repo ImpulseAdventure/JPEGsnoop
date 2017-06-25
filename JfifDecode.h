@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -196,7 +196,7 @@ private:
 
 	// DQT / DHT
 	void			ClearDQT();
-	void			SetDQTQuick(unsigned anDqt0[64],unsigned anDqt1[64]);
+	void			SetDQTQuick(unsigned short anDqt0[64],unsigned short anDqt1[64]);
 	void			GenLookupHuffMask();
 
 	// Field parsing
@@ -328,7 +328,7 @@ private:
 	bool			m_nImgRstEn;		// DRI seen
 	unsigned		m_nImgRstInterval;
 
-	unsigned		m_anImgDqtTbl[MAX_DQT_DEST_ID][MAX_DQT_COEFF];
+	unsigned short	m_anImgDqtTbl[MAX_DQT_DEST_ID][MAX_DQT_COEFF];
 	double			m_adImgDqtQual[MAX_DQT_DEST_ID];
 	bool			m_abImgDqtSet[MAX_DQT_DEST_ID];		// Has this table been configured?
 	unsigned		m_anDhtNumCodesLen_Li[17];
