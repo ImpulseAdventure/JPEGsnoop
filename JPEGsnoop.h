@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -83,6 +83,8 @@ private:
 	void			DocReprocess();
 	void			DocImageDirty();
 	void			HandleAutoReprocess();
+
+	HINSTANCE		LoadAppLangResourceDLL();	// MFC override
 
 	afx_msg void	OnOptionsDhtexpand();
 	afx_msg void	OnOptionsMakernotes();

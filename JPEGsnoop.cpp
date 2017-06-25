@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-// JPEGsnoop is written in Microsoft Visual C++ 2003 using MFC
+// JPEGsnoop is written in Microsoft Visual C++ using MFC
 
 // JPEGsnoop.cpp : Defines the class behaviors for the application.
 //
@@ -157,6 +157,8 @@ public:
 	};  
 
 	virtual void ParseParam(LPCTSTR pszParam, BOOL bFlag, BOOL bLast) {
+		bLast;	// Unreferenced param
+
 		CString		msg;
 
 		// GUI mode decision
@@ -464,6 +466,13 @@ CJPEGsnoopApp theApp;
 
 // CJPEGsnoopApp initialization
 
+// Override localization virtual function to avoid potential for
+// satellite DLL hijacking
+HINSTANCE CJPEGsnoopApp::LoadAppLangResourceDLL()
+{
+	return NULL;
+}
+
 BOOL CJPEGsnoopApp::InitInstance()
 {
 	if (DEBUG_EN) m_pAppConfig->DebugLogAdd(_T("CJPEGsnoopApp::InitInstance() Start"));
@@ -606,7 +615,7 @@ BOOL CJPEGsnoopApp::InitInstance()
 	// Now handle any other command-line directives that we haven't
 	// already covered above
 	if (m_pAppConfig->bGuiMode == false) {
-		bool	bCmdLineRet = false;
+		//bool	bCmdLineRet = false;
 		DoCmdLineCore();
 		return false;
 	}
@@ -1119,7 +1128,7 @@ void CJPEGsnoopApp::OnAppAbout()
 void CJPEGsnoopApp::MyOnFileOpen()
 {
 
-	bool bStatus = 0;
+	//bool bStatus = 0;
 	TCHAR aszFilter[] =
 		_T("JPEG Image (*.jpg;*.jpeg)|*.jpg;*.jpeg|")\
 		_T("Thumbnail (*.thm)|*.thm|")\
