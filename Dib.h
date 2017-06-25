@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -37,7 +37,7 @@ public:
     virtual ~CDIB();
 
 	void			Kill();
-    bool			CreateDIB(DWORD dwWidth,DWORD dwHeight,int nBits);
+    bool			CreateDIB(DWORD dwWidth,DWORD dwHeight,unsigned short nBits);
     bool			CreateDIBFromBitmap(CDC* pDC);
     void			InitializeColors();
     int				GetDIBCols() const;
