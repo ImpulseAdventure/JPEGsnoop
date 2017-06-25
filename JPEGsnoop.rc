@@ -301,7 +301,7 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     ICON            IDR_MAINFRAME,IDC_STATIC,12,6,20,20
     LTEXT           "JPEGsnoop",IDC_STATIC,42,6,39,8,SS_NOPREFIX
-    LTEXT           "Copyright © 2015 Calvin Hass",IDC_STATIC,42,18,124,8
+    LTEXT           "Copyright © 2017 Calvin Hass",IDC_STATIC,42,18,124,8
     DEFPUSHBUTTON   "OK",IDOK,185,7,50,16,WS_GROUP
     LTEXT           "www.impulseadventure.com/photo/",IDC_URL,24,66,117,8
     LTEXT           "Documentation and Updates for JPEGsnoop",IDC_URL_DOC,24,48,169,8
@@ -583,8 +583,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,7,6,0
- PRODUCTVERSION 1,7,6,0
+ FILEVERSION 1,8,0,0
+ PRODUCTVERSION 1,8,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -601,12 +601,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "ImpulseAdventure"
             VALUE "FileDescription", "JPEGsnoop"
-            VALUE "FileVersion", "1.7.6.0"
+            VALUE "FileVersion", "1.8.0.0"
             VALUE "InternalName", "JPEGsnoop.exe"
-            VALUE "LegalCopyright", "(c) 2015 Calvin Hass.  All rights reserved."
+            VALUE "LegalCopyright", "(c) 2017 Calvin Hass.  All rights reserved."
             VALUE "OriginalFilename", "JPEGsnoop.exe"
             VALUE "ProductName", "JPEGsnoop"
-            VALUE "ProductVersion", "1.7.6.0"
+            VALUE "ProductVersion", "1.8.0.0"
         END
     END
     BLOCK "VarFileInfo"
