@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -32,7 +32,7 @@
 // - Note that when the version number is incremented, I need
 //   to also update the corresponding version numbers in the
 //   JPEGsnoop.rc resource under "Version.VS_VERSION_INFO".
-#define VERSION_STR _T("1.7.5")
+#define VERSION_STR _T("1.8.0")
 
 // Version number for the database signatures
 // - This version number has been provided in case I decide
@@ -163,7 +163,7 @@ enum teLandscape {
 	ENUM_LANDSCAPE_NO,
 };
 
-typedef enum {DEC_OFFSET_START,DEC_OFFSET_SRCH1,DEC_OFFSET_SRCH2,DEC_OFFSET_POS} teOffsetMode;
+enum teOffsetMode {DEC_OFFSET_START,DEC_OFFSET_SRCH1,DEC_OFFSET_SRCH2,DEC_OFFSET_POS};
 
 // Define a few coach messages
 
