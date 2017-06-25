@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -36,7 +36,7 @@
 // - NUM     : binary number
 // - STR     : alphabetic characters, graphic characters, numeric character
 // - HEX     :
-typedef enum teIptcType { IPTC_T_NUM, IPTC_T_NUM1, IPTC_T_NUM2, IPTC_T_HEX, IPTC_T_STR, IPTC_T_UNK, IPTC_T_END };
+enum teIptcType { IPTC_T_NUM, IPTC_T_NUM1, IPTC_T_NUM2, IPTC_T_HEX, IPTC_T_STR, IPTC_T_UNK, IPTC_T_END };
 struct tsIptcField {
 	unsigned	nRecord;
 	unsigned	nDataSet;
@@ -45,7 +45,7 @@ struct tsIptcField {
 };
 
 // Structure used for each Image Resource Block (8BIM) record
-typedef enum teBimType { BIM_T_UNK, BIM_T_STR, BIM_T_HEX, 
+enum teBimType { BIM_T_UNK, BIM_T_STR, BIM_T_HEX, 
 	BIM_T_IPTC_NAA,
 	BIM_T_JPEG_QUAL,
 	BIM_T_PS_SLICES,
@@ -80,7 +80,7 @@ struct tsBimRecord {
 
 
 // Structure used for each enumerated field in IRB decoding
-typedef enum teBimEnumField {
+enum teBimEnumField {
 	BIM_T_ENUM_UNK,
 	BIM_T_ENUM_FILE_HDR_COL_MODE,
 	BIM_T_ENUM_RESOLUTION_INFO_RES_UNIT,

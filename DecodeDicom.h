@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -32,7 +32,7 @@
 
 // Structure used for each Tag entry
 // Reference: Types defined in Part 3, Section 5.2
-typedef enum teDicomType { DICOM_T_UNK,
+enum teDicomType { DICOM_T_UNK,
 	DICOM_T_TYPE1,
 	DICOM_T_TYPE1C,
 	DICOM_T_TYPE3,
