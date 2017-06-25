@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -243,7 +243,7 @@ CRegString& CRegString::operator =(CString s)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-
+#if 0 // Remove CRegRect (unneeded, triggers C2440)
 CRegRect::CRegRect(void)
 {
 	m_value = CRect(0,0,0,0);
@@ -346,6 +346,7 @@ CRegRect& CRegRect::operator =(CRect s)
 	write();
 	return *this;
 }
+#endif // Remove CRegRect
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 

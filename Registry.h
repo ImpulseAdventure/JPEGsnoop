@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -354,6 +354,7 @@ protected:
  * \bug
  * \warning
  */
+#if 0 // Remove CRegRect (unneeded, triggers C2440)
 class CRegRect : public CRegBase
 {
 public:
@@ -393,6 +394,7 @@ protected:
 	BOOL	m_read;						///< indicates if the value has already been read from the registry
 	BOOL	m_force;					///< indicates if no cache should be used, i.e. always read and write directly from registry
 };
+#endif // Remove CRegRect
 
 /**
  * \ingroup CommonClasses
