@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,7 @@
 
 #include "stdafx.h"
 #include "DbSigs.h"
+#include "General.h"
 
 #include "snoop.h"
 
@@ -139,9 +140,12 @@ unsigned CDbSigs::GetNumSigsExtra()
 	return m_nSigListExtraNum;
 }
 
+
 // Read an unsigned integer (4B) from the buffer
 bool CDbSigs::BufReadNum(PBYTE pBuf,unsigned &nOut,unsigned nMaxBytes,unsigned &nOffsetBytes)
 {
+	nMaxBytes;	// Unreferenced param
+
 	ASSERT(pBuf);
 	// TODO: check for buffer bounds
 	nOut = (unsigned)pBuf[nOffsetBytes];
@@ -152,6 +156,8 @@ bool CDbSigs::BufReadNum(PBYTE pBuf,unsigned &nOut,unsigned nMaxBytes,unsigned &
 // Write an unsigned integer (4B) to the buffer
 bool CDbSigs::BufWriteNum(PBYTE pBuf,unsigned nIn,unsigned nMaxBytes,unsigned &nOffsetBytes)
 {
+	nMaxBytes;	// Unreferenced param
+
 	ASSERT(pBuf);
 	// TODO: check for buffer bounds
 	PBYTE		pBufBase;
@@ -362,7 +368,7 @@ void CDbSigs::DatabaseExtraLoad()
 	CString		strVer;
 	CString		strSec;
 
-	bool		bErr = false;
+	//bool		bErr = false;
 	bool		bDone = false;
 	BOOL		bRet;
 
@@ -602,7 +608,7 @@ void CDbSigs::DatabaseExtraStore()
 {
 	CFile		*pOutFile = NULL;
 	PBYTE		pBuf = NULL;
-	unsigned	nBufLenBytes = 0;
+	//unsigned	nBufLenBytes = 0;
 	unsigned	nBufOffset = 0;
 
 	bool		bModeUni = true;	// Save in Unicode format
@@ -645,8 +651,8 @@ void CDbSigs::DatabaseExtraStore()
 	CString		strLine;
 	CString		strParam;
 	CString		strVal;
-	bool		bErr = false;
-	bool		bDone = false;
+	//bool		bErr = false;
+	//bool		bDone = false;
 	BOOL		bRet;
 
 	unsigned	nMaxBufBytes = MAX_BUF_SET_FILE;

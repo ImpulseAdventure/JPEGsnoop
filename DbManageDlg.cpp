@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -75,6 +75,8 @@ END_MESSAGE_MAP()
 // Prepare a custom signature entry for addition into the dialog listbox
 void CDbManageDlg::InsertEntry(unsigned ind,CString strMake, CString strModel, CString strQual, CString strSig)
 {
+	ind;	// Unreferenced param
+
 	CString strTmp;
 	strTmp.Format(_T("Make: [%s]\tModel: [%s]\tQual: [%s]"),(LPCTSTR)strMake,(LPCTSTR)strModel,(LPCTSTR)strQual);
 	m_asToInsert.Add(strTmp);

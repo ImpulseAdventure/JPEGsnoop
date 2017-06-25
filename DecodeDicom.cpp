@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -134,7 +134,7 @@ bool CDecodeDicom::GetTagHeader(unsigned long nPos,tsTagDetail &sTagDetail)
 	// Check for zeros in place of VR. This might hint at implicit VR
 	// FIXME
 	if (m_pWBuf->BufX(nPos+4,2,true) == 0) {
-		unsigned nBad=1;
+		//unsigned nBad=1;
 	}
 	strVR = m_pWBuf->BufReadStrn(nPos+4,2);
 	nVR = m_pWBuf->BufX(nPos+4,2,false);
@@ -578,7 +578,7 @@ bool CDecodeDicom::DecodeDicom(unsigned long nPos,unsigned long nPosFileEnd,unsi
 		bDone = true;
 	}
 
-	bool			bFoundJpeg = false;
+	//bool			bFoundJpeg = false;
 	unsigned long	nPosJpegFound = 0;
 	tsTagDetail		sTagDetail;
 	while (!bDone) {

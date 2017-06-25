@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -69,6 +69,7 @@ IMPLEMENT_DYNAMIC(CFolderDialog, CCmdTarget);
 //
 CFolderDialog::CFolderDialog(CWnd* pWnd)
 {
+	pWnd;	// Unreferenced param
 
 	//CAL! Modified the following to allow us to call this
 	//     routine without a parent window defined. This
@@ -244,6 +245,7 @@ void CFolderDialog::OnIUnknown(IUnknown* punk)
 //
 void CFolderDialog::OnSelChanged(LPCITEMIDLIST pidl)
 {
+	pidl;	// Unrefernced param
 	//BFTRACE(_T("CFolderDialog::OnSelChanged: %s\n"),
 	//	GetDisplayNameOf(m_shfRoot, pidl, SHGDN_FORPARSING));
 }
@@ -253,6 +255,7 @@ void CFolderDialog::OnSelChanged(LPCITEMIDLIST pidl)
 //
 BOOL CFolderDialog::OnValidateFailed(LPCTSTR lpsz)
 {
+	lpsz;	// Unreferenced param
 	//BFTRACE(_T("CFolderDialog::OnValidateFailed: %s\n"), lpsz);
 	return TRUE; // don't close dialog.
 }
@@ -265,6 +268,9 @@ HRESULT CFolderDialog::OnGetEnumFlags(
 	LPCITEMIDLIST pidlFolder,	// folder's PIDL
 	DWORD *pgrfFlags)				// [out] return flags you want to allow
 {
+	psf;		// Unreferenced param
+	pidlFolder;	// Unreferenced param
+	pgrfFlags;	// Unreferenced param
 	//BFTRACE(_T("CFolderDialog::OnGetEnumFlags(%p): %s\n"),
 	//	psf, GetPathName(pidlFolder));
 	return S_OK;
@@ -278,6 +284,9 @@ HRESULT CFolderDialog::OnShouldShow(
 	LPCITEMIDLIST pidlFolder,	// PIDL for folder containing item
 	LPCITEMIDLIST pidlItem)		// PIDL for item
 {
+	psf;		// Unreferenced param
+	pidlFolder;	// Unreferenced param
+	pidlItem;	// Unreferenced param
 	//BFTRACE(_T("CFolderDialog::OnShouldShow(%p): %s: %s\n"), psf,
 	//	GetDisplayNameOf(psf,pidlFolder,SHGDN_NORMAL),
 	//	GetDisplayNameOf(psf,pidlItem,SHGDN_NORMAL));
@@ -338,6 +347,7 @@ STDMETHODIMP CFolderDialog::XFolderFilter::QueryInterface(REFIID iid, LPVOID* pp
 STDMETHODIMP CFolderDialog::XFolderFilter::GetEnumFlags(IShellFolder* psf,
 	LPCITEMIDLIST pidlFolder, HWND *pHwnd, DWORD *pgrfFlags)
 {
+	pHwnd;	// Unreferenced param
 	METHOD_PROLOGUE(CFolderDialog, FolderFilter);
 	return pThis->OnGetEnumFlags(psf, pidlFolder, pgrfFlags);
 }

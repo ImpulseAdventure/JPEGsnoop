@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -145,6 +145,8 @@ void CMainFrame::Dump(CDumpContext& dc) const
 //CAL! Following code was added to support split windows
 BOOL CMainFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext) 
 {
+	lpcs;	// Unreferenced param
+
 	//calculate client size 
 	CRect cr; 
 	GetClientRect( &cr);

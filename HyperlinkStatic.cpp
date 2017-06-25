@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -55,8 +55,8 @@ CHyperlinkStatic::CHyperlinkStatic()
 	_strCaption = _strHyperlink = _T("");	 
 	_bMouseInControl = _bCreateFont = _bGetCaptionSize = false;
 
-	_hHandCursor = ::LoadCursor(0, MAKEINTRESOURCE(IDC_HAND));
-	_hArrowCursor = ::LoadCursor(0, MAKEINTRESOURCE(IDC_ARROW));
+	_hHandCursor = ::LoadCursor(0, IDC_HAND);
+	_hArrowCursor = ::LoadCursor(0, IDC_ARROW);
 }
 
 CHyperlinkStatic::~CHyperlinkStatic()
@@ -124,6 +124,8 @@ void CHyperlinkStatic::PreSubclassWindow()
 
 LRESULT CHyperlinkStatic::OnMouseLeave(WPARAM wParam, LPARAM lParam)
 {
+	lParam;	// Unreferenced param
+	wParam;	// Unreferenced param
 	_bMouseInControl = false;
 	::SetCursor(_hArrowCursor);	
 	return 0;

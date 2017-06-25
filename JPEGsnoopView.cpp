@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -92,11 +92,11 @@ void CJPEGsnoopView::OnInitialUpdate()
 	// doesn't actually handle the URL click message
 	//GetRichEditCtrl().SetAutoURLDetect(true);
 
-	const COLORREF CLOUDBLUE = RGB(128, 184, 223);
-	const COLORREF WHITE = RGB(255, 255, 255);
+	//const COLORREF CLOUDBLUE = RGB(128, 184, 223);
+	//const COLORREF WHITE = RGB(255, 255, 255);
 	const COLORREF BLACK = RGB(1, 1, 1);
-	const COLORREF DKGRAY = RGB(128, 128, 128);
-	const COLORREF PURPLE = RGB(255, 0, 255);
+	//const COLORREF DKGRAY = RGB(128, 128, 128);
+	//const COLORREF PURPLE = RGB(255, 0, 255);
 
 	// Set the default character formatting
 	CHARFORMAT cf;
@@ -172,7 +172,7 @@ void CJPEGsnoopView::OnDropFiles(HDROP hDropInfo)
 	TCHAR szNextFile [MAX_PATH];
 
     // Get the # of files being dropped.
-    uNumFiles = DragQueryFile ( hDropInfo, -1, NULL, 0 );
+    uNumFiles = DragQueryFile ( hDropInfo, 0xFFFFFFFF, NULL, 0 );
 
 	/*
 	for ( UINT uFile = 0; uFile < uNumFiles; uFile++ )
