@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -28,7 +28,7 @@ bool			TestBit(unsigned nVal,unsigned nBit);
 //CString			ByteStr2Unicode(BYTE* pBuf, unsigned nBufLen);
 bool			Str2Uint32(CString strVal,unsigned nBase,unsigned &nVal);
 
-
+bool		Uni2AscBuf(PBYTE pBuf,CString strIn,unsigned nMaxBytes,unsigned &nOffsetBytes);
 
 // General Global Constants
 extern const unsigned glb_anZigZag[64];

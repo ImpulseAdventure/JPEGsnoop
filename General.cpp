@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -44,9 +44,9 @@ CString Dec2Bin(unsigned nVal,unsigned nLen,bool bSpace)
 // before write-out of 16b values to disk
 unsigned short Swap16(unsigned short nVal)
 {
-	unsigned nValHi,nValLo;
-	nValHi = (nVal & 0xFF00)>>8;
-	nValLo = (nVal & 0x00FF);
+	BYTE nValHi,nValLo;
+	nValHi = static_cast<BYTE>((nVal & 0xFF00)>>8);
+	nValLo = static_cast<BYTE>((nVal & 0x00FF));
 	return (nValLo<<8) + nValHi;
 }
 
@@ -180,6 +180,74 @@ bool	Str2Uint32(CString strVal,unsigned nBase,unsigned &nVal)
 	}
 	return true;
 }
+
+
+
+// UNUSED
+// Convert a unicode string to ASCII and write into a buffer
+// - Returns true if we successfully wrote entire string including terminator
+bool Uni2AscBuf(PBYTE pBuf,CString strIn,unsigned nMaxBytes,unsigned &nOffsetBytes)
+{
+	ASSERT(pBuf);
+
+	bool		bRet = false;
+	char		chAsc;
+	PBYTE		pBufBase;
+	LPSTR		pBufAsc;
+
+	pBufBase = pBuf + nOffsetBytes;
+	pBufAsc = (LPSTR)pBufBase;
+
+#ifdef UNICODE
+
+	CW2A pszNonUnicode(strIn);
+
+#endif	// UNICODE
+
+
+	unsigned	nStrLen;
+	unsigned	nChInd;
+	nStrLen = strIn.GetLength();
+	for (nChInd=0;(nChInd<nStrLen)&&(nOffsetBytes<nMaxBytes);nChInd++) {
+
+
+#ifdef UNICODE
+		// To avoid Warning C4244: Conversion from 'wchar_t' to 'char' possible loss of data
+		// We need to implement conversion here
+		// Ref: http://stackoverflow.com/questions/4786292/converting-unicode-strings-and-vice-versa
+
+		// Since we have compiled for unicode, the CString character fetch
+		// will be unicode char. Therefore we need to use ANSI-converted form.
+		chAsc = pszNonUnicode[nChInd];
+#else
+		// Since we have compiled for non-Unicode, the CString character fetch
+		// will be single byte char
+		chAsc = strIn.GetAt(nChInd);
+#endif
+		pBufAsc[nChInd] = chAsc; 
+
+		// Advance pointers
+		nOffsetBytes++;
+	}
+
+	// Now terminate if we have space
+	if (nOffsetBytes < nMaxBytes) {
+
+		chAsc = char(0);
+		pBufAsc[nChInd] = chAsc;
+
+		// Advance pointers
+		nOffsetBytes++;
+
+		// Since we managed to include terminator, return is successful
+		bRet = true;
+	}
+
+	// Return true if we finished the string write (without exceeding nMaxBytes)
+	// or false otherwise
+	return bRet;
+}
+
 
 // ---------------------------------------
 // Global constants
