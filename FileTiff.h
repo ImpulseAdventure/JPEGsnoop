@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -66,8 +66,8 @@ public:
 
 	void		WriteFile(CString sFnameOut,bool bModeYcc,bool bMode16b,void* pBitmap,unsigned nSizeX,unsigned nSizeY);
 	void		WriteIfd(unsigned nSizeX,unsigned nSizeY,bool bModeYcc,bool bMode16b);
-	void		WriteIfdEntrySingle(unsigned nTag,unsigned nType,unsigned nValOffset);
-	void		WriteIfdEntryMult(unsigned nTag,unsigned nType,unsigned nNumVals,unsigned* nVals);
+	void		WriteIfdEntrySingle(unsigned short nTag,unsigned short nType,unsigned nValOffset);
+	void		WriteIfdEntryMult(unsigned short nTag,unsigned short nType,unsigned nNumVals,unsigned* nVals);
 
 	unsigned	GetTypeLen(unsigned nType);
 
@@ -85,9 +85,9 @@ private:
 	unsigned	m_nPtrImg;
 	unsigned	m_nPos;
 
-	bool		m_bPreCalc;
-	unsigned	m_nNumIfd;
-	BYTE*		m_pIfdExtraBuf;
-	unsigned	m_nIfdExtraLen;
+	bool			m_bPreCalc;
+	unsigned short	m_nNumIfd;
+	BYTE*			m_pIfdExtraBuf;
+	unsigned		m_nIfdExtraLen;
 
 };

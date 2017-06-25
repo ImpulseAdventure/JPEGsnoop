@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -88,10 +88,10 @@ void FileTiff::WriteVal32(unsigned int nVal)
 {
 	if (!m_bPreCalc) {
 		BYTE	nTmp[4];
-		nTmp[0] = (nVal & 0xFF000000) >> 24;
-		nTmp[1] = (nVal & 0x00FF0000) >> 16;
-		nTmp[2] = (nVal & 0x0000FF00) >> 8;
-		nTmp[3] = (nVal & 0x000000FF) >> 0;
+		nTmp[0] = static_cast<BYTE>((nVal & 0xFF000000) >> 24);
+		nTmp[1] = static_cast<BYTE>((nVal & 0x00FF0000) >> 16);
+		nTmp[2] = static_cast<BYTE>((nVal & 0x0000FF00) >> 8);
+		nTmp[3] = static_cast<BYTE>((nVal & 0x000000FF) >> 0);
 		m_pFileOutput->Write(&(nTmp[0]),1);
 		m_pFileOutput->Write(&(nTmp[1]),1);
 		m_pFileOutput->Write(&(nTmp[2]),1);
@@ -103,10 +103,10 @@ void FileTiff::WriteIfdExtraBuf32(unsigned int nVal)
 {
 	if (!m_bPreCalc) {
 		BYTE	nTmp[4];
-		nTmp[0] = (nVal & 0xFF000000) >> 24;
-		nTmp[1] = (nVal & 0x00FF0000) >> 16;
-		nTmp[2] = (nVal & 0x0000FF00) >> 8;
-		nTmp[3] = (nVal & 0x000000FF) >> 0;
+		nTmp[0] = static_cast<BYTE>((nVal & 0xFF000000) >> 24);
+		nTmp[1] = static_cast<BYTE>((nVal & 0x00FF0000) >> 16);
+		nTmp[2] = static_cast<BYTE>((nVal & 0x0000FF00) >> 8);
+		nTmp[3] = static_cast<BYTE>((nVal & 0x000000FF) >> 0);
 		ASSERT (m_pIfdExtraBuf);
 		m_pIfdExtraBuf[m_nIfdExtraLen+0] = nTmp[0];
 		m_pIfdExtraBuf[m_nIfdExtraLen+1] = nTmp[1];
@@ -117,7 +117,7 @@ void FileTiff::WriteIfdExtraBuf32(unsigned int nVal)
 }
 
 
-void FileTiff::WriteIfdEntrySingle(unsigned nTag,unsigned nType,unsigned nValOffset)
+void FileTiff::WriteIfdEntrySingle(unsigned short nTag,unsigned short nType,unsigned nValOffset)
 {
 	unsigned	nNum;
 
@@ -127,7 +127,7 @@ void FileTiff::WriteIfdEntrySingle(unsigned nTag,unsigned nType,unsigned nValOff
 	WriteVal32(nNum);
 	switch (nType) {
 		case TIFF_TYPE_BYTE:
-			WriteVal8(nValOffset);
+			WriteVal8(static_cast<BYTE>(nValOffset));
 			WriteVal8(0x00);
 			WriteVal16(0x0000);
 			break;
@@ -137,7 +137,7 @@ void FileTiff::WriteIfdEntrySingle(unsigned nTag,unsigned nType,unsigned nValOff
 			ASSERT(false);
 			break;
 		case TIFF_TYPE_SHORT:
-			WriteVal16(nValOffset);
+			WriteVal16(static_cast<unsigned short>(nValOffset));
 			WriteVal16(0x0000);
 			break;
 		case TIFF_TYPE_LONG:
@@ -192,7 +192,7 @@ unsigned FileTiff::GetTypeLen(unsigned nType)
 }
 
 // Use this if we are using external reference
-void FileTiff::WriteIfdEntryMult(unsigned nTag,unsigned nType,unsigned nNumVals,unsigned* nVals)
+void FileTiff::WriteIfdEntryMult(unsigned short nTag,unsigned short nType,unsigned nNumVals,unsigned* nVals)
 {
 	// Calculate total length so we can determine if the
 	// values fit inside a DWORD
@@ -213,30 +213,35 @@ void FileTiff::WriteIfdEntryMult(unsigned nTag,unsigned nType,unsigned nNumVals,
 
 
 	// Now start writing to IfdExtraBuf
-	unsigned	nVal;
+	unsigned		nVal;
+	BYTE			nVal1;
+	unsigned short	nVal2;
+	
 
 	for (unsigned nInd=0;nInd<nNumVals;nInd++) {
 		nVal = nVals[nInd];
+		nVal1 = static_cast<BYTE>(nVal & 0xFF);
+		nVal2 = static_cast<unsigned short>(nVal & 0xFFFF);
 		switch (nType) {
 			case TIFF_TYPE_BYTE:
 				if (bInExtra) {
-					WriteIfdExtraBuf8(nVal);
+					WriteIfdExtraBuf8(nVal1);
 				} else {
-					WriteVal8(nVal);
+					WriteVal8(nVal1);
 				}
 				break;
 			case TIFF_TYPE_ASCII:
 				if (bInExtra) {
-					WriteIfdExtraBuf8(nVal);
+					WriteIfdExtraBuf8(nVal1);
 				} else {
-					WriteVal8(nVal);
+					WriteVal8(nVal1);
 				}
 				break;
 			case TIFF_TYPE_SHORT:
 				if (bInExtra) {
-					WriteIfdExtraBuf16(nVal);
+					WriteIfdExtraBuf16(nVal2);
 				} else {
-					WriteVal16(nVal);
+					WriteVal16(nVal2);
 				}
 				break;
 			case TIFF_TYPE_LONG:
@@ -281,11 +286,11 @@ void FileTiff::WriteIfd(unsigned nSizeX,unsigned nSizeY,bool bModeYcc,bool bMode
 
 	bool		bPreCalcSaved;
 
-	unsigned	nFinalNumIfd;
-	unsigned	nFinalIfdExtraLen;
-	unsigned	nFinalPtrIfdStart;
-	unsigned	nFinalPtrIfdExtra;
-	unsigned	nFinalPtrIfdEnd;
+	unsigned short	nFinalNumIfd;
+	unsigned		nFinalIfdExtraLen;
+	unsigned		nFinalPtrIfdStart;
+	unsigned		nFinalPtrIfdExtra;
+	unsigned		nFinalPtrIfdEnd;
 
 
 	// Save the PreCalc mode
@@ -395,7 +400,6 @@ void FileTiff::WriteIfd(unsigned nSizeX,unsigned nSizeY,bool bModeYcc,bool bMode
 
 		nFinalIfdExtraLen = m_nIfdExtraLen;
 
-		unsigned nVal;
 		// Now write out IFD Extra buffer
 		if (m_nIfdExtraLen > 0) {
 			if (!m_bPreCalc) {
@@ -404,8 +408,8 @@ void FileTiff::WriteIfd(unsigned nSizeX,unsigned nSizeY,bool bModeYcc,bool bMode
 
 			for (unsigned nBufInd=0;nBufInd<m_nIfdExtraLen;nBufInd++) {
 				// In PreCalc phase, fill with placeholder bytes
-				nVal = (m_bPreCalc)?0x00:m_pIfdExtraBuf[nBufInd];
-				WriteVal8(nVal);
+				BYTE nVal1 = (m_bPreCalc)?0x00:m_pIfdExtraBuf[nBufInd];
+				WriteVal8(nVal1);
 			}
 		}
 
@@ -503,17 +507,18 @@ void FileTiff::WriteFile(CString sFnameOut,bool bModeYcc,bool bMode16b,void* pBi
 	}
 
 
+	// If no image was loaded, then output a placeholder gradient image
 	if (!pBitmap) {
 		for (unsigned nIndY=0;nIndY<nSizeY;nIndY++) {
 			for (unsigned nIndX=0;nIndX<nSizeX;nIndX++) {
 				if (!bMode16b) {
-					WriteVal8(0x00 + nIndX*32+nIndY*16);	// R
-					WriteVal8(0x20 + nIndX*16+nIndY*16);	// G
-					WriteVal8(0x80 + nIndX*8+nIndY*16);		// B
+					WriteVal8(0x00 + static_cast<BYTE>(nIndX*32+nIndY*16));	// R
+					WriteVal8(0x20 + static_cast<BYTE>(nIndX*16+nIndY*16));	// G
+					WriteVal8(0x80 + static_cast<BYTE>(nIndX*8 +nIndY*16));	// B
 				} else {
-					WriteVal16(0x00 + nIndX*32+nIndY*16);	// R
-					WriteVal16(0x20 + nIndX*16+nIndY*16);	// G
-					WriteVal16(0x80 + nIndX*8+nIndY*16);	// B
+					WriteVal16(0x00 + static_cast<unsigned short>(nIndX*32+nIndY*16));	// R
+					WriteVal16(0x20 + static_cast<unsigned short>(nIndX*16+nIndY*16));	// G
+					WriteVal16(0x80 + static_cast<unsigned short>(nIndX*8 +nIndY*16));	// B
 				}
 			}
 		}
