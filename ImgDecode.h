@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -163,7 +163,7 @@
 #define SUBSET_HISTO_BINS	512
 
 // Return values for ReadScanVal()
-typedef enum teRsvRet {
+enum teRsvRet {
 	RSV_OK,				// OK
 	RSV_EOB,			// End of Block
 	RSV_UNDERFLOW,		// Ran out of data in buffer
@@ -171,7 +171,7 @@ typedef enum teRsvRet {
 };
 
 // Scan decode errors (in m_anScanBuffPtr_err[] buffer array)
-typedef enum teScanBufStatus {
+enum teScanBufStatus {
 	SCANBUF_OK,
 	SCANBUF_BADMARK,
 	SCANBUF_RST
@@ -196,9 +196,9 @@ typedef struct {
 	int			nPreclipCr;
 	// Final YCC
 	// - After clipping to ensure we are in range 0..255
-	int			nFinalY;
-	int			nFinalCr;
-	int			nFinalCb;
+	BYTE		nFinalY;
+	BYTE		nFinalCr;
+	BYTE		nFinalCb;
 
 	// Pre-clip RGB
 	// - After color conversion and level shifting
@@ -305,7 +305,7 @@ public:
 	void		SetSofSampFactors(unsigned nCompInd, unsigned nSampFactH, unsigned nSampFactV);
 	void		ResetImageContent();
 	
-	bool		SetDqtEntry(unsigned nTblDestId, unsigned nCoeffInd, unsigned nCoeffIndZz, unsigned nCoeffVal);
+	bool		SetDqtEntry(unsigned nTblDestId, unsigned nCoeffInd, unsigned nCoeffIndZz, unsigned short nCoeffVal);
 	bool		SetDqtTables(unsigned nCompInd, unsigned nTbl);
 	unsigned	GetDqtEntry(unsigned nTblDestId, unsigned nCoeffInd);
 	bool		SetDhtTables(unsigned nCompInd, unsigned nTblDc, unsigned nTblAc);
@@ -381,14 +381,13 @@ private:
 
 
 public:
-	unsigned	DecodeScanDword(unsigned nFilePos,unsigned nWordAlign,unsigned nClass,unsigned nTbl,unsigned &rZrl,signed &rVal);
 	void		ScanErrorsDisable();
 	void		ScanErrorsEnable();
 private:
 
 	bool		ExpectRestart();
 	void		DecodeRestartDcState();
-	void		DecodeRestartScanBuf(unsigned nFilePos);
+	void		DecodeRestartScanBuf(unsigned nFilePos,bool bRestart);
 	unsigned	BuffAddByte();
 	void		BuffTopup();
 	void		ScanBuffConsume(unsigned nNumBits);
@@ -398,11 +397,11 @@ private:
 	// IDCT calcs
 	void		PrecalcIdct();
 	void		DecodeIdctClear();
-	void		DecodeIdctSet(unsigned nTbl,unsigned num_coeffs,unsigned zrl,int val);
+	void		DecodeIdctSet(unsigned nTbl,unsigned num_coeffs,unsigned zrl,short int val);
 	void		DecodeIdctCalcFloat(unsigned nCoefMax);
 	void		DecodeIdctCalcFixedpt();
 	void		ClrFullRes(unsigned nWidth,unsigned nHeight);
-	void		SetFullRes(unsigned nMcuX,unsigned nMcuY,unsigned nComp,unsigned nCssXInd,unsigned nCssYInd,int nDcOffset);
+	void		SetFullRes(unsigned nMcuX,unsigned nMcuY,unsigned nComp,unsigned nCssXInd,unsigned nCssYInd,short int nDcOffset);
 
 public: // For ImgMod
 	unsigned	PackFileOffset(unsigned nByte,unsigned nBit);
@@ -494,12 +493,12 @@ private:
 
 	// Decoder DC state
 	// Tables use signed to help flag undefined table indices
-	signed				m_nDcLum;
-	signed				m_nDcChrCb;
-	signed				m_nDcChrCr;
-	signed				m_anDcLumCss[MAX_SAMP_FACT_V*MAX_SAMP_FACT_H];	// Need 4x2 at least. Support up to 4x4
-	signed				m_anDcChrCbCss[MAX_SAMP_FACT_V*MAX_SAMP_FACT_H];
-	signed				m_anDcChrCrCss[MAX_SAMP_FACT_V*MAX_SAMP_FACT_H];
+	signed short		m_nDcLum;
+	signed short		m_nDcChrCb;
+	signed short		m_nDcChrCr;
+	signed short		m_anDcLumCss[MAX_SAMP_FACT_V*MAX_SAMP_FACT_H];	// Need 4x2 at least. Support up to 4x4
+	signed short		m_anDcChrCbCss[MAX_SAMP_FACT_V*MAX_SAMP_FACT_H];
+	signed short		m_anDcChrCrCss[MAX_SAMP_FACT_V*MAX_SAMP_FACT_H];
 
 
 	bool				m_bScanBad;			// Any errors found?
@@ -567,8 +566,8 @@ private:
 
 	// DQT Table
 public: 
-	unsigned			m_anDqtCoeff[MAX_DQT_DEST_ID][MAX_DQT_COEFF];		// Normal ordering
-	unsigned			m_anDqtCoeffZz[MAX_DQT_DEST_ID][MAX_DQT_COEFF];	// Original zigzag ordering
+	unsigned short		m_anDqtCoeff[MAX_DQT_DEST_ID][MAX_DQT_COEFF];	// Normal ordering
+	unsigned short		m_anDqtCoeffZz[MAX_DQT_DEST_ID][MAX_DQT_COEFF];	// Original zigzag ordering
 	int					m_anDqtTblSel[MAX_DQT_COMP];					// DQT table selector for image component in frame
 
 private:
@@ -597,7 +596,7 @@ private:
 	float				m_afIdctLookup[DCT_SZ_ALL][DCT_SZ_ALL];	// IDCT lookup table (floating point)
 	int					m_anIdctLookup[DCT_SZ_ALL][DCT_SZ_ALL];	// IDCT lookup table (fixed point)
 	unsigned			m_nDctCoefMax;							// Largest DCT coeff to process
-	int					m_anDctBlock[DCT_SZ_ALL];				// Input block for IDCT process
+	signed short		m_anDctBlock[DCT_SZ_ALL];				// Input block for IDCT process
 	float				m_afIdctBlock[DCT_SZ_ALL];				// Output block after IDCT (via floating point)
 	int					m_anIdctBlock[DCT_SZ_ALL];				// Output block after IDCT (via fixed point)
 
@@ -620,7 +619,8 @@ private:
 
 	unsigned			m_nScanBuff_vacant;		// Bits unused in LSB after shifting (add if >= 8)
 	unsigned long		m_nScanBuffPtr;			// Next byte position to load
-	unsigned long		m_nScanBuffPtr_start;	// Saved first position of scan data
+	unsigned long		m_nScanBuffPtr_start;	// Saved first position of scan data (reset by RSTn markers)
+	unsigned long		m_nScanBuffPtr_first;	// Saved first position of scan data in file (not reset by RSTn markers). For comp ratio.
 
 	bool				m_nScanCurErr;			// Mark as soon as error occurs
 	unsigned			m_anScanBuffPtr_pos[4];	// File posn for each byte in buffer

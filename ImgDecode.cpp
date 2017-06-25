@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2015 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -48,7 +48,7 @@
 // before Reset() ).
 void CimgDecode::Reset()
 {
-	DecodeRestartScanBuf(0);
+	DecodeRestartScanBuf(0,false);
 	DecodeRestartDcState();
 
 	m_bRestartRead = false;	// No restarts seen yet
@@ -424,7 +424,7 @@ void CimgDecode::ResetDhtLookup()
 //
 // NOTE: Asynchronously called by JFIF Decoder
 //
-bool CimgDecode::SetDqtEntry(unsigned nTblDestId, unsigned nCoeffInd, unsigned nCoeffIndZz, unsigned nCoeffVal)
+bool CimgDecode::SetDqtEntry(unsigned nTblDestId, unsigned nCoeffInd, unsigned nCoeffIndZz, unsigned short nCoeffVal)
 {
 	if ((nTblDestId < MAX_DQT_DEST_ID) && (nCoeffInd < MAX_DQT_COEFF)) {
 		m_anDqtCoeff[nTblDestId][nCoeffInd] = nCoeffVal;
@@ -1141,8 +1141,6 @@ teRsvRet CimgDecode::ReadScanVal(unsigned nClass,unsigned nTbl,unsigned &rZrl,si
 			bDone = true;
 			bFound = true;
 		}
-	} else {
-		unsigned nTmp = 0;
 	}
 	
 
@@ -1286,37 +1284,8 @@ teRsvRet CimgDecode::ReadScanVal(unsigned nClass,unsigned nTbl,unsigned &rZrl,si
 		return RSV_UNDERFLOW;
 	}
 
-	return RSV_UNDERFLOW;
-}
-
-
-// Do a quick decode on the current dword (with alignment),
-// determining the associated code value. This can be used
-// to get the current VLC total bit length.
-//
-// INPUT:
-// - nFilePos				= 
-// - nWordAlign				= 
-// - nClass					=
-// - nTbl					=
-// OUTPUT:
-// - rZrl					=
-// - rVal					=
-// RETURN:
-// - UNUSED
-//
-unsigned CimgDecode::DecodeScanDword(unsigned nFilePos,unsigned nWordAlign,unsigned nClass,unsigned nTbl,unsigned &rZrl,signed &rVal)
-{
-	teRsvRet eRsvRet;
-
-	// NOTE: In the following call, we want to remove align param, as it doesn't work
-	DecodeRestartScanBuf(nFilePos);
-	BuffTopup();
-	ScanBuffConsume(nWordAlign);
-	// NOTE: In the following call, we want to get the actual total len, not just ZRL, Val
-	// TODO: Check return value
-	eRsvRet = ReadScanVal(nClass,nTbl,rZrl,rVal);
-	return 0;
+	// NOTE: Can't reach here
+	// return RSV_UNDERFLOW;
 }
 
 
@@ -1419,7 +1388,7 @@ bool CimgDecode::ExpectRestart()
 //
 unsigned CimgDecode::BuffAddByte()
 {
-	unsigned nMarker;
+	unsigned nMarker = 0x00;
 	unsigned nBuf0,nBuf1;
 
 	// If we have already read in a restart marker but not
@@ -1637,15 +1606,17 @@ unsigned CimgDecode::BuffAddByte()
 //
 bool CimgDecode::DecodeScanComp(unsigned nTblDhtDc,unsigned nTblDhtAc,unsigned nTblDqt,unsigned nMcuX,unsigned nMcuY)
 {
-	unsigned	nZrl;
-	signed		nVal;
-	bool		bDone = false;
-	bool		bDC = true;	// Start with DC coeff
+	nMcuX;	// Unreferenced param
+	nMcuY;	// Unreferenced param
+	unsigned		nZrl;
+	signed			nVal;
+	bool			bDone = false;
+	bool			bDC = true;	// Start with DC coeff
 
 	teRsvRet	eRsvRet;	// Return value from ReadScanVal()
 
 	unsigned nNumCoeffs = 0;
-	unsigned nDctMax = 0;			// Maximum DCT coefficient to use for IDCT
+	//unsigned nDctMax = 0;			// Maximum DCT coefficient to use for IDCT
 	unsigned nSavedBufPos = 0;
 	unsigned nSavedBufErr = SCANBUF_OK;
 	unsigned nSavedBufAlign = 0;
@@ -1695,7 +1666,7 @@ bool CimgDecode::DecodeScanComp(unsigned nTblDhtDc,unsigned nTblDhtAc,unsigned n
 			m_nScanBuffPtr += 2;
 
 			// Step 3
-			DecodeRestartScanBuf(m_nScanBuffPtr);
+			DecodeRestartScanBuf(m_nScanBuffPtr,true);
 
 			// Step 4
 			m_bRestartRead = false;
@@ -1737,10 +1708,14 @@ bool CimgDecode::DecodeScanComp(unsigned nTblDhtDc,unsigned nTblDhtAc,unsigned n
 
 		}
 
+
+		short int	nVal2;
+		nVal2 = static_cast<short int>(nVal & 0xFFFF);
+
 		if (eRsvRet == RSV_OK) {
 			// DC entry is always one value only
 			if (bDC) {
-				DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal); //CALZ
+				DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal2); //CALZ
 				bDC = false;			// Now we will be on AC comps
 			} else {
 				// We're on AC entry, so keep looping until
@@ -1749,12 +1724,12 @@ bool CimgDecode::DecodeScanComp(unsigned nTblDhtDc,unsigned nTblDhtAc,unsigned n
 				// PERFORMANCE:
 				//   No noticeable difference if following is skipped
 				if (m_bDecodeScanAc) {
-					DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal);
+					DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal2);
 				}
 			}
 		} else if (eRsvRet == RSV_EOB) {
 			if (bDC) {
-				DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal); //CALZ
+				DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal2); //CALZ
 				// Now that we have finished the DC coefficient, start on AC coefficients
 				bDC = false;
 			} else {
@@ -1965,7 +1940,7 @@ bool CimgDecode::DecodeScanCompPrint(unsigned nTblDhtDc,unsigned nTblDhtAc,unsig
 			m_nScanBuffPtr += 2;
 
 			// Step 3
-			DecodeRestartScanBuf(m_nScanBuffPtr);
+			DecodeRestartScanBuf(m_nScanBuffPtr,true);
 
 			// Step 4
 			m_bRestartRead = false;
@@ -1990,8 +1965,7 @@ bool CimgDecode::DecodeScanCompPrint(unsigned nTblDhtDc,unsigned nTblDhtAc,unsig
 			m_bScanBad = true;
 
 			if (m_nWarnBadScanNum < m_nScanErrMax) {
-				CString strPos = GetScanBufPos(nSavedBufPos,nSavedBufAlign);
-				CString strTmp;
+				strPos = GetScanBufPos(nSavedBufPos,nSavedBufAlign);
 				strTmp.Format(_T("*** ERROR: Bad marker @ %s"),(LPCTSTR)strPos);
 				m_pLog->AddLineErr(strTmp);
 
@@ -2012,22 +1986,25 @@ bool CimgDecode::DecodeScanCompPrint(unsigned nTblDhtDc,unsigned nTblDhtAc,unsig
 		unsigned nCoeffStart = nNumCoeffs;
 		unsigned nCoeffEnd   = nNumCoeffs+nZrl;
 
+		short int	nVal2;
+		nVal2 = static_cast<short int>(nVal & 0xFFFF);
+
 		if (eRsvRet == RSV_OK) {
 			strSpecial = _T("");
 			// DC entry is always one value only
 			// FIXME: Do I need nTblDqt == 4 as well?
 			if (bDC) {
-				DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal);
+				DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal2);
 				bDC = false;			// Now we will be on AC comps
 			} else {
 				// We're on AC entry, so keep looping until
 				// we have finished up to 63 entries
 				// Set entry in table
-				DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal);
+				DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal2);
 			}
 		} else if (eRsvRet == RSV_EOB) {
 			if (bDC) {
-				DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal);
+				DecodeIdctSet(nTblDqt,nNumCoeffs,nZrl,nVal2);
 				bDC = false;			// Now we will be on AC comps
 			} else {
 				bDone = true;
@@ -2054,7 +2031,7 @@ bool CimgDecode::DecodeScanCompPrint(unsigned nTblDhtDc,unsigned nTblDhtAc,unsig
 
 			// Print out before we leave
 			if (bPrint) {
-				ReportVlc(nSavedBufPos,nSavedBufAlign,nZrl,nVal,
+				ReportVlc(nSavedBufPos,nSavedBufAlign,nZrl,nVal2,
 					nCoeffStart,nCoeffEnd,strSpecial);
 			}
 
@@ -2075,8 +2052,7 @@ bool CimgDecode::DecodeScanCompPrint(unsigned nTblDhtDc,unsigned nTblDhtAc,unsig
 			// ERROR
 
 			if (m_nWarnBadScanNum < m_nScanErrMax) {
-				CString strTmp;
-				CString strPos = GetScanBufPos(nSavedBufPos,nSavedBufAlign);
+				strPos = GetScanBufPos(nSavedBufPos,nSavedBufAlign);
 				strTmp.Format(_T("*** ERROR: @ %s, nNumCoeffs>64 [%u]"),(LPCTSTR)strPos,nNumCoeffs);
 				m_pLog->AddLineErr(strTmp);
 
@@ -2095,7 +2071,7 @@ bool CimgDecode::DecodeScanCompPrint(unsigned nTblDhtDc,unsigned nTblDhtAc,unsig
 		}
 
 		if (bPrint) {
-			ReportVlc(nSavedBufPos,nSavedBufAlign,nZrl,nVal,
+			ReportVlc(nSavedBufPos,nSavedBufAlign,nZrl,nVal2,
 				nCoeffStart,nCoeffEnd,strSpecial);
 		}
 
@@ -2294,7 +2270,7 @@ void CimgDecode::DecodeIdctClear()
 // NOTE:
 // - We need to convert between the zigzag order and the normal order
 //
-void CimgDecode::DecodeIdctSet(unsigned nDqtTbl,unsigned num_coeffs,unsigned zrl,int val)
+void CimgDecode::DecodeIdctSet(unsigned nDqtTbl,unsigned num_coeffs,unsigned zrl,short int val)
 {
 	unsigned ind = num_coeffs+zrl;
 	if (ind >= 64) {
@@ -2302,7 +2278,7 @@ void CimgDecode::DecodeIdctSet(unsigned nDqtTbl,unsigned num_coeffs,unsigned zrl
 		// After this call, we will likely trap the error.
 	} else {
 		unsigned nDctInd = glb_anZigZag[ind];
-		int nValUnquant = val * m_anDqtCoeffZz[nDqtTbl][ind];
+		short int nValUnquant = val * m_anDqtCoeffZz[nDqtTbl][ind];
 
 		/*
 		// NOTE:
@@ -2492,11 +2468,11 @@ void CimgDecode::ClrFullRes(unsigned nWidth,unsigned nHeight)
 // PRE:
 // - DecodeIdctCalc() already called on Lum AC, and Lum DC already done
 //
-void CimgDecode::SetFullRes(unsigned nMcuX,unsigned nMcuY,unsigned nComp,unsigned nCssXInd,unsigned nCssYInd,int nDcOffset)
+void CimgDecode::SetFullRes(unsigned nMcuX,unsigned nMcuY,unsigned nComp,unsigned nCssXInd,unsigned nCssYInd,short int nDcOffset)
 {
 	unsigned	nYX;
 	float		fVal;
-	int			nVal;
+	short int	nVal;
 	unsigned	nChan;
 
 	// Convert from Component index (1-based) to Channel index (0-based)
@@ -2543,7 +2519,7 @@ void CimgDecode::SetFullRes(unsigned nMcuX,unsigned nMcuY,unsigned nComp,unsigne
 #else
 			fVal = m_afIdctBlock[nYX];
 			// TODO: Why do I need AC value x8 multiplier?
-			nVal = ((int)(fVal*8) + nDcOffset);
+			nVal = ((short int)(fVal*8) + nDcOffset);
 #endif
 
 			// NOTE: These range checks were already done in DecodeScanImg()	
@@ -2631,8 +2607,8 @@ CString CimgDecode::GetScanBufPos(unsigned pos, unsigned align)
 //
 void CimgDecode::CheckScanErrors(unsigned nMcuX,unsigned nMcuY,unsigned nCssIndH,unsigned nCssIndV,unsigned nComp)
 {
-	unsigned mcu_x_max = (m_nDimX/m_nMcuWidth);
-	unsigned mcu_y_max = (m_nDimY/m_nMcuHeight);
+	//unsigned mcu_x_max = (m_nDimX/m_nMcuWidth);
+	//unsigned mcu_y_max = (m_nDimY/m_nMcuHeight);
 
 	// Determine pixel position, taking into account sampling quadrant as well
 	unsigned err_pos_x = m_nMcuWidth*nMcuX  + nCssIndH*BLK_SZ_X;
@@ -2697,6 +2673,8 @@ void CimgDecode::CheckScanErrors(unsigned nMcuX,unsigned nMcuY,unsigned nCssIndH
 //
 void CimgDecode::PrintDcCumVal(unsigned nMcuX,unsigned nMcuY,int nVal)
 {
+	nMcuX;	// Unreferenced param
+	nMcuY;	// Unreferenced param
 	CString strTmp;
 //	strTmp.Format(_T("  MCU [%4u,%4u] DC Cumulative Val = [%5d]"),nMcuX,nMcuY,nVal);
 	strTmp.Format(_T("                 Cumulative DC Val=[%5d]"),nVal);
@@ -2916,7 +2894,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 	ASSERT(m_pMcuFileMap == NULL);
 	m_pMcuFileMap = new unsigned[m_nMcuYMax*m_nMcuXMax];
 	if (!m_pMcuFileMap) {
-		CString strTmp = _T("ERROR: Not enough memory for Image Decoder MCU File Pos Map");
+		strTmp = _T("ERROR: Not enough memory for Image Decoder MCU File Pos Map");
 		m_pLog->AddLineErr(strTmp);
 		if (m_pAppConfig->bInteractive)
 			AfxMessageBox(strTmp);
@@ -2928,7 +2906,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 	// Allocate the 8x8 Block DC Map
 	m_pBlkDcValY  = new short[m_nBlkYMax*m_nBlkXMax];
 	if ( (!m_pBlkDcValY) ) {
-		CString strTmp = _T("ERROR: Not enough memory for Image Decoder Blk DC Value Map");
+		strTmp = _T("ERROR: Not enough memory for Image Decoder Blk DC Value Map");
 		m_pLog->AddLineErr(strTmp);
 		if (m_pAppConfig->bInteractive)
 			AfxMessageBox(strTmp);
@@ -2938,7 +2916,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 		m_pBlkDcValCb = new short[m_nBlkYMax*m_nBlkXMax];
 		m_pBlkDcValCr = new short[m_nBlkYMax*m_nBlkXMax];
 		if ( (!m_pBlkDcValCb) || (!m_pBlkDcValCr) ) {
-			CString strTmp = _T("ERROR: Not enough memory for Image Decoder Blk DC Value Map");
+			strTmp = _T("ERROR: Not enough memory for Image Decoder Blk DC Value Map");
 			m_pLog->AddLineErr(strTmp);
 			if (m_pAppConfig->bInteractive)
 				AfxMessageBox(strTmp);
@@ -2967,7 +2945,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 	// Allocate image (YCC)
 	m_pPixValY  = new short[nPixMapW * nPixMapH];
 	if ( (!m_pPixValY) ) {
-		CString strTmp = _T("ERROR: Not enough memory for Image Decoder Pixel YCC Value Map");
+		strTmp = _T("ERROR: Not enough memory for Image Decoder Pixel YCC Value Map");
 		m_pLog->AddLineErr(strTmp);
 		if (m_pAppConfig->bInteractive)
 			AfxMessageBox(strTmp);
@@ -2977,7 +2955,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 		m_pPixValCb = new short[nPixMapW * nPixMapH];
 		m_pPixValCr = new short[nPixMapW * nPixMapH];
 		if ( (!m_pPixValCb) || (!m_pPixValCr) ) {
-			CString strTmp = _T("ERROR: Not enough memory for Image Decoder Pixel YCC Value Map");
+			strTmp = _T("ERROR: Not enough memory for Image Decoder Pixel YCC Value Map");
 			m_pLog->AddLineErr(strTmp);
 			if (m_pAppConfig->bInteractive)
 				AfxMessageBox(strTmp);
@@ -3029,7 +3007,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 	DecodeRestartDcState();
 
 	// Reset the scan buffer
-	DecodeRestartScanBuf(nStart);
+	DecodeRestartScanBuf(nStart,false);
 
 	// Load the buffer
 	m_pWBuf->BufLoadWindow(nStart);
@@ -3180,8 +3158,6 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 		memset(&m_anHistoYSubset,0,sizeof(m_anHistoYSubset));
 	}
 
-
-    LONG lIdle = 0;
 
 
 	// -----------------------------------------------------------------------
@@ -3569,7 +3545,6 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 					// FIXME: Temporarily catch any range issue
 					if (nBlkXY >= m_nBlkXMax*m_nBlkYMax) {
 #ifdef DEBUG_LOG
-					CString	strTmp;
 					CString	strDebug;
 					strTmp.Format(_T("DecodeScanImg() with nBlkXY out of range. nBlkXY=[%u] m_nBlkXMax=[%u] m_nBlkYMax=[%u]"),nBlkXY,m_nBlkXMax,m_nBlkYMax);
 					strDebug.Format(_T("## File=[%-100s] Block=[%-10s] Error=[%s]\n"),(LPCTSTR)m_pAppConfig->strCurFname,
@@ -3596,7 +3571,6 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 						// FIXME: Temporarily catch any range issue
 						if (nBlkXY >= m_nBlkXMax*m_nBlkYMax) {
 #ifdef DEBUG_LOG
-							CString	strTmp;
 							CString	strDebug;
 							strTmp.Format(_T("DecodeScanImg() with nBlkXY out of range. nBlkXY=[%u] m_nBlkXMax=[%u] m_nBlkYMax=[%u]"),nBlkXY,m_nBlkXMax,m_nBlkYMax);
 							strDebug.Format(_T("## File=[%-100s] Block=[%-10s] Error=[%s]\n"),(LPCTSTR)m_pAppConfig->strCurFname,
@@ -3621,7 +3595,6 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 						// FIXME: Temporarily catch any range issue
 						if (nBlkXY >= m_nBlkXMax*m_nBlkYMax) {
 #ifdef DEBUG_LOG
-							CString	strTmp;
 							CString	strDebug;
 							strTmp.Format(_T("DecodeScanImg() with nBlkXY out of range. nBlkXY=[%u] m_nBlkXMax=[%u] m_nBlkYMax=[%u]"),nBlkXY,m_nBlkXMax,m_nBlkYMax);
 							strDebug.Format(_T("## File=[%-100s] Block=[%-10s] Error=[%s]\n"),(LPCTSTR)m_pAppConfig->strCurFname,
@@ -3688,10 +3661,10 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 		// TODO: Should we use m_nNumSofComps?
 		strTmp.Format(_T("  Compression stats:"));
 		m_pLog->AddLine(strTmp);
-		float nCompressionRatio = (float)(m_nDimX*m_nDimY*m_nNumSosComps*8) / (float)((m_anScanBuffPtr_pos[0]-m_nScanBuffPtr_start)*8);
+		float nCompressionRatio = (float)(m_nDimX*m_nDimY*m_nNumSosComps*8) / (float)((m_anScanBuffPtr_pos[0]-m_nScanBuffPtr_first)*8);
 		strTmp.Format(_T("    Compression Ratio: %5.2f:1"),nCompressionRatio);
 		m_pLog->AddLine(strTmp);
-		float nBitsPerPixel = (float)((m_anScanBuffPtr_pos[0]-m_nScanBuffPtr_start)*8) / (float)(m_nDimX*m_nDimY);
+		float nBitsPerPixel = (float)((m_anScanBuffPtr_pos[0]-m_nScanBuffPtr_first)*8) / (float)(m_nDimX*m_nDimY);
 		strTmp.Format(_T("    Bits per pixel:    %5.2f:1"),nBitsPerPixel);
 		m_pLog->AddLine(strTmp);
 		m_pLog->AddLine(_T(""));
@@ -4046,12 +4019,14 @@ void CimgDecode::DrawHistogram(bool bQuiet,bool bDumpHistoY)
 //
 // INPUT:
 // - nFilePos					= File position at start of scan
+// - bRestart					= Is this a reset due to RSTn marker?
 // PRE:
 // - m_nRestartInterval
 // POST:
 // - m_bScanEnd
 // - m_bScanBad
 // - m_nScanBuff
+// - m_nScanBuffPtr_first
 // - m_nScanBuffPtr_start
 // - m_nScanBuffPtr_align
 // - m_anScanBuffPtr_pos[]
@@ -4063,14 +4038,20 @@ void CimgDecode::DrawHistogram(bool bQuiet,bool bDumpHistoY)
 // - m_bRestartRead
 // - m_nRestartMcusLeft
 //
-void CimgDecode::DecodeRestartScanBuf(unsigned nFilePos)
+void CimgDecode::DecodeRestartScanBuf(unsigned nFilePos,bool bRestart)
 {
 	// Reset the state
 	m_bScanEnd = false;
 	m_bScanBad = false;
 	m_nScanBuff = 0x00000000;
 	m_nScanBuffPtr = nFilePos;
-	m_nScanBuffPtr_start = nFilePos;	// Only used for compression ratio
+	if (!bRestart) {
+		// Only reset the scan buffer pointer at the start of the file,
+		// not after any RSTn markers. This is only used for the compression
+		// ratio calculations.
+		m_nScanBuffPtr_first = nFilePos;
+	}
+	m_nScanBuffPtr_start = nFilePos;
 	m_nScanBuffPtr_align = 0;			// Start with byte alignment (0)
 	m_anScanBuffPtr_pos[0] = 0;
 	m_anScanBuffPtr_pos[1] = 0;
@@ -4126,9 +4107,9 @@ void CimgDecode::ConvertYCCtoRGBFastFloat(PixelCc &sPix)
 	nValCr = (sPix.nPreclipCr<-128)?-128:(sPix.nPreclipCr>127)?127:sPix.nPreclipCr;
 
 	// Save the YCC values (0..255)
-	sPix.nFinalY  = nValY  + 128;
-	sPix.nFinalCb = nValCb + 128;
-	sPix.nFinalCr = nValCr + 128;
+	sPix.nFinalY  = static_cast<BYTE>(nValY  + 128);
+	sPix.nFinalCb = static_cast<BYTE>(nValCb + 128);
+	sPix.nFinalCr = static_cast<BYTE>(nValCr + 128);
 
 	// Convert
 	// Since the following seems to preserve the multiplies and subtractions
@@ -4190,9 +4171,9 @@ void CimgDecode::ConvertYCCtoRGBFastFixed(PixelCc &sPix)
 	nValCr = (nPreclipCr<-128)?-128:(nPreclipCr>127)?127:nPreclipCr;
 
 	// Save the YCC values (0..255)
-	sPix.nFinalY  = nValY  + 128;
-	sPix.nFinalCb = nValCb + 128;
-	sPix.nFinalCr = nValCr + 128;
+	sPix.nFinalY  = static_cast<BYTE>(nValY  + 128);
+	sPix.nFinalCb = static_cast<BYTE>(nValCb + 128);
+	sPix.nFinalCr = static_cast<BYTE>(nValCr + 128);
 
 	// --------------
 
@@ -4224,9 +4205,9 @@ void CimgDecode::ConvertYCCtoRGBFastFixed(PixelCc &sPix)
 
 	// Limit
 	//   r/g/nPreclipB -> r/g/b
-	sPix.nFinalR = (nValR<0)?0:(nValR>255)?255:nValR;
-	sPix.nFinalG = (nValG<0)?0:(nValG>255)?255:nValG;
-	sPix.nFinalB = (nValB<0)?0:(nValB>255)?255:nValB;
+	sPix.nFinalR = (nValR<0)?0:(nValR>255)?255:static_cast<BYTE>(nValR);
+	sPix.nFinalG = (nValG<0)?0:(nValG>255)?255:static_cast<BYTE>(nValG);
+	sPix.nFinalB = (nValB<0)?0:(nValB>255)?255:static_cast<BYTE>(nValB);
 
 }
 
@@ -4296,7 +4277,7 @@ void CimgDecode::ConvertYCCtoRGB(unsigned nMcuX,unsigned nMcuY,PixelCc &sPix)
 	CapYccRange(nMcuX,nMcuY,sPix);
 
 	// --------------- Perform the color conversion
-	nByteY = sPix.nFinalY;
+	nByteY  = sPix.nFinalY;
 	nByteCb = sPix.nFinalCb;
 	nByteCr = sPix.nFinalCr;
 
@@ -4490,9 +4471,9 @@ void CimgDecode::CapYccRange(unsigned nMcuX,unsigned nMcuY,PixelCc &sPix)
 
 	// Perform color conversion: YCC->RGB
 	// The nCurY/cb/cr values should already be clipped to BYTE size
-	sPix.nFinalY  = nCurY;
-	sPix.nFinalCb = nCurCb;
-	sPix.nFinalCr = nCurCr;
+	sPix.nFinalY  = static_cast<BYTE>(nCurY);
+	sPix.nFinalCb = static_cast<BYTE>(nCurCb);
+	sPix.nFinalCr = static_cast<BYTE>(nCurCr);
 
 }
 
@@ -4640,6 +4621,7 @@ void CimgDecode::CapRgbRange(unsigned nMcuX,unsigned nMcuY,PixelCc &sPix)
 //
 void CimgDecode::CalcChannelPreviewFull(CRect* pRectView,unsigned char* pTmp)
 {
+	pRectView;	// Unreferenced param
 	PixelCc		sPixSrc,sPixDst;
 	CString		strTmp;
 
@@ -5333,9 +5315,12 @@ void CimgDecode::ViewOnDraw(CDC* pDC,CRect rectClient,CPoint ptScrolledPos,
 	int		nHeight;
 
 
-	unsigned nYPosImgTitle,nYPosImg;
-	unsigned nYPosHistTitle,nYPosHist;
-	unsigned nYPosHistYTitle,nYPosHistY;	// Y position of Img & Histogram
+	unsigned nYPosImgTitle		= 0;
+	unsigned nYPosImg			= 0;
+	unsigned nYPosHistTitle		= 0;
+	unsigned nYPosHist			= 0;
+	unsigned nYPosHistYTitle	= 0;
+	unsigned nYPosHistY			= 0;	// Y position of Img & Histogram
 
 	CRect rectTmp;
 
@@ -5676,15 +5661,16 @@ void CimgDecode::ViewMcuOverlay(CDC* pDC)
 //
 void CimgDecode::ViewMcuMarkedOverlay(CDC* pDC)
 {
+	pDC;	// Unreferenced param
 
 	// Now draw a simple MCU Marker overlay
 	CRect	my_rect;
 	CBrush	my_brush(RGB(255, 0, 255));
 	for (unsigned nMcuY=0;nMcuY<m_nMcuYMax;nMcuY++) {
 		for (unsigned nMcuX=0;nMcuX<m_nMcuXMax;nMcuX++) {
-			unsigned nXY = nMcuY*m_nMcuXMax + nMcuX;
-			unsigned nXZoomed = (unsigned)(nMcuX*m_nMcuWidth*m_nZoom);
-			unsigned nYZoomed = (unsigned)(nMcuY*m_nMcuHeight*m_nZoom);
+			//unsigned nXY = nMcuY*m_nMcuXMax + nMcuX;
+			//unsigned nXZoomed = (unsigned)(nMcuX*m_nMcuWidth*m_nZoom);
+			//unsigned nYZoomed = (unsigned)(nMcuY*m_nMcuHeight*m_nZoom);
 
 			/*
 			// TODO: Implement an overlay function
