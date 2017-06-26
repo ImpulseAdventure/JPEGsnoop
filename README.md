@@ -1,4 +1,4 @@
-# JPEGsnoop
+# JPEGsnoop v1.8.0
 
 JPEGsnoop is a detailed JPEG image decoder and analysis tool.
 It reports all image metadata and can even help identify if an image has been edited.
