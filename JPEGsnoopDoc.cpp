@@ -791,17 +791,19 @@ void CJPEGsnoopDoc::OnToolsAddcameratodb()
 		strUserSoftware = submitDlg.m_strUserSoftware;
 		strUserNotes = submitDlg.m_strNotes;
 
-		// FIXME: We should not be comparing the radio button index (nUserSrcPre) with the ENUM!
-		// When we make this fix, also add in new param "js_ver" for JPEGsnoop version and
-		// update signature version to "03" from "02".
+		// Prior to v1.8.0 the nUserSrcPre was compared against the ENUM_SOURCE_* values
+		// - This led to an incorrect mapping to the database value
+		// - As of v1.8.0 (and DB signature version "03"), this has been corrected
+		//   and a "js_vers" parameter is now passed to the external DB to help resolve
+		//   the error for older versions.
 		switch (nUserSrcPre) {
-			case ENUM_SOURCE_CAM:
+			case 0:
 				eUserSrc = ENUM_SOURCE_CAM;
 				break;
-			case ENUM_SOURCE_SW:
+			case 1:
 				eUserSrc = ENUM_SOURCE_SW;
 				break;
-			case ENUM_SOURCE_UNSURE:
+			case 2:
 				eUserSrc = ENUM_SOURCE_UNSURE;
 				break;
 			default:
@@ -2047,14 +2049,13 @@ void CJPEGsnoopDoc::OnToolsExporttiff()
 	short			nValY,nValCb,nValCr;
 	unsigned short	nValR,nValG,nValB;
 
-	short			nValMinY,nValMinCb,nValMinCr;
-	short			nValMaxY,nValMaxCb,nValMaxCr;
-	nValMaxY  = (short)0x0000; // - 32768	// FIXME: cast doesn't look right
-	nValMinY  = (short)0xFFFF; // + 32767
-	nValMaxCb = (short)0x0000; // - 32768
-	nValMinCb = (short)0xFFFF; // + 32767
-	nValMaxCr = (short)0x0000; // - 32768
-	nValMinCr = (short)0xFFFF; // + 32767
+	// Initialize min/max range values (to 16-bit signed limits)
+	short			nValMaxY  = -32768;
+	short			nValMinY  = +32767;
+	short			nValMaxCb = -32768;
+	short			nValMinCb = +32767;
+	short			nValMaxCr = -32768;
+	short			nValMinCr = +32767;
 
 	m_pCore->I_GetImageSize(nSizeX,nSizeY);
 	m_pCore->I_GetBitmapPtr(pBitmapRgb);
