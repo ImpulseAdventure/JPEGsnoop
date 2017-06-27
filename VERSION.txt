@@ -3,7 +3,7 @@
 //   by Calvin Hass
 // ==================================
 
-1.8.0 (06/25/17)
+1.8.0 (06/26/17)
 	> Fixed vulnerability (div0) with invalid DQT
 	> Fixed vulnerability (DLL hijacking)
 	> Fixed compression stats for files with RST markers
@@ -13,6 +13,7 @@
 	- Fixed command-line help for 'dhtexp'
 	- Fixed batch processing output with foreign characters
 	- Fixed batch processing with image decode option
+	- Fixed signature upload functionality
 	- Major code cleanup to eliminate warnings (Visual Studio 2017)
 
 1.7.5 (11/29/15)
