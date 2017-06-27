@@ -5,7 +5,6 @@
 JPEGsnoop is a detailed JPEG image decoder and analysis tool.
 It reports all image metadata and can even help identify if an image has been edited.
 
-
 This is the official repository for JPEGsnoop
 
 ## Documentation
@@ -18,11 +17,13 @@ This is the official repository for JPEGsnoop
 - Detect edited images through compression signature analysis
 - Report all image metadata (EXIF)
 - Batch file processing
+- Compression signature detection
+- Recover corrupt JPEG image data
 - No installation required
 
 ## Target System
-- Windows
-- Compilation under Visual C++
+- Windows (MFC)
+- Compilation under Visual Studio (Visual C++)
 
 ## License
 - JPEGsnoop is free for personal and commercial use per GNU General Public License version 2.0 (GPLv2)
