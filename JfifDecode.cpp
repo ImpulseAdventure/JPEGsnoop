@@ -5741,7 +5741,7 @@ void CjfifDecode::PrepareSignatureSingle(bool bRotate)
 		strTmp += strHashIn.Mid(i,80);
 		strTmp += "]";
 #ifdef DEBUG_SIG
-		m_pLog->AddLine(strTmp);
+		//m_pLog->AddLine(strTmp);
 #endif
 	}
 
@@ -5858,7 +5858,7 @@ void CjfifDecode::PrepareSignatureThumbSingle(bool bRotate)
 		strTmp += strHashIn.Mid(i,80);
 		strTmp += "]";
 #ifdef DEBUG_SIG
-		m_pLog->AddLine(strTmp);
+		//m_pLog->AddLine(strTmp);
 #endif
 	}
 
@@ -6510,7 +6510,9 @@ void CjfifDecode::SendSubmit(CString strExifMake, CString strExifModel, CString 
 
 	CUrlString curls;
 
-	CString DB_SUBMIT_WWW_VER = _T("02");
+	// Version "03": (v1.8.0+)
+	// - Adds JPEGsnoop version (js_ver) to enable signature source correction
+	CString DB_SUBMIT_WWW_VER = _T("03");
 
 #ifndef BATCH_DO
 	if (m_bSigExactInDB) {
@@ -6554,18 +6556,20 @@ void CjfifDecode::SendSubmit(CString strExifMake, CString strExifModel, CString 
 	if (nChecksum == 9678) {
 
 		// Submit to online database
+		// - Mark the encoding as UTF-8
 		CString strHeaders =
-			_T("Content-Type: application/x-www-form-urlencoded");
+			_T("Content-Type: application/x-www-form-urlencoded; charset=utf-8");
+
 		// URL-encoded form variables -
-		strFormat  = _T("ver=%s&x_make=%s&x_model=%s&strUmQual=%s&x_dqt0=%s&x_dqt1=%s&x_dqt2=%s&x_dqt3=%s");
-		strFormat += _T("&strXSubsamp=%s&strCSig=%s&strCSigRot=%s&c_qfact0=%f&c_qfact1=%f&x_img_w=%u&x_img_h=%u");
+		strFormat  = _T("ver=%s&js_ver=%s&x_make=%s&x_model=%s&um_qual=%s&x_dqt0=%s&x_dqt1=%s&x_dqt2=%s&x_dqt3=%s");
+		strFormat += _T("&x_subsamp=%s&c_sig=%s&c_sigrot=%s&c_qfact0=%f&c_qfact1=%f&x_img_w=%u&x_img_h=%u");
 		strFormat += _T("&x_sw=%s&x_com=%s&x_maker=%u&u_source=%d&u_sw=%s");
 		strFormat += _T("&x_extra=%s&u_notes=%s&c_sigthumb=%s&c_sigthumbrot=%s&x_landscape=%u");
 		strFormat += _T("&x_thumbx=%u&x_thumby=%u");
 
 
 		strFormDataPre.Format(strFormat,
-			(LPCTSTR)DB_SUBMIT_WWW_VER,(LPCTSTR)strExifMake,(LPCTSTR)strExifModel,
+			(LPCTSTR)DB_SUBMIT_WWW_VER,(LPCTSTR)VERSION_STR,(LPCTSTR)strExifMake,(LPCTSTR)strExifModel,
 			(LPCTSTR)strQual,(LPCTSTR)strDqt0,(LPCTSTR)strDqt1,(LPCTSTR)strDqt2,(LPCTSTR)strDqt3,
 			(LPCTSTR)strCss,(LPCTSTR)strSig,(LPCTSTR)strSigRot,fQFact0,fQFact1,nImgW,nImgH,
 			(LPCTSTR)strExifSoftware,(LPCTSTR)strComment,
@@ -6576,13 +6580,14 @@ void CjfifDecode::SendSubmit(CString strExifMake, CString strExifModel, CString 
 		//*** Need to sanitize data for URL submission!
 		// Search for "&", "?", "="
 		strFormData.Format(strFormat,
-			(LPCTSTR)DB_SUBMIT_WWW_VER,(LPCTSTR)curls.Encode(strExifMake),(LPCTSTR)curls.Encode(strExifModel),
+			(LPCTSTR)DB_SUBMIT_WWW_VER,(LPCTSTR)VERSION_STR,(LPCTSTR)curls.Encode(strExifMake),(LPCTSTR)curls.Encode(strExifModel),
 			(LPCTSTR)strQual,(LPCTSTR)strDqt0,(LPCTSTR)strDqt1,(LPCTSTR)strDqt2,(LPCTSTR)strDqt3,
 			(LPCTSTR)strCss,(LPCTSTR)strSig,(LPCTSTR)strSigRot,fQFact0,fQFact1,nImgW,nImgH,
 			(LPCTSTR)curls.Encode(strExifSoftware),(LPCTSTR)curls.Encode(strComment),
 			eMaker,eUserSource,(LPCTSTR)curls.Encode(strUserSoftware),
 			(LPCTSTR)curls.Encode(strExtra),(LPCTSTR)curls.Encode(strUserNotes),
 			(LPCTSTR)strSigThumb,(LPCTSTR)strSigThumbRot,nExifLandscape,nThumbX,nThumbY);
+
 		nFormDataLen = strFormData.GetLength();
 
 
@@ -6595,7 +6600,9 @@ void CjfifDecode::SendSubmit(CString strExifMake, CString strExifModel, CString 
 
 #ifdef WWW_WININET
 		//static LPSTR astrAcceptTypes[2]={"*/*", NULL};
-		HINTERNET hINet, hConnection, hData;
+		HINTERNET hINet = NULL;
+		HINTERNET hConnection = NULL;
+		HINTERNET hData = NULL;
 
 		hINet = InternetOpen(_T("JPEGsnoop/1.0"), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0 );
 		if ( !hINet )
@@ -6621,7 +6628,11 @@ void CjfifDecode::SendSubmit(CString strExifMake, CString strExifModel, CString 
 			}
 			// GET HttpSendRequest( hData, NULL, 0, NULL, 0);
 
-			HttpSendRequest( hData, (LPCTSTR)strHeaders, strHeaders.GetLength(), strFormData.GetBuffer(), strFormData.GetLength());
+			// POST requests from HttpSendRequest() don't work well with
+			// unicode, so convert from unicode to ANSI
+			CStringA strHeadersA = CW2A(strHeaders,CP_UTF8);
+			CStringA strFormDataA = CW2A(strFormData,CP_UTF8);
+			HttpSendRequestA( hData, strHeadersA, strHeadersA.GetLength(), strFormDataA.GetBuffer(), strFormDataA.GetLength());
 
 		}
 		catch( CInternetException* e)
