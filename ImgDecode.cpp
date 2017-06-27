@@ -186,10 +186,7 @@ CimgDecode::CimgDecode(CDocLog* pLog, CwindowBuf* pWBuf)
 	m_nImgSizeX = 0;
 	m_nImgSizeY = 0;
 
-	// Temporary hack to avoid divide-by-0 when displaying PSD (instead of JPEG)
-	// FIXME:
-	//XXX m_nMcuWidth = 0;
-	//XXX m_nMcuHeight = 0;
+	// FIXME: Temporary hack to avoid divide-by-0 when displaying PSD (instead of JPEG)
 	m_nMcuWidth = 1;
 	m_nMcuHeight = 1;
 
