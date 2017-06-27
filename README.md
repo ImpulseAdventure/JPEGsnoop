@@ -10,6 +10,8 @@ This is the official repository for JPEGsnoop
 ## Documentation
 - More details and support are available: [JPEGsnoop - ImpulseAdventure.com](http://www.impulseadventure.com/photo/jpeg-snoop.html)
 
+<img align="right" src="http://www.impulseadventure.com/photo/images/jpegsnoop-04.jpg">
+
 ## Features
 - Decode JPEG, AVI (MJPG), PSD images
 - MCU analysis with detailed decode
