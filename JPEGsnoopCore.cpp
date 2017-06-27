@@ -107,8 +107,7 @@ void CJPEGsnoopCore::Reset()
 	m_bFileOpened = false;
 	m_bFileAnalyzed = false;
 
-	//xxx TODO:
-	// Should we be calling Reset on the JfifDecoder, ImgDecoder and WBuf?
+	// FIXME: Should we be calling Reset on the JfifDecoder, ImgDecoder and WBuf?
 
 	// Indicate to JFIF ProcessFile() that document has changed
 	// and that the scan decode needs to be redone if it
@@ -375,7 +374,7 @@ void CJPEGsnoopCore::DoLogSave(CString strLogName)
 	// Open the file for output
 	ASSERT(strLogName != _T(""));
 
-	//xxx old comments
+	// OLD COMMENTS FOLLOW
 	// This save method will only work if we were in Quick Log mode
 	// where we have recorded the log to a string buffer and not
 	// directly to the RichEdit
@@ -383,11 +382,9 @@ void CJPEGsnoopCore::DoLogSave(CString strLogName)
 	// so we can't check the status here (except seeing that there are no
 	// lines in the array)
 
-	//TODO: Ensure file doesn't exist and only overwrite if specified in command-line?
+	// TODO: Ensure file doesn't exist and only overwrite if specified in command-line?
 
-	// TODO:
-	// Confirm that we are not writing to the same file we opened
-	// m_strPathName
+	// TODO: Confirm that we are not writing to the same file we opened (m_strPathName)
 	ASSERT(strLogName != m_strPathName);
 
 	try
@@ -910,7 +907,6 @@ void CJPEGsnoopCore::DoExtractEmbeddedJPEG(CString strInputFname,CString strOutp
 											bool bOverlayEn,bool bForceSoi,bool bForceEoi,bool bIgnoreEoi,bool bExtractAllEn,bool bDhtAviInsert,
 											CString strOutPath)
 {
-	//xxx CString			strTmp = _T("");
 	unsigned int	nFileSize = 0;
 	BOOL			bRet;
 
@@ -930,8 +926,8 @@ void CJPEGsnoopCore::DoExtractEmbeddedJPEG(CString strInputFname,CString strOutp
 			AnalyzeFileDo();
 		}
 
-		//xxx Is this being used anywhere?
-		//xxxstrTmp.Format(_T("0x%08X"),m_pJfifDec->GetPosEmbedStart());
+		// FIXME: Is this being used anywhere?
+		// strTmp.Format(_T("0x%08X"),m_pJfifDec->GetPosEmbedStart());
        
 		// If we are not in "extract all" mode, then check now to see if
 		// the current file position looks OK to extract a valid JPEG.
@@ -985,7 +981,7 @@ void CJPEGsnoopCore::DoExtractEmbeddedJPEG(CString strInputFname,CString strOutp
 		// --------------------------------------------------------
 
 		// Ensure we have no file state left over
-		//xxx FIXME: Do I really need this here?
+		// FIXME: Do I really need this here?
 		AnalyzeClose();
 
 		bool			bDoneBatch = false;

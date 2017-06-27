@@ -260,7 +260,7 @@ void CDocLog::DoLogSave(CString strLogName)
 	// Open the file for output
 	ASSERT(strLogName != _T(""));
 
-	//xxx old comments
+	// OLD COMMENTS FOLLOW
 	// This save method will only work if we were in Quick Log mode
 	// where we have recorded the log to a string buffer and not
 	// directly to the RichEdit
@@ -268,12 +268,11 @@ void CDocLog::DoLogSave(CString strLogName)
 	// so we can't check the status here (except seeing that there are no
 	// lines in the array)
 
-	//TODO: Ensure file doesn't exist and only overwrite if specified in command-line?
+	// TODO: Ensure file doesn't exist and only overwrite if specified in command-line?
 
 	// TODO:
-	// Confirm that we are not writing to the same file we opened
-	// m_strPathName
-	//xxx ASSERT(strLogName != m_strPathName);
+	// Confirm that we are not writing to the same file we opened (m_strPathName)
+	// ASSERT(strLogName != m_strPathName);
 
 	try
 	{
