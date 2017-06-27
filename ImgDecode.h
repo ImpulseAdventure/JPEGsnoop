@@ -504,7 +504,7 @@ private:
 	bool				m_bScanBad;			// Any errors found?
 	unsigned			m_nScanErrMax;		// Max # scan decode errors shown
 
-public: //xxx hack
+public: // FIXME (workaround)
 	bool				m_bDibTempReady;
 	CDIB				m_pDibTemp;				// Temporary version for display
 	bool				m_bPreviewIsJpeg;		// Is the preview image from decoded JPEG?
