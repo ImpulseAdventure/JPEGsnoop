@@ -7,8 +7,9 @@ It reports all image metadata and can even help identify if an image has been ed
 
 Official repository for JPEGsnoop: [JPEGsnoop @ GitHub](https://github.com/ImpulseAdventure/JPEGsnoop/)
 
-## Documentation
+## Documentation & Downloads
 - More details and support are available: [JPEGsnoop - ImpulseAdventure.com](http://www.impulseadventure.com/photo/jpeg-snoop.html)
+- Windows binary can be downloaded at: [JPEGsnoop latest releases](https://github.com/ImpulseAdventure/JPEGsnoop/releases)
 
 <img align="right" src="http://www.impulseadventure.com/photo/images/jpegsnoop-04.jpg">
 
