@@ -5,7 +5,7 @@
 JPEGsnoop is a detailed JPEG image decoder and analysis tool.
 It reports all image metadata and can even help identify if an image has been edited.
 
-This is the official repository for JPEGsnoop
+Official repository for JPEGsnoop: [JPEGsnoop @ GitHub](https://github.com/ImpulseAdventure/JPEGsnoop/)
 
 ## Documentation
 - More details and support are available: [JPEGsnoop - ImpulseAdventure.com](http://www.impulseadventure.com/photo/jpeg-snoop.html)
