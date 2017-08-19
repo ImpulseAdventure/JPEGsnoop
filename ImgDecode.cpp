@@ -195,7 +195,7 @@ CimgDecode::CimgDecode(CDocLog* pLog, CwindowBuf* pWBuf)
 	m_nDetailVlcX = 0;
 	m_nDetailVlcY = 0;
 	m_nDetailVlcLen = 1;
-	
+
 	m_bDecodeScanAc = true;
 
 
@@ -745,7 +745,7 @@ void CimgDecode::GetPreviewSize(unsigned &nX,unsigned &nY)
 // NOTE:
 // - Asynchronously called by JFIF Decoder
 //
-bool CimgDecode::SetDhtEntry(unsigned nDestId, unsigned nClass, unsigned nInd, unsigned nLen, 
+bool CimgDecode::SetDhtEntry(unsigned nDestId, unsigned nClass, unsigned nInd, unsigned nLen,
 							 unsigned nBits, unsigned nMask, unsigned nCode)
 {
 	if ( (nDestId >= MAX_DHT_DEST_ID) || (nClass >= MAX_DHT_CLASS) || (nInd >= MAX_DHT_CODES) ) {
@@ -796,7 +796,7 @@ bool CimgDecode::SetDhtEntry(unsigned nDestId, unsigned nClass, unsigned nInd, u
 		//   nBitsExtraLen = 8-len = 8-5 = 3
 
 		//   nBitsExtraVal = (1<<nBitsExtraLen) -1 = 1<<3 -1 = 8'b0000_1000 -1 = 8'b0000_0111
-		//   
+		//
 		//   nBitsMax = nBitsMsb + nBitsExtraVal
 		//   nBitsMax =  8'b1011_1111
 		nBitsMsb = (nBits & nMask) >> (32-DHT_FAST_SIZE);
@@ -1084,7 +1084,7 @@ teRsvRet CimgDecode::ReadScanVal(unsigned nClass,unsigned nTbl,unsigned &rZrl,si
 
 	rZrl = 0;
 	rVal = 0;
-	
+
 	// First check to see if we've entered here with a completely empty
 	// scan buffer with a restart marker already observed. In that case
 	// we want to exit with condition 3 (restart terminated)
@@ -1139,7 +1139,7 @@ teRsvRet CimgDecode::ReadScanVal(unsigned nClass,unsigned nTbl,unsigned &rZrl,si
 			bFound = true;
 		}
 	}
-	
+
 
 	// Slow search for variable-length huffman nCode
 	while (!bDone) {
@@ -1454,10 +1454,10 @@ unsigned CimgDecode::BuffAddByte()
 			// mark this scan buffer with a flag to indicate that it was
 			// ended by RST not by EOI or an Invalid Marker.
 
-			// If the main decoder (in ReadScanVal) cannot find a VLC code 
-			// match with the few bits left in the scan buffer 
+			// If the main decoder (in ReadScanVal) cannot find a VLC code
+			// match with the few bits left in the scan buffer
 			// (presumably padded with 1's), then it should check to see
-			// if the buffer is terminated by RST. If so, then it 
+			// if the buffer is terminated by RST. If so, then it
 			// purges the scan buffer, advances to the next byte (after the
 			// RST marker) and does a fill, then re-invokes the ReadScanVal
 			// routine. At the level above, the Decoder that is calling
@@ -1583,7 +1583,7 @@ unsigned CimgDecode::BuffAddByte()
 // - Pull bits from the main buffer
 // - Find matching huffman codes
 // - Fill in the IDCT matrix (m_anDctBlock[])
-// - Perform the IDCT to create spatial domain 
+// - Perform the IDCT to create spatial domain
 //
 // INPUT:
 // - nTblDhtDc					= DHT table ID for DC component
@@ -2133,7 +2133,7 @@ void CimgDecode::ReportDctMatrix()
 
 // Report out the variable length codes (VLC)
 //
-// Need to consider impact of padding bytes... When pads get extracted, they 
+// Need to consider impact of padding bytes... When pads get extracted, they
 // will not appear in the binary display shown below. Might want the get buffer
 // to do post-pad removal first.
 //
@@ -2210,7 +2210,7 @@ void CimgDecode::ReportVlc(unsigned nVlcPos, unsigned nVlcAlign,
 	for (unsigned ind=nVlcAlign+m_nScanBitsUsed1+m_nScanBitsUsed2;ind<32;ind++) {
 		strBinMarked += _T("-");
 	}
-	
+
 	strBinMarked.Insert(24,_T(" "));
 	strBinMarked.Insert(16,_T(" "));
 	strBinMarked.Insert(8,_T(" "));
@@ -2242,9 +2242,9 @@ void CimgDecode::ReportVlc(unsigned nVlcPos, unsigned nVlcAlign,
 //
 void CimgDecode::DecodeIdctClear()
 {
-	memset(m_anDctBlock,  0, (64*sizeof(int)) );
-	memset(m_afIdctBlock, 0, (64*sizeof(float)) );
-	memset(m_anIdctBlock, 0, (64*sizeof(int)) );
+	memset(m_anDctBlock,  0, sizeof m_anDctBlock);
+	memset(m_afIdctBlock, 0, sizeof m_afIdctBlock);
+	memset(m_anIdctBlock, 0, sizeof m_anIdctBlock);
 
 	m_nDctCoefMax = 0;
 }
@@ -2417,7 +2417,7 @@ void CimgDecode::DecodeIdctCalcFixedpt()
 		// FIXME: Note that float->int is very slow!
 		//   Should consider using fixed point instead!
 		m_anIdctBlock[nYX] = nSum >> 10;
-		
+
 	}
 
 }
@@ -2429,8 +2429,8 @@ void CimgDecode::DecodeIdctCalcFixedpt()
 // - nHeight				= Current allocated image height
 // POST:
 // - m_pPixValY
-// - m_pPixValCb 
-// - m_pPixValCr 
+// - m_pPixValCb
+// - m_pPixValCr
 //
 void CimgDecode::ClrFullRes(unsigned nWidth,unsigned nHeight)
 {
@@ -2495,7 +2495,7 @@ void CimgDecode::SetFullRes(unsigned nMcuX,unsigned nMcuY,unsigned nComp,unsigne
 	unsigned	nOffsetPixCorner;	// Linear offset to top-left corner of pixel (start point for expansion)
 
 	// Calculate the linear pixel offset for the top-left corner of the block in the MCU
-	nOffsetBlkCorner = ((nMcuY*m_nMcuHeight) + nCssYInd*BLK_SZ_X) * nPixMapW + 
+	nOffsetBlkCorner = ((nMcuY*m_nMcuHeight) + nCssYInd*BLK_SZ_X) * nPixMapW +
 						((nMcuX*m_nMcuWidth)  + nCssXInd*BLK_SZ_Y);
 
 	// Use the expansion factor to determine how many bits to replicate
@@ -2519,7 +2519,7 @@ void CimgDecode::SetFullRes(unsigned nMcuX,unsigned nMcuY,unsigned nComp,unsigne
 			nVal = ((short int)(fVal*8) + nDcOffset);
 #endif
 
-			// NOTE: These range checks were already done in DecodeScanImg()	
+			// NOTE: These range checks were already done in DecodeScanImg()
 			ASSERT(nCssXInd<MAX_SAMP_FACT_H);
 			ASSERT(nCssYInd<MAX_SAMP_FACT_V);
 			ASSERT(nY<BLK_SZ_Y);
@@ -2799,7 +2799,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 	//   [ 0 1 ] [ 4 5 ]
 	//   [ 2 3 ] [ 6 7 ]
 	// - The sequence for decode should be:
-	//   [ 0 ] [ 1 ] [ 2 ] [ 3 ] [ 4 ] ...	
+	//   [ 0 ] [ 1 ] [ 2 ] [ 3 ] [ 4 ] ...
 	// - Which is equivalent to the non-subsampled ordering (ie. 0x11)
 	// - Apply a correction for such images to remove the sampling factor
 	if ( m_nNumSosComps == 1) {
@@ -2982,7 +2982,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 	// work to run in 16- and 8-bit modes
 
 	bool bDoImage = false;	// Are we safe to set bits?
-	
+
 	if (bDisplay) {
 		m_pDibTemp.CreateDIB(m_nImgSizeX,m_nImgSizeY,32);
 		nDibImgRowBytes = m_nImgSizeX * sizeof(RGBQUAD);
@@ -3721,7 +3721,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 
 
 	// --------------------------------------
-	
+
 	if (!bQuiet) {
 		m_pLog->AddLine(_T("  Finished Decoding SCAN Data"));
 		strTmp.Format(_T("    Number of RESTART markers decoded: %u"),m_nRestartRead);
@@ -3884,7 +3884,7 @@ void CimgDecode::DrawHistogram(bool bQuiet,bool bDumpHistoY)
 			m_sHisto.nClipBMin,m_sHisto.nClipBMax,(float)m_sHisto.nClipBSum / (float)m_sHisto.nCount);
 		m_pLog->AddLine(strTmp);
 		m_pLog->AddLine(_T(""));
-	}		
+	}
 
 	// --------------------------------------
 	// Now draw the RGB histogram!
@@ -4650,8 +4650,8 @@ void CimgDecode::CalcChannelPreviewFull(CRect* pRectView,unsigned char* pTmp)
 	// NOTE: if we were to make these ranges a subset of the
 	// full image dimensions, then we'd have to determine the best
 	// way to handle the brightest pixel search & average luminance logic
-	// since those appear in the nRngX/Y loops. 
-	
+	// since those appear in the nRngX/Y loops.
+
 	nRngX1 = 0;
 	nRngX2 = m_nImgSizeX;
 	nRngY1 = 0;
@@ -4776,7 +4776,7 @@ void CimgDecode::CalcChannelPreviewFull(CRect* pRectView,unsigned char* pTmp)
 						}
 					}
 				}
-				
+
 			}
 
 			// Perform any channel filtering if enabled
@@ -4960,7 +4960,7 @@ void CimgDecode::GetBitmapPtr(unsigned char* &pBitmap)
 // POST:
 // - m_pDibTemp
 // NOTE:
-// - Channels are selected in CalcChannelPreviewFull() 
+// - Channels are selected in CalcChannelPreviewFull()
 //
 void CimgDecode::CalcChannelPreview()
 {
@@ -5166,7 +5166,7 @@ CPoint CimgDecode::GetMarkerBlk(unsigned nInd)
 // POST:
 // - m_nMarkersBlkNum
 // - m_aptMarkersBlk[]
-// 
+//
 void CimgDecode::SetMarkerBlk(unsigned nBlkX,unsigned nBlkY)
 {
 	if (m_nMarkersBlkNum == MAX_BLOCK_MARKERS) {
@@ -5293,7 +5293,7 @@ void CimgDecode::SetPreviewZoom(bool bInc,bool bDec,bool bSet,unsigned nVal)
 // OUTPUT:
 // - szNewScrollSize		= New dimension used for SetScrollSizes()
 //
-void CimgDecode::ViewOnDraw(CDC* pDC,CRect rectClient,CPoint ptScrolledPos, 
+void CimgDecode::ViewOnDraw(CDC* pDC,CRect rectClient,CPoint ptScrolledPos,
 							CFont* pFont, CSize &szNewScrollSize)
 {
 
@@ -5366,7 +5366,7 @@ void CimgDecode::ViewOnDraw(CDC* pDC,CRect rectClient,CPoint ptScrolledPos,
 			m_nPageHeight += nTitleHeight;	// Margin at top for title
 
 			m_rectHistReal = m_rectHistBase;
-	        
+
 			nYPosHist = m_nPageHeight;
 			m_nPageHeight += m_rectHistReal.Height();
 			m_nPageHeight += nBorderBottom;	// Margin at bottom
@@ -5446,7 +5446,7 @@ void CimgDecode::ViewOnDraw(CDC* pDC,CRect rectClient,CPoint ptScrolledPos,
 			}
 		}
 
-		
+
 		switch (m_nZoomMode) {
 			case PRV_ZOOM_12: strTitle += " @ 12.5% (1/8)"; break;
 			case PRV_ZOOM_25: strTitle += " @ 25% (1/4)"; break;
@@ -5459,7 +5459,7 @@ void CimgDecode::ViewOnDraw(CDC* pDC,CRect rectClient,CPoint ptScrolledPos,
 			case PRV_ZOOM_800: strTitle += _T(" @ 800% (8:1)"); break;
 			default: strTitle += _T(""); break;
 		}
-		
+
 
 		// Calculate the title width
 		CRect rectCalc = CRect(0,0,0,0);
@@ -5648,7 +5648,7 @@ void CimgDecode::ViewMcuOverlay(CDC* pDC)
 
 	pDC->SelectObject(pPenOld);
 	pDC->SetBkMode(nBkModeOld);
-	
+
 }
 
 // Draw an overlay that highlights the marked MCUs
