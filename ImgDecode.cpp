@@ -3364,7 +3364,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 
 						// Store fullres value
 						if (bDisplay)
-							SetFullRes(nMcuX,nMcuY,nComp,0,0,m_nDcChrCb);
+							SetFullRes(nMcuX,nMcuY,nComp,nCssIndH,nCssIndV,m_nDcChrCb);
 
 					}
 				}
@@ -3396,7 +3396,7 @@ void CimgDecode::DecodeScanImg(unsigned nStart,bool bDisplay,bool bQuiet)
 
 						// Store fullres value
 						if (bDisplay)
-							SetFullRes(nMcuX,nMcuY,nComp,0,0,m_nDcChrCr);
+							SetFullRes(nMcuX,nMcuY,nComp,nCssIndH,nCssIndV,m_nDcChrCr);
 
 					}
 				}
