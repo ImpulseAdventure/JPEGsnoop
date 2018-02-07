@@ -205,9 +205,6 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\jpegsnoop-prog-icon1-novista.ico" />
-    <Image Include="res\JPEGsnoop.ico" />
-    <Image Include="res\jpegsnoop4a.ico" />
-    <Image Include="res\jpegsnoop4a1.ico" />
     <Image Include="res\JPEGsnoopDoc.ico" />
     <Image Include="res\Toolbar.bmp" />
   </ItemGroup>
@@ -219,7 +216,7 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="README-FILES.txt" />
-    <Text Include="ReadMe.txt" />
+    <Text Include="README.md" />
     <Text Include="VERSION.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
