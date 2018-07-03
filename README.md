@@ -30,3 +30,10 @@ Official repository for JPEGsnoop: [JPEGsnoop @ GitHub](https://github.com/Impul
 
 ## License
 - JPEGsnoop is free for personal and commercial use per GNU General Public License version 2.0 (GPLv2)
+## Build  
+ - project build  
+req: ms visual studio(c++) 2012  
+simple stuff
+ - nmake  
+ req: ms visual studio(c++) 2005  
+ http://imageshack.com/i/pmym0PEnj
