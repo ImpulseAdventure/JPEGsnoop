@@ -15,254 +15,254 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AboutDlg.cpp">
+    <ClCompile Include="source\AboutDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BatchDlg.cpp">
+    <ClCompile Include="source\BatchDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CntrItem.cpp">
+    <ClCompile Include="source\CntrItem.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DbManageDlg.cpp">
+    <ClCompile Include="source\DbManageDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DbSigs.cpp">
+    <ClCompile Include="source\DbSigs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DbSubmitDlg.cpp">
+    <ClCompile Include="source\DbSubmitDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DecodeDetailDlg.cpp">
+    <ClCompile Include="source\DecodeDetailDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Dib.cpp">
+    <ClCompile Include="source\DecodeDicom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DocLog.cpp">
+    <ClCompile Include="source\DecodeDicomTags.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ExportDlg.cpp">
+    <ClCompile Include="source\DecodePs.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ExportTiffDlg.cpp">
+    <ClCompile Include="source\Dib.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FileTiff.cpp">
+    <ClCompile Include="source\DocLog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FolderDlg.cpp">
+    <ClCompile Include="source\ExportDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="General.cpp">
+    <ClCompile Include="source\ExportTiffDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="HyperlinkStatic.cpp">
+    <ClCompile Include="source\FileTiff.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ImgDecode.cpp">
+    <ClCompile Include="source\FolderDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="JfifDecode.cpp">
+    <ClCompile Include="source\General.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="JPEGsnoop.cpp">
+    <ClCompile Include="source\HyperlinkStatic.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="JPEGsnoopDoc.cpp">
+    <ClCompile Include="source\ImgDecode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="JPEGsnoopView.cpp">
+    <ClCompile Include="source\JfifDecode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="JPEGsnoopViewImg.cpp">
+    <ClCompile Include="source\JPEGsnoop.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="LookupDlg.cpp">
+    <ClCompile Include="source\JPEGsnoopCore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MainFrm.cpp">
+    <ClCompile Include="source\JPEGsnoopDoc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Md5.cpp">
+    <ClCompile Include="source\JPEGsnoopView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ModelessDlg.cpp">
+    <ClCompile Include="source\JPEGsnoopViewImg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NoteDlg.cpp">
+    <ClCompile Include="source\LookupDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OffsetDlg.cpp">
+    <ClCompile Include="source\MainFrm.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OverlayBufDlg.cpp">
+    <ClCompile Include="source\Md5.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Registry.cpp">
+    <ClCompile Include="source\ModelessDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SettingsDlg.cpp">
+    <ClCompile Include="source\NoteDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SnoopConfig.cpp">
+    <ClCompile Include="source\OffsetDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="stdafx.cpp">
+    <ClCompile Include="source\OverlayBufDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TermsDlg.cpp">
+    <ClCompile Include="source\Registry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="UpdateAvailDlg.cpp">
+    <ClCompile Include="source\SettingsDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="UrlString.cpp">
+    <ClCompile Include="source\SnoopConfig.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="WindowBuf.cpp">
+    <ClCompile Include="source\stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DecodeDicom.cpp">
+    <ClCompile Include="source\TermsDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DecodeDicomTags.cpp">
+    <ClCompile Include="source\UpdateAvailDlg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DecodePs.cpp">
+    <ClCompile Include="source\UrlString.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="JPEGsnoopCore.cpp">
+    <ClCompile Include="source\WindowBuf.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AboutDlg.h">
+    <ClInclude Include="source\AboutDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BatchDlg.h">
+    <ClInclude Include="source\BatchDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="CntrItem.h">
+    <ClInclude Include="source\CntrItem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DbManageDlg.h">
+    <ClInclude Include="source\DbManageDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DbSigs.h">
+    <ClInclude Include="source\DbSigs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DbSubmitDlg.h">
+    <ClInclude Include="source\DbSubmitDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DecodeDetailDlg.h">
+    <ClInclude Include="source\DecodeDetailDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Dib.h">
+    <ClInclude Include="source\DecodeDicom.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DocLog.h">
+    <ClInclude Include="source\DecodePs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ExportDlg.h">
+    <ClInclude Include="source\Dib.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ExportTiffDlg.h">
+    <ClInclude Include="source\DocLog.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FileTiff.h">
+    <ClInclude Include="source\ExportDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FolderDlg.h">
+    <ClInclude Include="source\ExportTiffDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="General.h">
+    <ClInclude Include="source\FileTiff.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HyperlinkStatic.h">
+    <ClInclude Include="source\FolderDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ImgDecode.h">
+    <ClInclude Include="source\General.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="JfifDecode.h">
+    <ClInclude Include="source\HyperlinkStatic.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="JPEGsnoop.h">
+    <ClInclude Include="source\ImgDecode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="JPEGsnoopDoc.h">
+    <ClInclude Include="source\JfifDecode.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="JPEGsnoopView.h">
+    <ClInclude Include="source\JPEGsnoop.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="JPEGsnoopViewImg.h">
+    <ClInclude Include="source\JPEGsnoopCore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LookupDlg.h">
+    <ClInclude Include="source\JPEGsnoopDoc.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MainFrm.h">
+    <ClInclude Include="source\JPEGsnoopView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Md5.h">
+    <ClInclude Include="source\JPEGsnoopViewImg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ModelessDlg.h">
+    <ClInclude Include="source\LookupDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="NoteDlg.h">
+    <ClInclude Include="source\MainFrm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="OffsetDlg.h">
+    <ClInclude Include="source\Md5.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="OverlayBufDlg.h">
+    <ClInclude Include="source\ModelessDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Registry.h">
+    <ClInclude Include="source\NoteDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Resource.h">
+    <ClInclude Include="source\OffsetDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SettingsDlg.h">
+    <ClInclude Include="source\OverlayBufDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="snoop.h">
+    <ClInclude Include="source\Registry.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SnoopConfig.h">
+    <ClInclude Include="source\SettingsDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="stdafx.h">
+    <ClInclude Include="source\snoop.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TermsDlg.h">
+    <ClInclude Include="source\SnoopConfig.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="UpdateAvailDlg.h">
+    <ClInclude Include="source\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="UrlString.h">
+    <ClInclude Include="source\TermsDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="WindowBuf.h">
+    <ClInclude Include="source\UpdateAvailDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DecodeDicom.h">
+    <ClInclude Include="source\UrlString.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DecodePs.h">
+    <ClInclude Include="source\WindowBuf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="JPEGsnoopCore.h">
+    <ClInclude Include="source\Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Signatures.inl">
+    <None Include="source\Signatures.inl">
       <Filter>Header Files</Filter>
     </None>
     <None Include="res\JPEGsnoop.rc2">
@@ -273,15 +273,6 @@
     <Image Include="res\jpegsnoop-prog-icon1-novista.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="res\JPEGsnoop.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\jpegsnoop4a.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="res\jpegsnoop4a1.ico">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="res\JPEGsnoopDoc.ico">
       <Filter>Resource Files</Filter>
     </Image>
@@ -290,16 +281,16 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="JPEGsnoop.rc">
-      <Filter>Resource Files</Filter>
-    </ResourceCompile>
-  </ItemGroup>
-  <ItemGroup>
     <Manifest Include="res\JPEGsnoop.manifest" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="README-FILES.txt" />
     <Text Include="VERSION.txt" />
-    <Text Include="ReadMe.txt" />
+    <Text Include="README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="source\JPEGsnoop.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>
