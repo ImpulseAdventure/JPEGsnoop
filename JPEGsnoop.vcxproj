@@ -201,6 +201,7 @@
     <ClInclude Include="source\WindowBuf.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="makefile" />
     <None Include="source\Signatures.inl" />
     <None Include="res\JPEGsnoop.rc2" />
   </ItemGroup>

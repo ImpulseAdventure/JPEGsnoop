@@ -268,6 +268,7 @@
     <None Include="res\JPEGsnoop.rc2">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="makefile" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\jpegsnoop-prog-icon1-novista.ico">
