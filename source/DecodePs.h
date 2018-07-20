@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,8 @@
 //
 // ==========================================================================
 
-#pragma once
+#ifndef DECODEPS_H
+#define DECODEPS_H
 
 #include "WindowBuf.h"
 #include "snoop.h"
@@ -36,198 +37,225 @@
 // - NUM     : binary number
 // - STR     : alphabetic characters, graphic characters, numeric character
 // - HEX     :
-enum teIptcType { IPTC_T_NUM, IPTC_T_NUM1, IPTC_T_NUM2, IPTC_T_HEX, IPTC_T_STR, IPTC_T_UNK, IPTC_T_END };
-struct tsIptcField {
-	unsigned	nRecord;
-	unsigned	nDataSet;
-	teIptcType	eFldType;
-	CString		strFldName;
+enum teIptcType
+{
+  IPTC_T_NUM,
+  IPTC_T_NUM1,
+  IPTC_T_NUM2,
+  IPTC_T_HEX,
+  IPTC_T_STR,
+  IPTC_T_UNK,
+  IPTC_T_END
+};
+
+struct tsIptcField
+{
+  uint32_t nRecord;
+  uint32_t nDataSet;
+  teIptcType eFldType;
+  QString strFldName;
 };
 
 // Structure used for each Image Resource Block (8BIM) record
-enum teBimType { BIM_T_UNK, BIM_T_STR, BIM_T_HEX, 
-	BIM_T_IPTC_NAA,
-	BIM_T_JPEG_QUAL,
-	BIM_T_PS_SLICES,
-	BIM_T_PS_THUMB_RES,
-	BIM_T_PS_DESCRIPTOR,
-	BIM_T_PS_VER_INFO,
-	BIM_T_PS_RESOLUTION_INFO,
-	BIM_T_PS_PRINT_SCALE,
-	BIM_T_PS_PIXEL_ASPECT_RATIO,
-	BIM_T_PS_DOC_SPECIFIC_SEED,
-	BIM_T_PS_GRID_GUIDES,
-	BIM_T_PS_GLOBAL_ANGLE,
-	BIM_T_PS_GLOBAL_ALTITUDE,
-	BIM_T_PS_PRINT_FLAGS,
-	BIM_T_PS_PRINT_FLAGS_INFO,
-	BIM_T_PS_COPYRIGHT_FLAG,
-	BIM_T_PS_LAYER_STATE_INFO,
-	BIM_T_PS_LAYER_GROUP_INFO,
-	BIM_T_PS_LAYER_GROUP_ENABLED,
-	BIM_T_PS_LAYER_SELECT_ID,
-	BIM_T_PS_STR_UNI,
-	BIM_T_PS_STR_ASC,
-	BIM_T_PS_STR_ASC_LONG,
-	BIM_T_END
-};
-struct tsBimRecord {
-	unsigned	nCode;			// Code value or start code for range
-	unsigned	nCodeEnd;		// 0x0000 if not a range, else specifies last code value
-	teBimType	eBimType;
-	CString		strRecordName;
+enum teBimType
+{
+  BIM_T_UNK, BIM_T_STR, BIM_T_HEX,
+  BIM_T_IPTC_NAA,
+  BIM_T_JPEG_QUAL,
+  BIM_T_PS_SLICES,
+  BIM_T_PS_THUMB_RES,
+  BIM_T_PS_DESCRIPTOR,
+  BIM_T_PS_VER_INFO,
+  BIM_T_PS_RESOLUTION_INFO,
+  BIM_T_PS_PRINT_SCALE,
+  BIM_T_PS_PIXEL_ASPECT_RATIO,
+  BIM_T_PS_DOC_SPECIFIC_SEED,
+  BIM_T_PS_GRID_GUIDES,
+  BIM_T_PS_GLOBAL_ANGLE,
+  BIM_T_PS_GLOBAL_ALTITUDE,
+  BIM_T_PS_PRINT_FLAGS,
+  BIM_T_PS_PRINT_FLAGS_INFO,
+  BIM_T_PS_COPYRIGHT_FLAG,
+  BIM_T_PS_LAYER_STATE_INFO,
+  BIM_T_PS_LAYER_GROUP_INFO,
+  BIM_T_PS_LAYER_GROUP_ENABLED,
+  BIM_T_PS_LAYER_SELECT_ID,
+  BIM_T_PS_STR_UNI,
+  BIM_T_PS_STR_ASC,
+  BIM_T_PS_STR_ASC_LONG,
+  BIM_T_END
 };
 
+struct tsBimRecord
+{
+  uint32_t nCode;               // Code value or start code for range
+  uint32_t nCodeEnd;            // 0x0000 if not a range, else specifies last code value
+  teBimType eBimType;
+  QString strRecordName;
+};
 
 // Structure used for each enumerated field in IRB decoding
-enum teBimEnumField {
-	BIM_T_ENUM_UNK,
-	BIM_T_ENUM_FILE_HDR_COL_MODE,
-	BIM_T_ENUM_RESOLUTION_INFO_RES_UNIT,
-	BIM_T_ENUM_RESOLUTION_INFO_WIDTH_UNIT,
-	BIM_T_ENUM_PRINT_SCALE_STYLE,
-	BIM_T_ENUM_GRID_GUIDE_DIR,
-	BIM_T_ENUM_BLEND_MODE_KEY,
-	BIM_T_ENUM_END
+enum teBimEnumField
+{
+  BIM_T_ENUM_UNK,
+  BIM_T_ENUM_FILE_HDR_COL_MODE,
+  BIM_T_ENUM_RESOLUTION_INFO_RES_UNIT,
+  BIM_T_ENUM_RESOLUTION_INFO_WIDTH_UNIT,
+  BIM_T_ENUM_PRINT_SCALE_STYLE,
+  BIM_T_ENUM_GRID_GUIDE_DIR,
+  BIM_T_ENUM_BLEND_MODE_KEY,
+  BIM_T_ENUM_END
 };
-struct tsBimEnum {
-	teBimEnumField	eBimEnum;
-	unsigned		nVal;
-	CString			strVal;
+
+struct tsBimEnum
+{
+  teBimEnumField eBimEnum;
+  uint32_t nVal;
+  QString strVal;
 };
 
 // Byte Swap enable for Photoshop decoding
 #define PS_BSWAP	false
 
 // Define the 8BIM/IRB hex output display characteristics
-#define PS_HEX_MAX_INLINE	16		// Threshold for displaying hex in-line with field name
-#define PS_HEX_MAX_ROW		16		// Maximum number of bytes to report per line
-#define PS_HEX_TOTAL		128		// Total number of bytes to report before clipping
+static const uint32_t PS_HEX_MAX_INLINE = 16;   // Threshold for displaying hex in-line with field name
+static const uint32_t PS_HEX_MAX_ROW = 16;      // Maximum number of bytes to report per line
+static const uint32_t PS_HEX_TOTAL = 128;       // Total number of bytes to report before clipping
 
 // Define the maximum length Unicode string to display
-#define PS_MAX_UNICODE_STRLEN 256
+static const uint32_t PS_MAX_UNICODE_STRLEN = 256;
 
 // Information about layer and channels within it
-struct tsLayerInfo {
-	unsigned	nNumChans;
-	unsigned*	pnChanLen;
-	unsigned*	pnChanID;
-	unsigned	nWidth;
-	unsigned	nHeight;
+struct tsLayerInfo
+{
+  uint32_t nNumChans;
+  uint32_t *pnChanLen;
+  uint32_t *pnChanID;
+  uint32_t nWidth;
+  uint32_t nHeight;
 };
 
 // From Layer Info
-struct tsLayerAllInfo {
-	unsigned		nNumLayers;
-	tsLayerInfo*	psLayers;
+struct tsLayerAllInfo
+{
+  uint32_t nNumLayers;
+  tsLayerInfo *psLayers;
 };
 
 // From File Header
-struct tsImageInfo {
-	unsigned		nImageWidth;
-	unsigned		nImageHeight;
-	unsigned		nNumChans;
-	unsigned		nDepthBpp;
+struct tsImageInfo
+{
+  uint32_t nImageWidth;
+  uint32_t nImageHeight;
+  uint32_t nNumChans;
+  uint32_t nDepthBpp;
 };
 
 class CDecodePs
 {
 public:
-	CDecodePs(CwindowBuf* pWBuf,CDocLog* pLog);
-	~CDecodePs(void);
+  CDecodePs(CwindowBuf * pWBuf, CDocLog * pLog);
+  ~CDecodePs(void);
 
-	void			Reset();
+  void Reset();
 
-	bool			DecodePsd(unsigned long nPos,CDIB* pDibTemp,unsigned &nWidth,unsigned &nHeight);
-	bool			PhotoshopParseImageResourceBlock(unsigned long &nPos,unsigned nIndent);
-	
-private:
-	CString			PhotoshopParseGetLStrAsc(unsigned long &nPos);
-	CString			PhotoshopParseIndent(unsigned nIndent);
-	void			PhotoshopParseReportNote(unsigned nIndent,CString strNote);
-	CString			PhotoshopParseLookupEnum(teBimEnumField eEnumField,unsigned nVal);
-	void			PhotoshopParseReportFldNum(unsigned nIndent,CString strField,unsigned nVal,CString strUnits);
-	void			PhotoshopParseReportFldBool(unsigned nIndent,CString strField,unsigned nVal);
-	void			PhotoshopParseReportFldEnum(unsigned nIndent,CString strField,teBimEnumField eEnumField,unsigned nVal);
-	void			PhotoshopParseReportFldFixPt(unsigned nIndent,CString strField,unsigned nVal,CString strUnits);
-	void			PhotoshopParseReportFldFloatPt(unsigned nIndent,CString strField,unsigned nVal,CString strUnits);
-	void			PhotoshopParseReportFldDoublePt(unsigned nIndent,CString strField,unsigned nVal1,unsigned nVal2,CString strUnits);
-	void			PhotoshopParseReportFldStr(unsigned nIndent,CString strField,CString strVal);
-	void			PhotoshopParseReportFldOffset(unsigned nIndent,CString strField,unsigned long nOffset);
-	void			PhotoshopParseReportFldHex(unsigned nIndent,CString strField,unsigned long nPosStart,unsigned nLen);
-	void			PhotoshopParseThumbnailResource(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseSliceHeader(unsigned long &nPos,unsigned nIndent,unsigned long nPosEnd);
-	void			PhotoshopParseSliceResource(unsigned long &nPos,unsigned nIndent,unsigned long nPosEnd);
-	void			PhotoshopParseDescriptor(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseList(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseInteger(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseBool(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseEnum(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseStringUni(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseHandleOsType(CString strOsType,unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseFileHeader(unsigned long &nPos,unsigned nIndent,tsImageInfo* psImageInfo);
-	void			PhotoshopParseColorModeSection(unsigned long &nPos,unsigned nIndent);
-	bool			PhotoshopParseImageResourcesSection(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseVersionInfo(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseResolutionInfo(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParsePrintScale(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParsePixelAspectRatio(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseDocSpecificSeed(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseGridGuides(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseGlobalAngle(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseGlobalAltitude(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParsePrintFlags(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParsePrintFlagsInfo(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseCopyrightFlag(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseLayerStateInfo(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseLayerGroupInfo(unsigned long &nPos,unsigned nIndent,unsigned nLen);
-	void			PhotoshopParseLayerGroupEnabled(unsigned long &nPos,unsigned nIndent,unsigned nLen);
-	void			PhotoshopParseLayerSelectId(unsigned long &nPos,unsigned nIndent);
-	void			PhotoshopParseJpegQuality(unsigned long &nPos,unsigned nIndent,unsigned long nPosEnd);
-
-	bool			PhotoshopParseLayerMaskInfo(unsigned long &nPos,unsigned nIndent,CDIB* pDibTemp);
-	bool			PhotoshopParseLayerInfo(unsigned long &nPos,unsigned nIndent,CDIB* pDibTemp);
-	bool			PhotoshopParseLayerRecord(unsigned long &nPos,unsigned nIndent,tsLayerInfo* psLayerInfo);
-	bool			PhotoshopParseLayerMask(unsigned long &nPos,unsigned nIndent);
-	bool			PhotoshopParseLayerBlendingRanges(unsigned long &nPos,unsigned nIndent);
-	bool			PhotoshopParseChannelImageData(unsigned long &nPos,unsigned nIndent,unsigned nWidth,unsigned nHeight,unsigned nChan,unsigned char* pDibBits);
-	bool			PhotoshopParseGlobalLayerMaskInfo(unsigned long &nPos,unsigned nIndent);
-	bool			PhotoshopParseAddtlLayerInfo(unsigned long &nPos,unsigned nIndent);
-	bool			PhotoshopParseImageData(unsigned long &nPos,unsigned nIndent,tsImageInfo* psImageInfo,unsigned char* pDibBits);
-
-	bool			PhotoshopDecodeRowUncomp(unsigned long &nPos,unsigned nWidth,unsigned nHeight,unsigned nRow,unsigned nChanID,unsigned char* pDibBits);
-	bool			PhotoshopDecodeRowRle(unsigned long &nPos,unsigned nWidth,unsigned nHeight,unsigned nRow,unsigned nRowLen,unsigned nChanID,unsigned char* pDibBits);
-
-	CString			PhotoshopDispHexWord(unsigned nVal);
-
-	// 8BIM
-	CString			PhotoshopParseGetBimLStrUni(unsigned long nPos,unsigned &nPosOffset);
-	bool			FindBimRecord(unsigned nBimId,unsigned &nFldInd);
-
-	// IPTC
-	void			DecodeIptc(unsigned long &nPos,unsigned nLen,unsigned nIndent);
-	bool			LookupIptcField(unsigned nRecord,unsigned nDataSet,unsigned &nFldInd);
-	CString			DecodeIptcValue(teIptcType eIptcType,unsigned nFldCnt,unsigned long nPos);
-
-	BYTE			Buf(unsigned long offset,bool bClean);
+  bool DecodePsd(uint32_t nPos, CDIB * pDibTemp, uint32_t &nWidth, uint32_t &nHeight);
+  bool PhotoshopParseImageResourceBlock(uint32_t &nPos, uint32_t nIndent);
 
 private:
-	// Configuration
-	CSnoopConfig*	m_pAppConfig;
+  CDecodePs &operator = (const CDecodePs&);
+  CDecodePs(CDecodePs&);
 
-	// General classes required for decoding
-	CwindowBuf*		m_pWBuf;
-	CDocLog*		m_pLog;
+  QString PhotoshopParseGetLStrAsc(uint32_t &nPos);
+  QString PhotoshopParseIndent(uint32_t nIndent);
+  void PhotoshopParseReportNote(uint32_t nIndent, QString strNote);
+  QString PhotoshopParseLookupEnum(teBimEnumField eEnumField, uint32_t nVal);
+  void PhotoshopParseReportFldNum(uint32_t nIndent, QString strField, uint32_t nVal, QString strUnits);
+  void PhotoshopParseReportFldBool(uint32_t nIndent, QString strField, uint32_t nVal);
+  void PhotoshopParseReportFldEnum(uint32_t nIndent, QString strField, teBimEnumField eEnumField, uint32_t nVal);
+  void PhotoshopParseReportFldFixPt(uint32_t nIndent, QString strField, uint32_t nVal, QString strUnits);
+  void PhotoshopParseReportFldFloatPt(uint32_t nIndent, QString strField, uint32_t nVal, QString strUnits);
+  void PhotoshopParseReportFldDoublePt(uint32_t nIndent, QString strField, uint32_t nVal1, uint32_t nVal2, QString strUnits);
+  void PhotoshopParseReportFldStr(uint32_t nIndent, QString strField, QString strVal);
+  void PhotoshopParseReportFldOffset(uint32_t nIndent, QString strField, uint32_t nOffset);
+  void PhotoshopParseReportFldHex(uint32_t nIndent, QString strField, uint32_t nPosStart, uint32_t nLen);
+  void PhotoshopParseThumbnailResource(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseSliceHeader(uint32_t &nPos, uint32_t nIndent, uint32_t nPosEnd);
+  void PhotoshopParseSliceResource(uint32_t &nPos, uint32_t nIndent, uint32_t nPosEnd);
+  void PhotoshopParseDescriptor(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseList(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseInteger(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseBool(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseEnum(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseStringUni(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseHandleOsType(QString strOsType, uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseFileHeader(uint32_t &nPos, uint32_t nIndent, tsImageInfo * psImageInfo);
+  void PhotoshopParseColorModeSection(uint32_t &nPos, uint32_t nIndent);
+  bool PhotoshopParseImageResourcesSection(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseVersionInfo(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseResolutionInfo(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParsePrintScale(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParsePixelAspectRatio(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseDocSpecificSeed(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseGridGuides(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseGlobalAngle(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseGlobalAltitude(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParsePrintFlags(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParsePrintFlagsInfo(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseCopyrightFlag(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseLayerStateInfo(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseLayerGroupInfo(uint32_t &nPos, uint32_t nIndent, uint32_t nLen);
+  void PhotoshopParseLayerGroupEnabled(uint32_t &nPos, uint32_t nIndent, uint32_t nLen);
+  void PhotoshopParseLayerSelectId(uint32_t &nPos, uint32_t nIndent);
+  void PhotoshopParseJpegQuality(uint32_t &nPos, uint32_t nIndent, uint32_t nPosEnd);
 
-	bool			m_bAbort;		// Abort continued decode?
+  bool PhotoshopParseLayerMaskInfo(uint32_t &nPos, uint32_t nIndent, CDIB * pDibTemp);
+  bool PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, CDIB * pDibTemp);
+  bool PhotoshopParseLayerRecord(uint32_t &nPos, uint32_t nIndent, tsLayerInfo * psLayerInfo);
+  bool PhotoshopParseLayerMask(uint32_t &nPos, uint32_t nIndent);
+  bool PhotoshopParseLayerBlendingRanges(uint32_t &nPos, uint32_t nIndent);
+  bool PhotoshopParseChannelImageData(uint32_t &nPos, uint32_t nIndent, uint32_t nWidth, uint32_t nHeight, uint32_t nChan,
+                                      unsigned char *pDibBits);
+  bool PhotoshopParseGlobalLayerMaskInfo(uint32_t &nPos, uint32_t nIndent);
+  bool PhotoshopParseAddtlLayerInfo(uint32_t &nPos, uint32_t nIndent);
+  bool PhotoshopParseImageData(uint32_t &nPos, uint32_t nIndent, tsImageInfo * psImageInfo, unsigned char *pDibBits);
+
+  bool PhotoshopDecodeRowUncomp(uint32_t &nPos, uint32_t nWidth, uint32_t nHeight, uint32_t nRow, uint32_t nChanID,
+                                unsigned char *pDibBits);
+  bool PhotoshopDecodeRowRle(uint32_t &nPos, uint32_t nWidth, uint32_t nHeight, uint32_t nRow, uint32_t nRowLen,
+                             uint32_t nChanID, unsigned char *pDibBits);
+
+  QString PhotoshopDispHexWord(uint32_t nVal);
+
+  // 8BIM
+  QString PhotoshopParseGetBimLStrUni(uint32_t nPos, uint32_t &nPosOffset);
+  bool FindBimRecord(uint32_t nBimId, uint32_t &nFldInd);
+
+  // IPTC
+  void DecodeIptc(uint32_t &nPos, uint32_t nLen, uint32_t nIndent);
+  bool LookupIptcField(uint32_t nRecord, uint32_t nDataSet, uint32_t &nFldInd);
+  QString DecodeIptcValue(teIptcType eIptcType, uint32_t nFldCnt, uint32_t nPos);
+
+  quint8 Buf(uint32_t offset, bool bClean);
+
+private:
+  // Configuration
+  CSnoopConfig * m_pAppConfig;
+
+  // General classes required for decoding
+  CwindowBuf *m_pWBuf;
+  CDocLog *m_pLog;
+
+  bool m_bAbort;                // Abort continued decode?
 
 public:
-	bool			m_bPsd;
-	unsigned		m_nQualitySaveAs;
-	unsigned		m_nQualitySaveForWeb;
+  bool m_bPsd;
+  uint32_t m_nQualitySaveAs;
+  uint32_t m_nQualitySaveForWeb;
 
-	bool			m_bDisplayLayer;
-	unsigned		m_nDisplayLayerInd;
-	bool			m_bDisplayImage;
+  bool m_bDisplayLayer;
+  uint32_t m_nDisplayLayerInd;
+  bool m_bDisplayImage;
 };
 
+#endif

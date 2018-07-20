@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -23,8 +23,9 @@
 //
 // ==========================================================================
 
-
 #pragma once
+
+#include <QString>
 
 #define DBEX_ENTRIES_MAX 300
 #define DB_VER_STR "03"
@@ -32,107 +33,105 @@
 #include "snoop.h"
 
 // Signature exception structure with metadata fields
-struct CompExcMm {
-	LPTSTR		strXMake;			// EXIF Make
-	LPTSTR		strXModel;			// EXIF Model
+struct CompExcMm
+{
+  QString strXMake;             // EXIF Make
+  QString strXModel;            // EXIF Model
 };
-
 
 // Signature structure for hardcoded table
-struct CompSigConst {
-	teEditor	eEditor;			// Digicam vs software/editor
-	LPTSTR		strXMake;			// Blank for editors (set to strMSwDisp)
-	LPTSTR		strXModel;			// Blank for editors
-	LPTSTR		strUmQual;
-	LPTSTR		strCSig;			// Signature
-	LPTSTR		strCSigRot;			// Signature of rotated DQTs
-	LPTSTR		strXSubsamp;		// Blank for editors
-	LPTSTR		strMSwTrim;			// Blank for digicam
-	LPTSTR		strMSwDisp;			// Blank for digicam
+struct CompSigConst
+{
+  teEditor eEditor;             // Digicam vs software/editor
+  QString strXMake;             // Blank for editors (set to strMSwDisp)
+  QString strXModel;            // Blank for editors
+  QString strUmQual;
+  QString strCSig;              // Signature
+  QString strCSigRot;           // Signature of rotated DQTs
+  QString strXSubsamp;          // Blank for editors
+  QString strMSwTrim;           // Blank for digicam
+  QString strMSwDisp;           // Blank for digicam
 };
 
-
-// Signature structure for runtime table (can use CStrings)
-struct CompSig {
-	bool		bValid;				// Set to FALSE for removal
-	teEditor	eEditor;
-	CString		strXMake;			// Blank for editors
-	CString		strXModel;			// Blank for editors
-	CString		strUmQual;
-	CString		strCSig;
-	CString		strCSigRot;
-	CString		strXSubsamp;		// Blank for editors
-	CString		strMSwTrim;			// Blank for digicam
-	CString		strMSwDisp;			// Blank for digicam
+// Signature structure for runtime table (can use QStrings)
+struct CompSig
+{
+  bool bValid;                  // Set to FALSE for removal
+  teEditor eEditor;
+  QString strXMake;             // Blank for editors
+  QString strXModel;            // Blank for editors
+  QString strUmQual;
+  QString strCSig;
+  QString strCSigRot;
+  QString strXSubsamp;          // Blank for editors
+  QString strMSwTrim;           // Blank for digicam
+  QString strMSwDisp;           // Blank for digicam
 };
-
-
 
 class CDbSigs
 {
 public:
-	CDbSigs();
-	~CDbSigs();
+  CDbSigs();
+  ~CDbSigs();
 
-	unsigned	GetNumSigsInternal();
-	unsigned	GetNumSigsExtra();
+  unsigned GetNumSigsInternal();
+  unsigned GetNumSigsExtra();
 
-	unsigned	GetDBNumEntries();
-	bool		GetDBEntry(unsigned nInd,CompSig* pEntry);
-	unsigned	IsDBEntryUser(unsigned nInd);
+  unsigned GetDBNumEntries();
+  bool GetDBEntry(unsigned nInd, CompSig * pEntry);
+  unsigned IsDBEntryUser(unsigned nInd);
 
-	void		SetEntryValid(unsigned nInd,bool bValid);
+  void SetEntryValid(unsigned nInd, bool bValid);
 
-	void		DatabaseExtraClean();
-	void		DatabaseExtraLoad();
-	void		DatabaseExtraStore();
+  void DatabaseExtraClean();
+  void DatabaseExtraLoad();
+  void DatabaseExtraStore();
 
-	unsigned	DatabaseExtraGetNum();
-	CompSig		DatabaseExtraGet(unsigned nInd);
+  unsigned DatabaseExtraGetNum();
+  CompSig DatabaseExtraGet(unsigned nInd);
 
-	void		DatabaseExtraAdd(CString strExifMake,CString strExifModel,
-							   CString strQual,CString strSig,CString strSigRot,CString strCss,
-							   teSource eUserSource,CString strUserSoftware);
+  void DatabaseExtraAdd(QString strExifMake, QString strExifModel,
+                        QString strQual, QString strSig, QString strSigRot, QString strCss,
+                        teSource eUserSource, QString strUserSoftware);
 
-	bool		BufReadNum(PBYTE pBuf,unsigned &nOut,unsigned nMaxBytes,unsigned &nOffsetBytes);
-	bool		BufReadStr(PBYTE pBuf,CString &strOut,unsigned nMaxBytes,bool bUni,unsigned &nOffsetBytes);
-	bool		BufWriteNum(PBYTE pBuf,unsigned nIn,unsigned nMaxBytes,unsigned &nOffsetBytes);
-	bool		BufWriteStr(PBYTE pBuf,CString strIn,unsigned nMaxBytes,bool bUni,unsigned &nOffsetBytes);
+  bool BufReadNum(quint8 * pBuf, unsigned &nOut, unsigned nMaxBytes, unsigned &nOffsetBytes);
+  bool BufReadStr(quint8 * pBuf, QString & strOut, unsigned nMaxBytes, bool bUni, unsigned &nOffsetBytes);
+  bool BufWriteNum(quint8 * pBuf, unsigned nIn, unsigned nMaxBytes, unsigned &nOffsetBytes);
+  bool BufWriteStr(quint8 * pBuf, QString strIn, unsigned nMaxBytes, bool bUni, unsigned &nOffsetBytes);
 
-	bool		SearchSignatureExactInternal(CString strMake, CString strModel, CString strSig);
-	bool		SearchCom(CString strCom);
+  bool SearchSignatureExactInternal(QString strMake, QString strModel, QString strSig);
+  bool SearchCom(QString strCom);
 
-	bool		LookupExcMmNoMkr(CString strMake,CString strModel);
-	bool		LookupExcMmIsEdit(CString strMake,CString strModel);
+  bool LookupExcMmNoMkr(QString strMake, QString strModel);
+  bool LookupExcMmIsEdit(QString strMake, QString strModel);
 
-	unsigned	GetIjgNum();
-	LPTSTR		GetIjgEntry(unsigned nInd);
+  unsigned GetIjgNum();
+  QString GetIjgEntry(unsigned nInd);
 
-	void		SetDbDir(CString strDbDir);
-	void		SetFirstRun(bool bFirstRun);
+  void SetDbDir(QString strDbDir);
+  void SetFirstRun(bool bFirstRun);
 
 private:
-	CompSig						m_sSigListExtra[DBEX_ENTRIES_MAX];	// Extra entries
-	unsigned					m_nSigListExtraNum;
+  CompSig m_sSigListExtra[DBEX_ENTRIES_MAX];  // Extra entries
+  unsigned m_nSigListExtraNum;
 
-	unsigned					m_nSigListNum;
-	static const CompSigConst	m_sSigList[];			// Built-in entries
+  unsigned m_nSigListNum;
+  static const CompSigConst m_sSigList[];       // Built-in entries
 
-	unsigned					m_nExcMmNoMkrListNum;
-	static const CompExcMm		m_sExcMmNoMkrList[];
+  unsigned m_nExcMmNoMkrListNum;
+  static const CompExcMm m_sExcMmNoMkrList[];
 
-	unsigned					m_nExcMmIsEditListNum;
-	static const CompExcMm		m_sExcMmIsEditList[];
-	
-	unsigned					m_nSwIjgListNum;
-	static LPTSTR				m_sSwIjgList[];
+  unsigned m_nExcMmIsEditListNum;
+  static const CompExcMm m_sExcMmIsEditList[];
 
-	unsigned					m_nXcomSwListNum;
-	static LPTSTR				m_sXComSwList[];
+  unsigned m_nSwIjgListNum;
 
-	CString						m_strDbDir;				// Database directory
 
-	bool						m_bFirstRun;			// First time running app?
+  unsigned m_nXcomSwListNum;
 
+  QString m_strDbDir;           // Database directory
+  QStringList m_sXComSwList;
+  QStringList m_sSwIjgList;
+
+  bool m_bFirstRun;             // First time running app?
 };
-

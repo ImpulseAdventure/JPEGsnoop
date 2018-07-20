@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,27 +16,30 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "StdAfx.h"
-
 // ---------------------------------------
 // Global functions
 // ---------------------------------------
+#include <QString>
 
-
-CString Dec2Bin(unsigned nVal,unsigned nLen,bool bSpace)
+QString Dec2Bin(unsigned nVal,unsigned nLen,bool bSpace)
 {
 	unsigned	nBit;
-	CString		strBin = _T("");
+  QString		strBin = "";
+
 	for (int nInd=nLen-1;nInd>=0;nInd--)
 	{
 		nBit = ( nVal & (1 << nInd) ) >> nInd;
-		strBin += (nBit==1)?_T("1"):_T("0");
-		if ( ((nInd % 8) == 0) && (nInd != 0) ) {
-			if (bSpace) {
-				strBin += _T(" ");
+    strBin += (nBit==1)?"1":"0";
+
+    if ( ((nInd % 8) == 0) && (nInd != 0) )
+    {
+      if (bSpace)
+      {
+        strBin += " ";
 			}
 		}
 	}
+
 	return strBin;
 }
 
@@ -44,9 +47,9 @@ CString Dec2Bin(unsigned nVal,unsigned nLen,bool bSpace)
 // before write-out of 16b values to disk
 unsigned short Swap16(unsigned short nVal)
 {
-	BYTE nValHi,nValLo;
-	nValHi = static_cast<BYTE>((nVal & 0xFF00)>>8);
-	nValLo = static_cast<BYTE>((nVal & 0x00FF));
+  quint8 nValHi,nValLo;
+  nValHi = static_cast<quint8>((nVal & 0xFF00)>>8);
+  nValLo = static_cast<quint8>((nVal & 0x00FF));
 	return (nValLo<<8) + nValHi;
 }
 
@@ -65,9 +68,9 @@ bool TestBit(unsigned nVal,unsigned nBit)
 // Convert between unsigned integer to a 4-byte character string
 // (also known as FourCC codes). This field type is used often in
 // ICC profile entries.
-CString Uint2Chars(unsigned nVal)
+QString Uint2Chars(unsigned nVal)
 {
-	CString strTmp;
+  QString strTmp;
 	char c3,c2,c1,c0;
 	c3 = char((nVal & 0xFF000000)>>24);
 	c2 = char((nVal & 0x00FF0000)>>16);
@@ -77,38 +80,44 @@ CString Uint2Chars(unsigned nVal)
 	c2 = (c2 == 0)?'.':c2;
 	c1 = (c1 == 0)?'.':c1;
 	c0 = (c0 == 0)?'.':c0;
-	strTmp.Format(_T("'%c%c%c%c' (0x%08X)"),
-		c3,c2,c1,c0,nVal);
+//	strTmp.Format(_T("'%c%c%c%c' (0x%08X)"), c3,c2,c1,c0,nVal);
+  strTmp = QString("'%1%2%3%4' (%5)").arg(c3).arg(c2).arg(c1).arg(c0).arg(nVal, 8, 16, QChar('0'));
 	return strTmp;
 }
 
 // Convert between unsigned int and a dotted-byte notation
-CString Uint2DotByte(unsigned nVal)
+QString Uint2DotByte(unsigned nVal)
 {
-	CString strTmp;
-	strTmp.Format(_T("'%u.%u.%u.%u' (0x%08X)"),
+  QString strTmp;
+  strTmp = QString("'%1%2%3%4' (%5)")
+      .arg(nVal & 0xFF000000>>24)
+      .arg(nVal & 0x00FF0000>>16)
+      .arg(nVal & 0x0000FF00>>8)
+      .arg(nVal & 0x000000FF)
+      .arg(nVal, 8, 16, QChar('0'));
+/*	strTmp.Format(_T("'%u.%u.%u.%u' (0x%08X)"),
 		((nVal & 0xFF000000)>>24),
 		((nVal & 0x00FF0000)>>16),
 		((nVal & 0x0000FF00)>>8),
 		(nVal & 0x000000FF),
-		nVal);
+    nVal);*/
 	return strTmp;
 }
 
 /*
-// Convert a byte array into a unicode CString
+// Convert a byte array into a unicode QString
 // - Clips to MAX_UNICODE_STRLEN
 //
 // INPUT:
 // - pBuf				= Byte array containing encoded unicode string
 // - nBufLen			= Number of unicode characters (16b) to read
 // RETURN:
-// - CString containing unicode characters
+// - QString containing unicode characters
 //
 #define MAX_UNICODE_STRLEN	255
-CString ByteStr2Unicode(BYTE* pBuf, unsigned nBufLen)
+QString ByteStr2Unicode(BYTE* pBuf, unsigned nBufLen)
 {
-	CString		strUni;
+  QString		strUni;
 	BYTE		anStrBuf[(MAX_UNICODE_STRLEN+1)*2];
 	wchar_t		acStrBuf[(MAX_UNICODE_STRLEN+1)];
 
@@ -150,45 +159,49 @@ CString ByteStr2Unicode(BYTE* pBuf, unsigned nBufLen)
 	// - This routine requires it to be terminated first!
 	lstrcpyW(acStrBuf,(LPCWSTR)anStrBuf);
 
-	// Finally copy back into CString
+  // Finally copy back into QString
 	strUni = acStrBuf;
 	return strUni;
 }
 */
 
-bool	Str2Uint32(CString strVal,unsigned nBase,unsigned &nVal)
+bool	Str2Uint32(QString strVal,unsigned nBase,unsigned &nVal)
 {
 	// Convert to unsigned 32b
-	strVal.MakeUpper();
-	if (nBase == 16) {
+//	strVal.MakeUpper();
+  bool Ok;
+
+  if (nBase == 16)
+  {
 		// Hex
-		if (strVal.Left(2) == _T("0X")) {
-			strVal = strVal.Mid(2,20);
+    if (strVal.startsWith("0X"))
+    {
+      strVal = strVal.mid(2,20);
 		}
-		if (strVal.SpanIncluding(_T("0123456789ABCDEF")) != strVal) {
-			return false;
-		}
-		nVal = _tcstoul(strVal,NULL,16);
-	} else if (nBase == 10) {
+
+    nVal = strVal.toUInt(&Ok, 16);
+  }
+  else if (nBase == 10)
+  {
 		// Dec
-		if (strVal.SpanIncluding(_T("0123456789")) != strVal) {
-			return false;
-		}
-		nVal = _tcstoul(strVal,NULL,10);
-	} else {
+     nVal = strVal.toUInt(&Ok, 10);
+  }
+  else
+  {
 		return false;
 	}
-	return true;
+
+  return Ok;
 }
 
 
-
+/*
 // UNUSED
 // Convert a unicode string to ASCII and write into a buffer
 // - Returns true if we successfully wrote entire string including terminator
-bool Uni2AscBuf(PBYTE pBuf,CString strIn,unsigned nMaxBytes,unsigned &nOffsetBytes)
+bool Uni2AscBuf(PBYTE pBuf,QString strIn,unsigned nMaxBytes,unsigned &nOffsetBytes)
 {
-	ASSERT(pBuf);
+  ASSERT(pBuf);
 
 	bool		bRet = false;
 	char		chAsc;
@@ -216,11 +229,11 @@ bool Uni2AscBuf(PBYTE pBuf,CString strIn,unsigned nMaxBytes,unsigned &nOffsetByt
 		// We need to implement conversion here
 		// Ref: http://stackoverflow.com/questions/4786292/converting-unicode-strings-and-vice-versa
 
-		// Since we have compiled for unicode, the CString character fetch
+    // Since we have compiled for unicode, the QString character fetch
 		// will be unicode char. Therefore we need to use ANSI-converted form.
 		chAsc = pszNonUnicode[nChInd];
 #else
-		// Since we have compiled for non-Unicode, the CString character fetch
+    // Since we have compiled for non-Unicode, the QString character fetch
 		// will be single byte char
 		chAsc = strIn.GetAt(nChInd);
 #endif
@@ -245,8 +258,8 @@ bool Uni2AscBuf(PBYTE pBuf,CString strIn,unsigned nMaxBytes,unsigned &nOffsetByt
 
 	// Return true if we finished the string write (without exceeding nMaxBytes)
 	// or false otherwise
-	return bRet;
-}
+  return bRet;
+} */
 
 
 // ---------------------------------------

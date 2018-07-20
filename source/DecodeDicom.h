@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -23,7 +23,10 @@
 //
 // ==========================================================================
 
-#pragma once
+#ifndef DECODEDICOM_H
+#define DECODEDICOM_H
+
+#include <QString>
 
 #include "WindowBuf.h"
 #include "snoop.h"
@@ -42,21 +45,21 @@ struct tsDicomTag {
 	unsigned	nTagGroup;
 	unsigned	nTagElement;
 	teDicomType	eTagType;
-	CString		strTagName;
+	QString		strTagName;
 };
 
 // Definition of Transfer Syntaxes and other UIDs
 struct tsDicomTagSpec {
 	unsigned	nTagGroup;
 	unsigned	nTagElement;
-	CString		strVal;
-	CString		strDefinition;
+	QString		strVal;
+	QString		strDefinition;
 };
 
 struct tsTagDetail {
 	unsigned		nTagGroup;
 	unsigned		nTagElement;
-	CString			strVR;
+	QString			strVR;
 	unsigned		nLen;
 	unsigned		nOffset;		// Offset after parsing this tag
 
@@ -64,20 +67,20 @@ struct tsTagDetail {
 	bool			bLen4B;
 
 	bool			bTagOk;
-	CString			strTag;
+	QString			strTag;
 	bool			bValOk;
-	CString			strVal;
+	QString			strVal;
 
 	bool			bTagIsJpeg;
 	unsigned long	nPosJpeg;
 
 	tsTagDetail() {
-		Reset();		
+		Reset();
 	};
 	void Reset() {
 		nTagGroup		= 0;
 		nTagElement		= 0;
-		strVR			= _T("");
+        strVR			= "";
 		nLen			= 0;
 		nOffset			= 0;
 
@@ -85,9 +88,9 @@ struct tsTagDetail {
 		bLen4B			= false;
 
 		bTagOk			= false;
-		strTag			= _T("");
+        strTag			= "";
 		bValOk			= false;
-		strVal			= _T("");
+        strVal			= "";
 
 		bTagIsJpeg		= false;
 		nPosJpeg		= 0;
@@ -116,20 +119,23 @@ public:
 	void			Reset();
 
 	bool			DecodeDicom(unsigned long nPos,unsigned long nPosFileEnd,unsigned long &nPosJpeg);
-	//bool			DecodeTagHeader(unsigned long nPos,CString &strTag,CString &strVR,unsigned &nLen,unsigned &nOffset,unsigned long &nPosJpeg);
+	//bool			DecodeTagHeader(unsigned long nPos,QString &strTag,QString &strVR,unsigned &nLen,unsigned &nOffset,unsigned long &nPosJpeg);
 	bool			GetTagHeader(unsigned long nPos,tsTagDetail &sTagDetail);
 	bool			FindTag(unsigned nTagGroup,unsigned nTagElement,unsigned &nFldInd);
 
-	BYTE			Buf(unsigned long offset,bool bClean);
+    quint8			Buf(unsigned long offset,bool bClean);
 
-	CString			ParseIndent(unsigned nIndent);
-	void			ReportFldStr(unsigned nIndent,CString strField,CString strVal);
-	void			ReportFldStrEnc(unsigned nIndent,CString strField,CString strVal,CString strEncVal);
-	void			ReportFldHex(unsigned nIndent,CString strField,unsigned long nPosStart,unsigned nLen);
-	void			ReportFldEnum(unsigned nIndent,CString strField,unsigned nTagGroup,unsigned nTagElement,CString strVal);
-	bool			LookupEnum(unsigned nTagGroup,unsigned nTagElement,CString strVal,CString &strDesc);
+	QString			ParseIndent(unsigned nIndent);
+	void			ReportFldStr(unsigned nIndent,QString strField,QString strVal);
+	void			ReportFldStrEnc(unsigned nIndent,QString strField,QString strVal,QString strEncVal);
+	void			ReportFldHex(unsigned nIndent,QString strField,unsigned long nPosStart,unsigned nLen);
+	void			ReportFldEnum(unsigned nIndent,QString strField,unsigned nTagGroup,unsigned nTagElement,QString strVal);
+	bool			LookupEnum(unsigned nTagGroup,unsigned nTagElement,QString strVal,QString &strDesc);
 
 private:
+  CDecodeDicom &operator = (const CDecodeDicom&);
+  CDecodeDicom(CDecodeDicom&);
+  
 	// Configuration
 	CSnoopConfig*	m_pAppConfig;
 
@@ -141,6 +147,6 @@ public:
 	bool			m_bDicom;
 	bool			m_bJpegEncap;
 	bool			m_bJpegEncapOffsetNext;
-
 };
 
+#endif

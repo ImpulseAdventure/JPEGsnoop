@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -25,142 +25,140 @@
 
 #pragma once
 
+#include <QMessageBox>
+#include <QPainter>
+
 #include "JfifDecode.h"
 #include "ImgDecode.h"
 #include "WindowBuf.h"
 #include "SnoopConfig.h"
 
-
 class CJPEGsnoopCore
 {
 public:
-	CJPEGsnoopCore(void);
-	~CJPEGsnoopCore(void);
+  CJPEGsnoopCore(void);
+  ~CJPEGsnoopCore(void);
 
-	void			Reset();
+  void Reset();
 
-	void			SetStatusBar(CStatusBar* pStatBar);
+  void SetStatusBar(QStatusBar * pStatBar);
 
-	BOOL			AnalyzeFile(CString strFname);
-	void			AnalyzeFileDo();
-	BOOL			AnalyzeOpen();
-	void			AnalyzeClose();
-	BOOL			IsAnalyzed();
-	BOOL			DoAnalyzeOffset(CString strFname);
+  bool AnalyzeFile(QString strFname);
+  void AnalyzeFileDo();
+  bool AnalyzeOpen();
+  void AnalyzeClose();
+  bool IsAnalyzed();
+  bool DoAnalyzeOffset(QString strFname);
 
-	void			DoLogSave(CString strLogName);
+  void DoLogSave(QString strLogName);
 
-	void			GenBatchFileList(CString strDirSrc,CString strDirDst,bool bRecSubdir,bool bExtractAll);
-	unsigned		GetBatchFileCount();
-	void			DoBatchFileProcess(unsigned nFileInd,bool bWriteLog,bool bExtractAll);
-	CString			GetBatchFileInfo(unsigned nFileInd);
+  void GenBatchFileList(QString strDirSrc, QString strDirDst, bool bRecSubdir, bool bExtractAll);
+  uint32_t GetBatchFileCount();
+  void DoBatchFileProcess(uint32_t nFileInd, bool bWriteLog, bool bExtractAll);
+  QString GetBatchFileInfo(uint32_t nFileInd);
 
-	void			BuildDirPath(CString strPath);
+  void BuildDirPath(QString strPath);
 
-	void			DoExtractEmbeddedJPEG(CString strInputFname,CString strOutputFname,
-							bool bOverlayEn,bool bForceSoi,bool bForceEoi,bool bIgnoreEoi,bool bExtractAllEn,bool bDhtAviInsert,
-							CString strOutPath);
+  void DoExtractEmbeddedJPEG(QString strInputFname, QString strOutputFname,
+                             bool bOverlayEn, bool bForceSoi, bool bForceEoi, bool bIgnoreEoi, bool bExtractAllEn,
+                             bool bDhtAviInsert, QString strOutPath);
 
+  // Accessor wrappers for CjfifDecode
+  void J_GetAviMode(bool & bIsAvi, bool & bIsMjpeg);
+  void J_SetAviMode(bool bIsAvi, bool bIsMjpeg);
+  void J_ImgSrcChanged();
+  uint32_t J_GetPosEmbedStart();
+  uint32_t J_GetPosEmbedEnd();
+  void J_GetDecodeSummary(QString & strHash, QString & strHashRot, QString & strImgExifMake, QString & strImgExifModel,
+                          QString & strImgQualExif, QString & strSoftware, teDbAdd & eDbReqSuggest);
+  uint32_t J_GetDqtZigZagIndex(uint32_t nInd, bool bZigZag);
+  uint32_t J_GetDqtQuantStd(uint32_t nInd);
+  void J_SetStatusBar(QStatusBar * pStatBar);
+  void J_ProcessFile(QFile * inFile);
+  void J_PrepareSendSubmit(QString strQual, teSource eUserSource, QString strUserSoftware, QString strUserNotes);
 
-	// Accessor wrappers for CjfifDecode
-	void			J_GetAviMode(bool &bIsAvi,bool &bIsMjpeg);
-	void			J_SetAviMode(bool bIsAvi,bool bIsMjpeg);
-	void			J_ImgSrcChanged();
-	unsigned long	J_GetPosEmbedStart();
-	unsigned long	J_GetPosEmbedEnd();
-	void			J_GetDecodeSummary(CString &strHash,CString &strHashRot,CString &strImgExifMake,CString &strImgExifModel,
-										CString &strImgQualExif,CString &strSoftware,teDbAdd &eDbReqSuggest);
-	unsigned		J_GetDqtZigZagIndex(unsigned nInd,bool bZigZag);
-	unsigned		J_GetDqtQuantStd(unsigned nInd);
-	void			J_SetStatusBar(CStatusBar* pStatBar);
-	void			J_ProcessFile(CFile* inFile);
-	void			J_PrepareSendSubmit(CString strQual,teSource eUserSource,CString strUserSoftware,CString strUserNotes);
-	
-	// Accessor wrappers for CImgDec
-	void			I_SetStatusBar(CStatusBar* pStatBar);
-	unsigned		I_GetDqtEntry(unsigned nTblDestId, unsigned nCoeffInd);
-	void			I_SetPreviewMode(unsigned nMode);
-	unsigned		I_GetPreviewMode();
-	void			I_SetPreviewYccOffset(unsigned nMcuX,unsigned nMcuY,int nY,int nCb,int nCr);
-	void			I_GetPreviewYccOffset(unsigned &nMcuX,unsigned &nMcuY,int &nY,int &nCb,int &nCr);
-	void			I_SetPreviewMcuInsert(unsigned nMcuX,unsigned nMcuY,int nLen);
-	void			I_GetPreviewMcuInsert(unsigned &nMcuX,unsigned &nMcuY,unsigned &nLen);
-	void			I_SetPreviewZoom(bool bInc,bool bDec,bool bSet,unsigned nVal);
-	unsigned		I_GetPreviewZoomMode();
-	float			I_GetPreviewZoom();
-	bool			I_GetPreviewOverlayMcuGrid();
-	void			I_SetPreviewOverlayMcuGridToggle();
-	CPoint			I_PixelToMcu(CPoint ptPix);
-	CPoint			I_PixelToBlk(CPoint ptPix);
-	unsigned		I_McuXyToLinear(CPoint ptMcu);
-	void			I_GetImageSize(unsigned &nX,unsigned &nY);
-	void			I_GetPixMapPtrs(short* &pMapY,short* &pMapCb,short* &pMapCr);
-	void			I_GetDetailVlc(bool &bDetail,unsigned &nX,unsigned &nY,unsigned &nLen);
-	void			I_SetDetailVlc(bool bDetail,unsigned nX,unsigned nY,unsigned nLen);	
-	unsigned		I_GetMarkerCount();
-	void			I_SetMarkerBlk(unsigned nBlkX,unsigned nBlkY);
-	CPoint			I_GetMarkerBlk(unsigned nInd);
-	void			I_SetStatusText(CString strText);
-	CString			I_GetStatusYccText();
-	void			I_SetStatusYccText(CString strText);
-	CString			I_GetStatusMcuText();
-	void			I_SetStatusMcuText(CString strText);
-	CString			I_GetStatusFilePosText();
-	void			I_SetStatusFilePosText(CString strText);
-	void			I_GetBitmapPtr(unsigned char* &pBitmap);
-	void			I_LookupFilePosMcu(unsigned nMcuX,unsigned nMcuY, unsigned &nByte, unsigned &nBit);
-	void			I_LookupFilePosPix(unsigned nPixX,unsigned nPixY, unsigned &nByte, unsigned &nBit);
-	void			I_LookupBlkYCC(unsigned nBlkX,unsigned nBlkY,int &nY,int &nCb,int &nCr);
-	void			I_ViewOnDraw(CDC* pDC,CRect rectClient,CPoint ptScrolledPos,CFont* pFont, CSize &szNewScrollSize);
-	void			I_GetPreviewPos(unsigned &nX,unsigned &nY);
-	void			I_GetPreviewSize(unsigned &nX,unsigned &nY);
-	bool			I_IsPreviewReady();
+  // Accessor wrappers for CImgDec
+  void I_SetStatusBar(QStatusBar * pStatBar);
+  uint32_t I_GetDqtEntry(uint32_t nTblDestId, uint32_t nCoeffInd);
+  void I_SetPreviewMode(uint32_t nMode);
+  uint32_t I_GetPreviewMode();
+  void I_SetPreviewYccOffset(uint32_t nMcuX, uint32_t nMcuY, int nY, int nCb, int nCr);
+  void I_GetPreviewYccOffset(uint32_t &nMcuX, uint32_t &nMcuY, int &nY, int &nCb, int &nCr);
+  void I_SetPreviewMcuInsert(uint32_t nMcuX, uint32_t nMcuY, int nLen);
+  void I_GetPreviewMcuInsert(uint32_t &nMcuX, uint32_t &nMcuY, uint32_t &nLen);
+  void I_SetPreviewZoom(bool bInc, bool bDec, bool bSet, uint32_t nVal);
+  uint32_t I_GetPreviewZoomMode();
+  float I_GetPreviewZoom();
+  bool I_GetPreviewOverlayMcuGrid();
+  void I_SetPreviewOverlayMcuGridToggle();
+  QPoint I_PixelToMcu(QPoint ptPix);
+  QPoint I_PixelToBlk(QPoint ptPix);
+  uint32_t I_McuXyToLinear(QPoint ptMcu);
+  void I_GetImageSize(uint32_t &nX, uint32_t &nY);
+  void I_GetPixMapPtrs(short *&pMapY, short *&pMapCb, short *&pMapCr);
+  void I_GetDetailVlc(bool & bDetail, uint32_t &nX, uint32_t &nY, uint32_t &nLen);
+  void I_SetDetailVlc(bool bDetail, uint32_t nX, uint32_t nY, uint32_t nLen);
+  uint32_t I_GetMarkerCount();
+  void I_SetMarkerBlk(uint32_t nBlkX, uint32_t nBlkY);
+  QPoint I_GetMarkerBlk(uint32_t nInd);
+  void I_SetStatusText(QString strText);
+  QString I_GetStatusYccText();
+  void I_SetStatusYccText(QString strText);
+  QString I_GetStatusMcuText();
+  void I_SetStatusMcuText(QString strText);
+  QString I_GetStatusFilePosText();
+  void I_SetStatusFilePosText(QString strText);
+  void I_GetBitmapPtr(unsigned char *&pBitmap);
+  void I_LookupFilePosMcu(uint32_t nMcuX, uint32_t nMcuY, uint32_t &nByte, uint32_t &nBit);
+  void I_LookupFilePosPix(uint32_t nPixX, uint32_t nPixY, uint32_t &nByte, uint32_t &nBit);
+  void I_LookupBlkYCC(uint32_t nBlkX, uint32_t nBlkY, int &nY, int &nCb, int &nCr);
+  void I_ViewOnDraw(QPainter* pDC,QRect rectClient,QPoint ptScrolledPos,QFont* pFont, QSize &szNewScrollSize);
+  void I_GetPreviewPos(uint32_t &nX, uint32_t &nY);
+  void I_GetPreviewSize(uint32_t &nX, uint32_t &nY);
+  bool I_IsPreviewReady();
 
-	// Accessor wrappers for CwindowBuf
-	void			B_SetStatusBar(CStatusBar* pStatBar);
-	void			B_BufLoadWindow(unsigned long nPosition);
-	void			B_BufFileSet(CFile* inFile);
-	void			B_BufFileUnset();
-	BYTE			B_Buf(unsigned long nOffset,bool bClean=false);
-	bool			B_BufSearch(unsigned long nStartPos, unsigned nSearchVal, unsigned nSearchLen,
-						   bool bDirFwd, unsigned long &nFoundPos);
-	bool			B_OverlayInstall(unsigned nOvrInd, BYTE* pOverlay,unsigned nLen,unsigned nBegin,
-							unsigned nMcuX,unsigned nMcuY,unsigned nMcuLen,unsigned nMcuLenIns,
-							int nAdjY,int nAdjCb,int nAdjCr);
-	void			B_OverlayRemoveAll();
-	bool			B_OverlayGet(unsigned nOvrInd, BYTE* &pOverlay,unsigned &nLen,unsigned &nBegin);
+  // Accessor wrappers for CwindowBuf
+  void B_SetStatusBar(QStatusBar * pStatBar);
+  void B_BufLoadWindow(uint32_t nPosition);
+  void B_BufFileSet(QFile * inFile);
+  void B_BufFileUnset();
+  quint8 B_Buf(uint32_t nOffset, bool bClean = false);
+  bool B_BufSearch(uint32_t nStartPos, uint32_t nSearchVal, uint32_t nSearchLen, bool bDirFwd, uint32_t &nFoundPos);
+  bool B_OverlayInstall(uint32_t nOvrInd, quint8 * pOverlay, uint32_t nLen, uint32_t nBegin,
+                        uint32_t nMcuX, uint32_t nMcuY, uint32_t nMcuLen, uint32_t nMcuLenIns, int nAdjY, int nAdjCb, int nAdjCr);
+  void B_OverlayRemoveAll();
+  bool B_OverlayGet(uint32_t nOvrInd, quint8 * &pOverlay, uint32_t &nLen, uint32_t &nBegin);
 
+  CimgDecode *imgDecoder() { return m_pImgDec; }
 private:
 
-	// Batch processing
-	void			GenBatchFileListRecurse(CString strSrcRootName,CString strDstRootName,CString strPathName,bool bSubdirs,bool bExtractAll);
-	void			GenBatchFileListSingle(CString strSrcRootName,CString strDstRootName,CString strPathName,bool bExtractAll);
-
+  // Batch processing
+  void GenBatchFileListRecurse(QString strSrcRootName, QString strDstRootName, QString strPathName, bool bSubdirs,
+                               bool bExtractAll);
+  void GenBatchFileListSingle(QString strSrcRootName, QString strDstRootName, QString strPathName, bool bExtractAll);
 
 private:
+    QMessageBox msgBox;
 
-	// Config
-	CSnoopConfig*	m_pAppConfig;		// Pointer to application config
+  // Config
+  CSnoopConfig *m_pAppConfig;   // Pointer to application config
 
-	// Input JPEG file
-	CFile*			m_pFile;
-	ULONGLONG		m_lFileSize;
+  // Input JPEG file
+  QFile *m_pFile;
+  quint64 m_lFileSize;
 
+  QString m_strPathName;
+  bool m_bFileAnalyzed;         // Have we opened and analyzed a file?
+  bool m_bFileOpened;           // Is a file currently opened?
 
-	CString			m_strPathName;
-	BOOL			m_bFileAnalyzed;		// Have we opened and analyzed a file?
-	BOOL			m_bFileOpened;			// Is a file currently opened?
-	
-	// Decoders and Buffers
-	CjfifDecode*	m_pJfifDec;
-	CimgDecode*		m_pImgDec;
-	CwindowBuf*		m_pWBuf;
+  // Decoders and Buffers
+  CjfifDecode *m_pJfifDec;
+  CimgDecode *m_pImgDec;
+  CwindowBuf *m_pWBuf;
 
-
-	// Batch processing
-	CStringArray	m_asBatchFiles;
-	CStringArray	m_asBatchDest;
-	CStringArray	m_asBatchOutputs;
+  // Batch processing
+  QStringList m_asBatchFiles;
+  QStringList m_asBatchDest;
+  QStringList m_asBatchOutputs;
 
 };
-

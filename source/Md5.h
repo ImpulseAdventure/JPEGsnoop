@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -82,9 +82,11 @@
 #ifndef ___MD5_H___
 #define ___MD5_H___
 
+#include <stdint.h>
+
 /* Typedef a 32 bit type */
 #ifndef UINT4
-typedef unsigned long int UINT4;
+typedef uint32_t UINT4;
 #endif
 
 /* Data structure for MD5 (Message Digest) computation */
@@ -94,13 +96,13 @@ typedef struct {
 	unsigned char in[64];                              /* Input buffer */
 	unsigned char digest[16];     /* Actual digest after MD5Final call */
 
-	unsigned int digest32[4]; //CAL! Added
+  uint32_t digest32[4]; //CAL! Added
 } MD5_CTX;
 
 static void MD5_Transform (UINT4 *buf, UINT4 *in);
 
 void MD5Init(MD5_CTX *mdContext, unsigned long pseudoRandomNumber = 0);
-void MD5Update(MD5_CTX *mdContext, unsigned char *inBuf, unsigned int inLen);
+void MD5Update(MD5_CTX *mdContext, unsigned char *inBuf, int32_t inLen);
 void MD5Final(MD5_CTX *mdContext);
 
 #endif /* ___MD5_H___ included */

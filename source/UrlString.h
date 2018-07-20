@@ -39,13 +39,13 @@ Description: H URL Encoder/Decoder
 class CUrlString
 {
 private:
-	CString m_csUnsafe;
+        QString m_csUnsafe;
 
 public:
 	CUrlString();
 	virtual ~CUrlString() { };
-	CString Encode(CString csDecoded);
-	CString Decode(CString csEncoded);
+        QString Encode(QString csDecoded);
+        QString Decode(QString csEncoded);
 };
 
 #endif //__CURLSTRING_H_

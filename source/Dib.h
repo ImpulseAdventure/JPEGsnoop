@@ -28,28 +28,98 @@
 //		ISBN-13:	978-0672312410
 // ====================================================================================================
 
-#pragma once
+#ifndef DIB_H
+#define DIB_H
 
-class CDIB : public CObject
+#include <QBitmap>
+#include <QObject>
+#include <QRect>
+
+// TODO: Note that this file (Dib) will likely be removed soon
+#include <windows.h>
+
+#define BI_RGB 0
+
+// TODO: Confirm appropriate mapping (LONG & DWORD)
+typedef long LONG;
+typedef unsigned char BYTE;
+typedef unsigned long DWORD;
+typedef unsigned short WORD;
+
+// TODO: Remove the following as already defined in windows.h
+#if 0
+
+typedef struct tagBITMAPFILEHEADER
+{
+    WORD    bfType; // 2  /* Magic identifier */
+    DWORD   bfSize; // 4  /* File size in bytes */
+    WORD    bfReserved1; // 2
+    WORD    bfReserved2; // 2
+    DWORD   bfOffBits; // 4 /* Offset to image data, bytes */
+} __attribute__((packed)) BITMAPFILEHEADER;
+
+typedef struct tagBITMAPINFOHEADER
+{
+    DWORD    biSize; // 4 /* Header size in bytes */
+    LONG     biWidth; // 4 /* Width of image */
+    LONG     biHeight; // 4 /* Height of image */
+    WORD     biPlanes; // 2 /* Number of colour planes */
+    WORD     biBitCount; // 2 /* Bits per pixel */
+    DWORD    biCompression; // 4 /* Compression type */
+    DWORD    biSizeImage; // 4 /* Image size in bytes */
+    LONG     biXPelsPerMeter; // 4
+    LONG     biYPelsPerMeter; // 4 /* Pixels per meter */
+    DWORD    biClrUsed; // 4 /* Number of colours */
+    DWORD    biClrImportant; // 4 /* Important colours */
+} BITMAPINFOHEADER;
+
+typedef struct tagRGBQUAD
+{
+    unsigned char    rgbBlue;
+    unsigned char    rgbGreen;
+    unsigned char    rgbRed;
+    unsigned char    rgbReserved;
+} RGBQUAD, *LPRGBQUAD;
+
+typedef struct tagBITMAPINFO
+{
+  BITMAPINFOHEADER bmiHeader;
+  RGBQUAD          bmiColors[1];
+} BITMAPINFO, *LPBITMAPINFO;
+
+#endif //
+
+typedef struct
+{
+        BYTE    b;
+        BYTE    g;
+        BYTE    r;
+} RGB_data; // RGB TYPE, plz also make sure the order
+
+class CDIB : public QObject
 {
 public:
     CDIB();
     virtual ~CDIB();
 
-	void			Kill();
-    bool			CreateDIB(DWORD dwWidth,DWORD dwHeight,unsigned short nBits);
-    bool			CreateDIBFromBitmap(CDC* pDC);
+    void			Kill();
+    bool			CreateDIB(quint32 dwWidth,quint32 dwHeight,unsigned short nBits);
+//  bool			CreateDIBFromBitmap(CDC* pDC);
     void			InitializeColors();
     int				GetDIBCols() const;
     void*			GetDIBBitArray() const;
-    bool			CopyDIB(CDC* pDestDC,int x,int y,float scale=1);
-	bool			CopyDibDblBuf(CDC* pDestDC, int x, int y,CRect* rectClient, float scale);
-    bool			CopyDIBsmall(CDC* pDestDC,int x,int y,float scale=1);
-	bool			CopyDibPart(CDC* pDestDC,CRect rectImg,CRect* rectClient, float scale);
+//  bool			CopyDIB(CDC* pDestDC,int x,int y,float scale=1);
+//  bool			CopyDibDblBuf(CDC* pDestDC, int x, int y,QRect* rectClient, float scale);
+//  bool			CopyDIBsmall(CDC* pDestDC,int x,int y,float scale=1);
+//  bool			CopyDibPart(CDC* pDestDC,QRect rectImg,QRect* rectClient, float scale);
 
-public:
-    CBitmap			m_bmBitmap;
+  QBitmap			m_bmBitmap;
 
 private:
-    LPBITMAPINFO	m_pDIB;
+  CDIB &operator = (const CDIB&);
+  CDIB(CDIB&);
+
+  LPBITMAPINFO	m_pDIB;
 };
+
+#endif

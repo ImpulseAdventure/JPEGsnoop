@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,9 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
-#include "stdafx.h"
+#include <QDebug>
+#include <QFile>
+
 #include "DbSigs.h"
 #include "General.h"
 
@@ -60,10 +62,12 @@ CDbSigs::CDbSigs()
 
 	bDone = false;
 	m_nSigListNum = 0;
+
 	while (!bDone)
 	{
-		if (!_tcscmp(m_sSigList[m_nSigListNum].strXMake,_T("*")))
-			bDone = true;
+//    if (!_tcscmp(m_sSigList[m_nSigListNum].strXMake,"*"))
+    if (m_sSigList[m_nSigListNum].strXMake == "*")
+      bDone = true;
 		else
 			m_nSigListNum++;
 	}
@@ -71,20 +75,24 @@ CDbSigs::CDbSigs()
 	// Count number of exceptions in Signatures.inl
 	bDone = false;
 	m_nExcMmNoMkrListNum = 0;
+
 	while (!bDone)
 	{
-		if (!_tcscmp(m_sExcMmNoMkrList[m_nExcMmNoMkrListNum].strXMake,_T("*")))
-			bDone = true;
+//    if (!_tcscmp(m_sExcMmNoMkrList[m_nExcMmNoMkrListNum].strXMake,"*"))
+    if (m_sExcMmNoMkrList[m_nExcMmNoMkrListNum].strXMake == "*")
+      bDone = true;
 		else
 			m_nExcMmNoMkrListNum++;
 	}
 
 	bDone = false;
 	m_nExcMmIsEditListNum = 0;
+
 	while (!bDone)
 	{
-		if (!_tcscmp(m_sExcMmIsEditList[m_nExcMmIsEditListNum].strXMake,_T("*")))
-			bDone = true;
+//    if (!_tcscmp(m_sExcMmIsEditList[m_nExcMmIsEditListNum].strXMake,"*"))
+    if (m_sExcMmIsEditList[m_nExcMmIsEditListNum].strXMake == "*")
+      bDone = true;
 		else
 			m_nExcMmIsEditListNum++;
 	}
@@ -92,22 +100,42 @@ CDbSigs::CDbSigs()
 
 	bDone = false;
 	m_nSwIjgListNum = 0;
-	while (!bDone) {
-		if (!_tcscmp(m_sSwIjgList[m_nSwIjgListNum],_T("*")))
-			bDone = true;
-		else
-			m_nSwIjgListNum++;
-	}
+
+  // Sample list of software programs that also use the IJG encoder
+
+  m_sSwIjgList
+    << "GIMP"
+    << "IrfanView"
+    << "idImager"
+    << "FastStone Image Viewer"
+    << "NeatImage"
+    << "Paint.NET"
+    << "Photomatix"
+    << "XnView";
+
+  m_nSwIjgListNum = m_sSwIjgList.count();
+
 
 	bDone = false;
 	m_nXcomSwListNum = 0;
-	while (!bDone) {
-		if (!_tcscmp(m_sXComSwList[m_nXcomSwListNum],_T("*")))
-			bDone = true;
-		else
-			m_nXcomSwListNum++;
-	}
 
+  // Sample list of software programs marked by EXIF.COMMENT field
+  //
+  // NOTE: Have not included the following indicators as they also appear in some digicams in addition to software encoders.
+  //   "LEAD Technologies"
+  //   "U-Lead Systems"
+  //   "Intel(R) JPEG Library" (unsure if ever in hardware)
+  //
+
+  m_sXComSwList
+    << "gd-jpeg"
+    << "Photoshop"
+    << "ACD Systems"
+    << "AppleMark"
+    << "PICResize"
+    << "NeatImage";
+
+  m_nXcomSwListNum = m_sXComSwList.count();
 
 	// Reset extra database
 	m_nSigListExtraNum = 0;
@@ -115,8 +143,7 @@ CDbSigs::CDbSigs()
 	// Default to user database dir not set yet
 	// This will cause a fail if database load/store
 	// functions are called before SetDbDir()
-	m_strDbDir = _T("");
-
+  m_strDbDir = "";
 }
 
 CDbSigs::~CDbSigs()
@@ -142,11 +169,9 @@ unsigned CDbSigs::GetNumSigsExtra()
 
 
 // Read an unsigned integer (4B) from the buffer
-bool CDbSigs::BufReadNum(PBYTE pBuf,unsigned &nOut,unsigned nMaxBytes,unsigned &nOffsetBytes)
+bool CDbSigs::BufReadNum(uint8_t *pBuf,unsigned &nOut,unsigned,unsigned &nOffsetBytes)
 {
-	nMaxBytes;	// Unreferenced param
-
-	ASSERT(pBuf);
+  Q_ASSERT(pBuf);
 	// TODO: check for buffer bounds
 	nOut = (unsigned)pBuf[nOffsetBytes];
 	nOffsetBytes += sizeof(unsigned);
@@ -154,13 +179,11 @@ bool CDbSigs::BufReadNum(PBYTE pBuf,unsigned &nOut,unsigned nMaxBytes,unsigned &
 }
 
 // Write an unsigned integer (4B) to the buffer
-bool CDbSigs::BufWriteNum(PBYTE pBuf,unsigned nIn,unsigned nMaxBytes,unsigned &nOffsetBytes)
+bool CDbSigs::BufWriteNum(uint8_t *pBuf,unsigned nIn,unsigned,unsigned &nOffsetBytes)
 {
-	nMaxBytes;	// Unreferenced param
-
-	ASSERT(pBuf);
+  Q_ASSERT(pBuf);
 	// TODO: check for buffer bounds
-	PBYTE		pBufBase;
+  uint8_t *	pBufBase;
 	unsigned*	pBufInt;
 	pBufBase = &pBuf[nOffsetBytes];
 	pBufInt = (unsigned*)pBufBase;
@@ -169,16 +192,15 @@ bool CDbSigs::BufWriteNum(PBYTE pBuf,unsigned nIn,unsigned nMaxBytes,unsigned &n
 	return true;
 }
 
-
 // Attempt to read a line from the buffer
 // This is a replacement for CStdioFile::ReadLine()
 // Both 16-bit unicode and 8-bit SBCS encoding modes are supported (via bUni)
 // Offset parameter is incremented accordingly
 // Supports both newline and NULL for string termination
-bool CDbSigs::BufReadStr(PBYTE pBuf,CString &strOut,unsigned nMaxBytes,bool bUni,unsigned &nOffsetBytes)
+bool CDbSigs::BufReadStr(uint8_t *pBuf,QString &strOut,unsigned nMaxBytes,bool bUni,unsigned &nOffsetBytes)
 {
-	ASSERT(pBuf);
-	CString		strOutTmp;
+  Q_ASSERT(pBuf);
+  QString		strOutTmp;
 	bool		bDone;
 
 	char		chAsc;
@@ -186,30 +208,43 @@ bool CDbSigs::BufReadStr(PBYTE pBuf,CString &strOut,unsigned nMaxBytes,bool bUni
 	unsigned	nCharSz = ((bUni)?sizeof(wchar_t):sizeof(char));
 
 	bDone = false;
-	strOut = _T("");
-	// Ensure we don't overrun the buffer by calculating the last
-	// byte index required for each iteration.
-	for (unsigned nInd=nOffsetBytes;(!bDone)&&(nInd+nCharSz-1<nMaxBytes);nInd+=nCharSz) {
-		if (bUni) {
+  strOut = "";
+
+  // Ensure we don't overrun the buffer by calculating the last byte index required for each iteration.
+  for (unsigned nInd=nOffsetBytes; (!bDone) && (nInd + nCharSz - 1 < nMaxBytes); nInd += nCharSz)
+  {
+    if (bUni)
+    {
 			chUni = pBuf[nInd];
-			if ( (chUni != '\n') && (chUni != 0) ) {
+
+      if ( (chUni != '\n') && (chUni != 0) )
+      {
 				strOut += chUni;
-			} else {
+      }
+      else
+      {
 				bDone = true;
 				nOffsetBytes = nInd+nCharSz;
 			}
-		} else {
+    }
+    else
+    {
 			chAsc = pBuf[nInd];
-			if ( (chAsc != '\n') && (chAsc != 0) ) {
+
+      if ( (chAsc != '\n') && (chAsc != 0) )
+      {
 				strOut += chAsc;
-			} else {
+      }
+      else
+      {
 				bDone = true;
 				nOffsetBytes = nInd+nCharSz;
 			}
 		}
 	}
 
-	if (!bDone) {
+  if (!bDone)
+  {
 		nOffsetBytes = nMaxBytes;
 		// The input was not terminated, so we're still going to return what we got so far
 		return false;
@@ -218,23 +253,25 @@ bool CDbSigs::BufReadStr(PBYTE pBuf,CString &strOut,unsigned nMaxBytes,bool bUni
 	return true;
 }
 
-// Return true if we managed to write entire string including terminator
-// without overrunning nMaxBytes
-bool CDbSigs::BufWriteStr(PBYTE pBuf,CString strIn,unsigned nMaxBytes,bool bUni,unsigned &nOffsetBytes)
+// Return true if we managed to write entire string including terminator without overrunning nMaxBytes
+bool CDbSigs::BufWriteStr(unsigned char *pBuf,QString strIn,unsigned nMaxBytes,bool bUni,unsigned &nOffsetBytes)
 {
-	ASSERT(pBuf);
+    Q_ASSERT(pBuf);
 
-	bool		bRet = false;
-	char		chAsc;
-	wchar_t		chUni;
-	unsigned	nCharSz = ((bUni)?sizeof(wchar_t):sizeof(char));
-	PBYTE		pBufBase;
-	LPWSTR		pBufUni;
-	LPSTR		pBufAsc;
+    bool            bRet = false;
+    char            chAsc;
+    wchar_t         chUni;
+    unsigned        nCharSz = ((bUni)?sizeof(wchar_t):sizeof(char));
+    unsigned char   *pBufBase;
+    wchar_t         *pBufUni;
+    unsigned char   *pBufAsc;
 
 	pBufBase = pBuf + nOffsetBytes;
-	pBufUni = (LPWSTR)pBufBase;
-	pBufAsc = (LPSTR)pBufBase;
+    pBufUni = (wchar_t *)pBufBase;
+    pBufAsc = pBufBase;
+
+    // FIXME: Comment out the following until a cross-platform solution can be written
+    /*
 
 #ifdef UNICODE
 	// Create non-Unicode version of string
@@ -248,99 +285,98 @@ bool CDbSigs::BufWriteStr(PBYTE pBuf,CString strIn,unsigned nMaxBytes,bool bUni,
 	strIn.UnlockBuffer( );
 #endif
 
-
 	unsigned	nStrLen;
 	unsigned	nChInd;
-	nStrLen = strIn.GetLength();
-	for (nChInd=0;(nChInd<nStrLen)&&(nOffsetBytes+nCharSz-1<nMaxBytes);nChInd++) {
-		if (bUni) {
-			// Normal handling for unicode
-			chUni = strIn.GetAt(nChInd);
-			pBufUni[nChInd] = chUni; 
-		} else {
+    nStrLen = strIn.size();
 
+    for (nChInd=0;(nChInd<nStrLen)&&(nOffsetBytes+nCharSz-1<nMaxBytes);nChInd++)
+    {
+        if (bUni)
+        {
+			// Normal handling for unicode
+            chUni = strIn[nChInd];
+			pBufUni[nChInd] = chUni; 
+        }
+        else
+        {
 #ifdef UNICODE
 			// To avoid Warning C4244: Conversion from 'wchar_t' to 'char' possible loss of data
 			// We need to implement conversion here
 			// Ref: http://stackoverflow.com/questions/4786292/converting-unicode-strings-and-vice-versa
 
-			// Since we have compiled for unicode, the CString character fetch
+            // Since we have compiled for unicode, the QString character fetch
 			// will be unicode char. Therefore we need to use ANSI-converted form.
 			chAsc = pszNonUnicode[nChInd];
 #else
-			// Since we have compiled for non-Unicode, the CString character fetch
+            // Since we have compiled for non-Unicode, the QString character fetch
 			// will be single byte char
-			chAsc = strIn.GetAt(nChInd);
+            chAsc = strIn[nChInd];
 #endif
 			pBufAsc[nChInd] = chAsc; 
 		}
+
 		// Advance pointers
 		nOffsetBytes += nCharSz;
 	}
 
 	// Now terminate if we have space
-	if ((nOffsetBytes + nCharSz-1) < nMaxBytes) {
-		if (bUni) {
-			chUni = wchar_t(0);
+    if ((nOffsetBytes + nCharSz-1) < nMaxBytes)
+    {
+        if (bUni)
+        {
+            chUni = wchar0;
 			pBufUni[nChInd] = chUni;
-		} else {
+        }
+        else
+        {
 			chAsc = char(0);
 			pBufAsc[nChInd] = chAsc;
 		}
-		// Advance pointers
+
+        // Advance pointers
 		nOffsetBytes += nCharSz;
 
 		// Since we managed to include terminator, return is successful
 		bRet = true;
-	}
+    }
+
+    */
 
 	// Return true if we finished the string write (without exceeding nMaxBytes)
 	// or false otherwise
 	return bRet;
 }
 
-
 void CDbSigs::DatabaseExtraLoad()
 {
-	CFile		*pInFile = NULL;
-	PBYTE		pBuf = NULL;
+  uint8_t *	pBuf = NULL;
 	unsigned	nBufLenBytes = 0;
 	unsigned	nBufOffset = 0;
-	CString		strError;
+  QString		strError;
 
-	ASSERT(m_strDbDir != _T(""));
-	if (m_strDbDir == _T("")) {
+  Q_ASSERT(m_strDbDir != "");
+
+  if (m_strDbDir == "")
+  {
 		return;
 	}
 
-	// Retrieve from environment user profile path.
-	// FIXME: Increase maximum file path size
-	TCHAR szFilePathName[200];
-	_stprintf_s(szFilePathName,_T("%s\\%s"),(LPCTSTR)m_strDbDir,DAT_FILE);
-
 	// Open the input file
-	try
-	{
-		// Open specified file
-		pInFile = new CFile(szFilePathName, CFile::modeRead );
-	}
-	catch (CFileException* e)
-	{
-		TCHAR		msg[MAX_BUF_EX_ERR_MSG];
-		e->GetErrorMessage(msg,MAX_BUF_EX_ERR_MSG);
-		e->Delete();
+  QFile pInFile(m_strDbDir + QString(DAT_FILE));
 
+  if(pInFile.open(QIODevice::ReadOnly) == false)
+	{
 		// To avoid any user confusion, we disable this warning message if this
 		// is the first time the program has been run (when we would expect that the user
 		// database is not present). After first run, the user database will have been
 		// created.
 		// Take from SnoopConfig.bEulaAccepted
-		if (!m_bFirstRun) {
-			strError.Format(_T("Couldn't find User Signature Database\n\n[%s]\n\nCreating default database"),(LPCTSTR)msg);
-			OutputDebugString(strError);
-			AfxMessageBox(strError);
+    if (!m_bFirstRun)
+    {
+      strError = QString("Couldn't find User Signature Database\n\n[%1]\n\nCreating default database").arg(pInFile.errorString());
+      qDebug() << (strError);
+//@@			AfxMessageBox(strError);
 		}
-		pInFile = NULL;
 
 		// Now create default database file in current DB location
 		DatabaseExtraStore();
@@ -349,28 +385,28 @@ void CDbSigs::DatabaseExtraLoad()
 	}
 
 	// Allocate the input buffer
-	pBuf = new BYTE [MAX_BUF_SET_FILE];
-	ASSERT(pBuf);
+  pBuf = new unsigned char[MAX_BUF_SET_FILE];
+  Q_ASSERT(pBuf);
 
 	// Load the buffer
-	nBufLenBytes = pInFile->Read(pBuf,MAX_BUF_SET_FILE);
+  nBufLenBytes = pInFile.read((char *)pBuf,MAX_BUF_SET_FILE);
 
-	ASSERT(nBufLenBytes>0);
+  Q_ASSERT(nBufLenBytes>0);
 	// TODO: Error check for config file longer than max buffer!
-	ASSERT(nBufLenBytes<MAX_BUF_SET_FILE);
+  Q_ASSERT(nBufLenBytes<MAX_BUF_SET_FILE);
 	nBufOffset = 0;
 
-	CString		strLine;
-	CString		strParam;
-	CString		strVal;
+  QString		strLine;
+  QString		strParam;
+  QString		strVal;
 
-	CString		strTmp;
-	CString		strVer;
-	CString		strSec;
+  QString		strTmp;
+  QString		strVer;
+  QString		strSec;
 
 	//bool		bErr = false;
 	bool		bDone = false;
-	BOOL		bRet;
+  bool		bRet;
 
 	unsigned	nBufOffsetTmp;
 	bool		bFileOk = false;
@@ -391,7 +427,9 @@ void CDbSigs::DatabaseExtraLoad()
 	// Test unicode mode
 	nBufOffsetTmp = 0;
 	bRet = BufReadStr(pBuf,strLine,nBufLenBytes,true,nBufOffsetTmp);
-	if (strLine.Compare(_T("JPEGsnoop"))==0) {
+
+  if (strLine == "JPEGsnoop")
+  {
 		bFileOk = true;
 		bFileModeUni = true;
 		nBufOffset = nBufOffsetTmp;
@@ -400,31 +438,30 @@ void CDbSigs::DatabaseExtraLoad()
 	// Test SBCS mode
 	nBufOffsetTmp = 0;
 	bRet = BufReadStr(pBuf,strLine,nBufLenBytes,false,nBufOffsetTmp);
-	if (strLine.Compare(_T("JPEGsnoop"))==0) {
+
+  if (strLine == "JPEGsnoop")
+  {
 		bFileOk = true;
 		nBufOffset = nBufOffsetTmp;
 	}
 
-	if (!bFileOk) {
-		strError.Format(_T("WARNING: User Signature Database corrupt\n[%s]\nProceeding with defaults."),
-			(LPCTSTR)szFilePathName);
-		OutputDebugString(strError);
-		AfxMessageBox(strError);
+  if (!bFileOk)
+  {
+    strError = QString("WARNING: User Signature Database corrupt\n[%1]\nProceeding with defaults.").arg(m_strDbDir + QString(DAT_FILE));
+    qDebug() << (strError);
+//		AfxMessageBox(strError);
+
 		// Close the file to ensure no sharing violation
-		if (pInFile) {
-			pInFile->Close();
-			delete pInFile;
-			pInFile = NULL;
-		}
+    pInFile.close();
+
 		// Copy old config file
-		TCHAR szFilePathNameBak[200];
-		_stprintf_s(szFilePathNameBak,_T("%s\\%s.bak"),(LPCTSTR)m_strDbDir,DAT_FILE);
-		CopyFile(szFilePathName,szFilePathNameBak,false);
-		// Now rewrite file in latest version
-		DatabaseExtraStore();
+    pInFile.copy(m_strDbDir + QString(DAT_FILE) + ".bak");
+    // Now rewrite file in latest version
+    DatabaseExtraStore();
+
 		// Notify user
-		strTmp.Format(_T("Created default User Signature Database. Backup of old DB in [%s]"),szFilePathNameBak);
-		AfxMessageBox(strTmp);
+    strTmp = QString("Created default User Signature Database. Backup of old DB in [%1]").arg(m_strDbDir + QString(DAT_FILE) + ".bak");
+//@@		AfxMessageBox(strTmp);
 		return;
 	}
 	
@@ -433,22 +470,39 @@ void CDbSigs::DatabaseExtraLoad()
 	// Version
 	bRet = BufReadStr(pBuf,strVer,nBufLenBytes,bFileModeUni,nBufOffset);
 	bValid = false;
-	if (strVer == _T("00")) { bValid = false; }
-	if (strVer == _T("01")) { bValid = true; }
-	if (strVer == _T("02")) { bValid = true; }
-	if (strVer == _T("03")) { bValid = true; }
+
+  if (strVer == "00")
+  {
+    bValid = false;
+  }
+
+  if (strVer == "01")
+  {
+    bValid = true;
+  }
+
+  if (strVer == "02")
+  {
+    bValid = true;
+  }
+
+  if (strVer == "03")
+  {
+    bValid = true;
+  }
 
 	// Should consider trimming down local database if same entry
 	// exists in built-in database (for example, user starts running
 	// new version of tool).
 
-	while (!bDone && bValid) {
-
+  while (!bDone && bValid)
+  {
 		// Read section header
 
 		bRet = BufReadStr(pBuf,strSec,nBufLenBytes,bFileModeUni,nBufOffset);
 
-		if (strSec == _T("*DB*")) {
+    if (strSec == "*DB*")
+    {
 			// Read DB count
 			bRet = BufReadNum(pBuf,nNumLoad,nBufLenBytes,nBufOffset);
 
@@ -457,30 +511,30 @@ void CDbSigs::DatabaseExtraLoad()
 			// don't add it to the runtime DB, and mark the local DB as
 			// needing trimming. If so, rewrite the DB.
 
-			for (unsigned ind=0;ind<nNumLoad;ind++) {
-
+      for (unsigned ind=0;ind<nNumLoad;ind++)
+      {
 				sDbLocalEntry.bValid = false;
-				sDbLocalEntry.strXMake = _T("");
-				sDbLocalEntry.strXModel = _T("");
-				sDbLocalEntry.strUmQual = _T("");
-				sDbLocalEntry.strCSig = _T("");
-				sDbLocalEntry.strCSigRot = _T("");
-				sDbLocalEntry.strXSubsamp = _T("");
-				sDbLocalEntry.strMSwTrim = _T("");
-				sDbLocalEntry.strMSwDisp = _T("");
+        sDbLocalEntry.strXMake = "";
+        sDbLocalEntry.strXModel = "";
+        sDbLocalEntry.strUmQual = "";
+        sDbLocalEntry.strCSig = "";
+        sDbLocalEntry.strCSigRot = "";
+        sDbLocalEntry.strXSubsamp = "";
+        sDbLocalEntry.strMSwTrim = "";
+        sDbLocalEntry.strMSwDisp = "";
 
 				bDbLocalEntryFound = false;
 
-
-				if (strVer == _T("01")) {
+        if (strVer == "01")
+        {
 					// For version 01:
 
 					bRet = BufReadStr(pBuf,sDbLocalEntry.strXMake,nBufLenBytes,bFileModeUni,nBufOffset);
 					bRet = BufReadStr(pBuf,sDbLocalEntry.strXModel,nBufLenBytes,bFileModeUni,nBufOffset);
 
-					strTmp = _T("");
+          strTmp = "";
 					bRet = BufReadStr(pBuf,strTmp,nBufLenBytes,bFileModeUni,nBufOffset);
-					sDbLocalEntry.eEditor = static_cast<teEditor>(_tstoi(strTmp));
+//@@					sDbLocalEntry.eEditor = static_cast<teEditor>(_tstoi(strTmp));
 
 					bRet = BufReadStr(pBuf,sDbLocalEntry.strUmQual,nBufLenBytes,bFileModeUni,nBufOffset);
 					bRet = BufReadStr(pBuf,sDbLocalEntry.strCSig,nBufLenBytes,bFileModeUni,nBufOffset);
@@ -490,8 +544,9 @@ void CDbSigs::DatabaseExtraLoad()
 					bRet = BufReadStr(pBuf,sDbLocalEntry.strMSwTrim,nBufLenBytes,bFileModeUni,nBufOffset);
 					bRet = BufReadStr(pBuf,sDbLocalEntry.strMSwDisp,nBufLenBytes,bFileModeUni,nBufOffset);
 
-				} else if ( (strVer == _T("02")) || (strVer == _T("03")) ) {
-
+        }
+        else if ( (strVer == "02") || (strVer == "03") )
+        {
 					// For version 02 or 03:
 					// NOTE: Difference between 02 and 03:
 					//       - 02 : SBCS format
@@ -499,9 +554,9 @@ void CDbSigs::DatabaseExtraLoad()
 					bRet = BufReadStr(pBuf,sDbLocalEntry.strXMake,nBufLenBytes,bFileModeUni,nBufOffset);
 					bRet = BufReadStr(pBuf,sDbLocalEntry.strXModel,nBufLenBytes,bFileModeUni,nBufOffset);
 
-					strTmp = _T("");
+          strTmp = "";
 					bRet = BufReadStr(pBuf,strTmp,nBufLenBytes,bFileModeUni,nBufOffset);
-					sDbLocalEntry.eEditor = static_cast<teEditor>(_tstoi(strTmp));
+//@@					sDbLocalEntry.eEditor = static_cast<teEditor>(_tstoi(strTmp));
 
 					bRet = BufReadStr(pBuf,sDbLocalEntry.strUmQual,nBufLenBytes,bFileModeUni,nBufOffset);
 					bRet = BufReadStr(pBuf,sDbLocalEntry.strCSig,nBufLenBytes,bFileModeUni,nBufOffset);
@@ -516,11 +571,11 @@ void CDbSigs::DatabaseExtraLoad()
 
 				// -------------------------------------------------------
 
-
 				// Does the entry already exist in the internal DB?
 				bDbLocalEntryFound = SearchSignatureExactInternal(sDbLocalEntry.strXMake,sDbLocalEntry.strXModel,sDbLocalEntry.strCSig);
 
-				if (!bDbLocalEntryFound) {
+        if (!bDbLocalEntryFound)
+        {
 					// Add it!
 					m_sSigListExtra[m_nSigListExtraNum].bValid    = true;
 					m_sSigListExtra[m_nSigListExtraNum].strXMake    = sDbLocalEntry.strXMake;
@@ -534,31 +589,28 @@ void CDbSigs::DatabaseExtraLoad()
 					m_sSigListExtra[m_nSigListExtraNum].strMSwTrim  = sDbLocalEntry.strMSwTrim;
 					m_sSigListExtra[m_nSigListExtraNum].strMSwDisp  = sDbLocalEntry.strMSwDisp;
 					m_nSigListExtraNum++;
-				} else {
+        } else
+        {
 					bDbLocalTrimmed = true;
 				}
-
 			}
-		} else if (strSec == _T("*Z*")) {
+    }
+    else if (strSec == "*Z*")
+    {
 			bDone = true;
-		} else {
+    }
+    else
+    {
 			bValid = false;
 		} // strSec
-
 	} // while
-
-
-
 
 	// ----------------------
 
-	if (pInFile) {
-		pInFile->Close();
-		delete pInFile;
-		pInFile = NULL;
-	}
+    pInFile.close();
 
-	if (pBuf) {
+  if (pBuf)
+  {
 		delete [] pBuf;
 		pBuf = NULL;
 	}
@@ -566,25 +618,26 @@ void CDbSigs::DatabaseExtraLoad()
 	// If we did make changes to the database (trim), then rewrite it!
 	// Ensure that we have closed the file above before we rewrite it
 	// otherwise we could end up with a sharing violation
-	if (bDbLocalTrimmed) {
+  if (bDbLocalTrimmed)
+  {
 		DatabaseExtraStore();
 	}
 
 	// Now is this an old config file version? If so,
 	// create a backup and then rewrite the new version
-	if (bValid) {
-		if (strVer != DB_VER_STR) {
-			// Copy old config file
-			TCHAR szFilePathNameBak[200];
-			_stprintf_s(szFilePathNameBak,_T("%s\\%s.bak"),(LPCTSTR)m_strDbDir,DAT_FILE);
-			CopyFile(szFilePathName,szFilePathNameBak,false);
-			// Now rewrite file in latest version
-			DatabaseExtraStore();
-			// Notify user
-			strError.Format(_T("Upgraded User Signature Database. Backup in:\n%s"),szFilePathNameBak);
-			AfxMessageBox(strError);
-		}
-	}
+//	if (bValid) {
+//		if (strVer != DB_VER_STR) {
+//			// Copy old config file
+//			TCHAR szFilePathNameBak[200];
+//      _stprintf_s(szFilePathNameBak,"%s\\%s.bak",m_strDbDir,DAT_FILE);
+//			CopyFile(szFilePathName,szFilePathNameBak,false);
+//			// Now rewrite file in latest version
+//			DatabaseExtraStore();
+//			// Notify user
+//      strError = QString(("Upgraded User Signature Database. Backup in:\n%s",szFilePathNameBak);
+//			AfxMessageBox(strError);
+//		}
+//	}
 }
 
 void CDbSigs::DatabaseExtraClean()
@@ -600,72 +653,61 @@ unsigned CDbSigs::DatabaseExtraGetNum()
 
 CompSig CDbSigs::DatabaseExtraGet(unsigned nInd)
 {
-	ASSERT(nInd<m_nSigListExtraNum);
+  Q_ASSERT(nInd<m_nSigListExtraNum);
 	return m_sSigListExtra[nInd];
 }
 
 void CDbSigs::DatabaseExtraStore()
 {
-	CFile		*pOutFile = NULL;
-	PBYTE		pBuf = NULL;
+  uint8_t *	pBuf = NULL;
 	//unsigned	nBufLenBytes = 0;
 	unsigned	nBufOffset = 0;
 
 	bool		bModeUni = true;	// Save in Unicode format
 
-	ASSERT(m_strDbDir != _T(""));
-	if (m_strDbDir == _T("")) {
+  Q_ASSERT(m_strDbDir != "");
+  if (m_strDbDir == "") {
 		return;
 	}
 
-	// Retrieve from environment user profile path.
-	TCHAR szFilePathName[200];
-	_stprintf_s(szFilePathName,_T("%s\\%s"),(LPCTSTR)m_strDbDir,DAT_FILE);
-
-
 	// Open the output file
-	try
+    QFile pOutFile(m_strDbDir + QString(DAT_FILE));
+
+  if(pOutFile.open(QIODevice::WriteOnly) == false)
 	{
-		// Open specified file
-		pOutFile = new CFile(szFilePathName, CFile::modeWrite | CFile::typeBinary | CFile::modeCreate );
-	}
-	catch (CFileException* e)
-	{
-		CString		strError;
-		TCHAR		msg[MAX_BUF_EX_ERR_MSG];
-		e->GetErrorMessage(msg,MAX_BUF_EX_ERR_MSG);
-		e->Delete();
-		strError.Format(_T("ERROR: Couldn't open file: [%s]"),(LPCTSTR)msg);
-		OutputDebugString(strError);
-		AfxMessageBox(strError);
-		pOutFile = NULL;
+    QString		strError;
+    strError = QString("ERROR: Couldn't open file: [%s]").arg(pOutFile.errorString());
+    qDebug() << (strError);
+//@@		AfxMessageBox(strError);
 		return;
 	}
 
 	// Allocate the output buffer
-	pBuf = new BYTE [MAX_BUF_SET_FILE];
-	ASSERT(pBuf);
+  pBuf = new unsigned char [MAX_BUF_SET_FILE];
+  Q_ASSERT(pBuf);
 
 	nBufOffset = 0;
 
-	CString		strLine;
-	CString		strParam;
-	CString		strVal;
+  QString		strLine;
+  QString		strParam;
+  QString		strVal;
 	//bool		bErr = false;
 	//bool		bDone = false;
-	BOOL		bRet;
+  bool		bRet;
 
 	unsigned	nMaxBufBytes = MAX_BUF_SET_FILE;
 
-	bRet = BufWriteStr(pBuf,_T("JPEGsnoop"),nMaxBufBytes,bModeUni,nBufOffset);
-	bRet = BufWriteStr(pBuf,_T(DB_VER_STR),nMaxBufBytes,bModeUni,nBufOffset);
-	bRet = BufWriteStr(pBuf,_T("*DB*"),nMaxBufBytes,bModeUni,nBufOffset);
+  bRet = BufWriteStr(pBuf,"JPEGsnoop",nMaxBufBytes,bModeUni,nBufOffset);
+  bRet = BufWriteStr(pBuf,DB_VER_STR,nMaxBufBytes,bModeUni,nBufOffset);
+  bRet = BufWriteStr(pBuf,"*DB*",nMaxBufBytes,bModeUni,nBufOffset);
 
-	// Determine how many entries will remain (after removing marked
-	// deleted entries
+  // Determine how many entries will remain (after removing marked deleted entries
 	unsigned nNewExtraNum = m_nSigListExtraNum;
-	for (unsigned nInd=0;nInd<m_nSigListExtraNum;nInd++) {
-		if (!m_sSigListExtra[nInd].bValid) {
+
+  for (unsigned nInd=0;nInd<m_nSigListExtraNum;nInd++)
+  {
+    if (!m_sSigListExtra[nInd].bValid)
+    {
 			nNewExtraNum--;
 		}
 	}
@@ -679,13 +721,13 @@ void CDbSigs::DatabaseExtraStore()
 			continue;
 		}
 
-		CString	strTmp;
+    QString	strTmp;
 
 		// For version 02?
 
 		bRet = BufWriteStr(pBuf,m_sSigListExtra[nInd].strXMake,nMaxBufBytes,bModeUni,nBufOffset);
 		bRet = BufWriteStr(pBuf,m_sSigListExtra[nInd].strXModel,nMaxBufBytes,bModeUni,nBufOffset);
-		strTmp.Format(_T("%u"),m_sSigListExtra[nInd].eEditor);				// eEditor = u_source
+    strTmp = QString("%1").arg(m_sSigListExtra[nInd].eEditor);				// eEditor = u_source
 		bRet = BufWriteStr(pBuf,strTmp,nMaxBufBytes,bModeUni,nBufOffset);
 		bRet = BufWriteStr(pBuf,m_sSigListExtra[nInd].strUmQual,nMaxBufBytes,bModeUni,nBufOffset);
 		bRet = BufWriteStr(pBuf,m_sSigListExtra[nInd].strCSig,nMaxBufBytes,bModeUni,nBufOffset);
@@ -696,18 +738,14 @@ void CDbSigs::DatabaseExtraStore()
 
 	}
 
-	bRet = BufWriteStr(pBuf,_T("*Z*"),nMaxBufBytes,bModeUni,nBufOffset);
+  bRet = BufWriteStr(pBuf,"*Z*",nMaxBufBytes,bModeUni,nBufOffset);
 
 	// --------------------------
 
 	// Now write out the buffer
-	if (pOutFile) {
-		pOutFile->Write(pBuf,nBufOffset);
+    pOutFile.write((char *)pBuf);
 
-		pOutFile->Close();
-		delete pOutFile;
-		pOutFile = NULL;
-	}
+    pOutFile.close();
 
 	if (pBuf) {
 		delete [] pBuf;
@@ -716,15 +754,17 @@ void CDbSigs::DatabaseExtraStore()
 	
 }
 
-void CDbSigs::DatabaseExtraAdd(CString strExifMake,CString strExifModel,
-							   CString strQual,CString strSig,CString strSigRot,CString strCss,
-							   teSource eUserSource,CString strUserSoftware)
+void CDbSigs::DatabaseExtraAdd(QString strExifMake,QString strExifModel,
+                 QString strQual,QString strSig,QString strSigRot,QString strCss,
+                 teSource eUserSource,QString strUserSoftware)
 {
-	ASSERT(m_nSigListExtraNum < DBEX_ENTRIES_MAX);
-	if (m_nSigListExtraNum >= DBEX_ENTRIES_MAX) {
-		CString strTmp;
-		strTmp.Format(_T("ERROR: Can only store maximum of %u extra signatures in local DB"),DBEX_ENTRIES_MAX);
-		AfxMessageBox(strTmp);
+  Q_ASSERT(m_nSigListExtraNum < DBEX_ENTRIES_MAX);
+
+  if (m_nSigListExtraNum >= DBEX_ENTRIES_MAX)
+  {
+    QString strTmp;
+    strTmp = QString("ERROR: Can only store maximum of %1 extra signatures in local DB").arg(DBEX_ENTRIES_MAX);
+//@@		AfxMessageBox(strTmp);
 		return;
 	}
 
@@ -738,17 +778,17 @@ void CDbSigs::DatabaseExtraAdd(CString strExifMake,CString strExifModel,
 
 		if (eUserSource == ENUM_SOURCE_CAM) { // digicam
 			m_sSigListExtra[m_nSigListExtraNum].eEditor = ENUM_EDITOR_CAM;
-			m_sSigListExtra[m_nSigListExtraNum].strMSwTrim = _T("");
-			m_sSigListExtra[m_nSigListExtraNum].strMSwDisp = _T("");
+      m_sSigListExtra[m_nSigListExtraNum].strMSwTrim = "";
+      m_sSigListExtra[m_nSigListExtraNum].strMSwDisp = "";
 		} else if (eUserSource == ENUM_SOURCE_SW) { // software
 			m_sSigListExtra[m_nSigListExtraNum].eEditor = ENUM_EDITOR_SW;
-			m_sSigListExtra[m_nSigListExtraNum].strMSwTrim = _T("");
+      m_sSigListExtra[m_nSigListExtraNum].strMSwTrim = "";
 			m_sSigListExtra[m_nSigListExtraNum].strMSwDisp = strUserSoftware; // Not quite right perfect
-			m_sSigListExtra[m_nSigListExtraNum].strXMake   = _T("");
-			m_sSigListExtra[m_nSigListExtraNum].strXModel  = _T("");
+      m_sSigListExtra[m_nSigListExtraNum].strXMake   = "";
+      m_sSigListExtra[m_nSigListExtraNum].strXModel  = "";
 		} else { // user didn't know
 			m_sSigListExtra[m_nSigListExtraNum].eEditor = ENUM_EDITOR_UNSURE;
-			m_sSigListExtra[m_nSigListExtraNum].strMSwTrim = _T("");
+      m_sSigListExtra[m_nSigListExtraNum].strMSwTrim = "";
 			m_sSigListExtra[m_nSigListExtraNum].strMSwDisp = strUserSoftware; // Not quite right perfect
 		}
 
@@ -759,23 +799,28 @@ void CDbSigs::DatabaseExtraAdd(CString strExifMake,CString strExifModel,
 }
 
 // TODO: Should we include editors in this search?
-bool CDbSigs::SearchSignatureExactInternal(CString strMake, CString strModel, CString strSig)
+bool CDbSigs::SearchSignatureExactInternal(QString strMake, QString strModel, QString strSig)
 {
 	bool		bFoundExact = false;
 	bool		bDone = false;
 	unsigned	nInd = 0;
-	while (!bDone) {
-		if (nInd >= m_nSigListNum) {
-			bDone = true;
-		} else {
 
-			if ( (m_sSigList[nInd].strXMake  == strMake) &&
-				(m_sSigList[nInd].strXModel == strModel) &&
-				((m_sSigList[nInd].strCSig  == strSig) || (m_sSigList[nInd].strCSigRot == strSig)) )
+  while (!bDone)
+  {
+    if (nInd >= m_nSigListNum)
+    {
+			bDone = true;
+    }
+    else
+    {
+      if((m_sSigList[nInd].strXMake  == strMake) &&
+         (m_sSigList[nInd].strXModel == strModel) &&
+         ((m_sSigList[nInd].strCSig  == strSig) || (m_sSigList[nInd].strCSigRot == strSig)) )
 			{
 				bFoundExact = true;
 				bDone = true;
 			}
+
 			nInd++;
 		}
 	}
@@ -783,25 +828,22 @@ bool CDbSigs::SearchSignatureExactInternal(CString strMake, CString strModel, CS
 	return bFoundExact;
 }
 
-bool CDbSigs::SearchCom(CString strCom)
+bool CDbSigs::SearchCom(QString strCom)
 {
 	bool bFound = false;
-	bool bDone = false;
-	unsigned nInd = 0;
-	if (strCom.GetLength() == 0) {
-		bDone = true;
-	}
-	while (!bDone) {
-		if (nInd >= m_nXcomSwListNum) {
-			bDone = true;
-		} else {
-			if (strCom.Find(m_sXComSwList[nInd]) != -1) {
-				bFound = true;
-				bDone = true;
-			}
-			nInd++;
-		}
-	}
+
+  if (strCom.size() > 0)
+  {
+    for(int i = 0; i < m_sXComSwList.size(); i++)
+    {
+      if(m_sXComSwList.at(i).contains(strCom))
+      {
+        bFound = true;
+        break;
+      }
+    }
+  }
+
 	return bFound;
 }
 
@@ -814,9 +856,12 @@ unsigned CDbSigs::GetDBNumEntries()
 // Returns total of built-in plus local DB
 unsigned CDbSigs::IsDBEntryUser(unsigned nInd)
 {
-	if (nInd < m_nSigListNum) {
+  if (nInd < m_nSigListNum)
+  {
 		return false;
-	} else {
+  }
+  else
+  {
 		return true;
 	}
 }
@@ -826,9 +871,11 @@ bool CDbSigs::GetDBEntry(unsigned nInd,CompSig* pEntry)
 {
 	unsigned nIndOffset;
 	unsigned nIndMax = GetDBNumEntries();
-	ASSERT(pEntry);
-	ASSERT(nInd<nIndMax);
-	if (nInd < m_nSigListNum) {
+  Q_ASSERT(pEntry);
+  Q_ASSERT(nInd<nIndMax);
+
+  if (nInd < m_nSigListNum)
+  {
 		pEntry->eEditor  = m_sSigList[nInd].eEditor;
 		pEntry->strXMake    = m_sSigList[nInd].strXMake;
 		pEntry->strXModel   = m_sSigList[nInd].strXModel;
@@ -839,7 +886,9 @@ bool CDbSigs::GetDBEntry(unsigned nInd,CompSig* pEntry)
 		pEntry->strMSwTrim  = m_sSigList[nInd].strMSwTrim;
 		pEntry->strMSwDisp  = m_sSigList[nInd].strMSwDisp;
 		return true;
-	} else {
+  }
+  else
+  {
 		nIndOffset = nInd-m_nSigListNum;
 		pEntry->eEditor  = m_sSigListExtra[nIndOffset].eEditor;
 		pEntry->strXMake    = m_sSigListExtra[nIndOffset].strXMake;
@@ -857,7 +906,7 @@ bool CDbSigs::GetDBEntry(unsigned nInd,CompSig* pEntry)
 void CDbSigs::SetEntryValid(unsigned nInd,bool bValid)
 {
 	// TODO: Bounds check
-	ASSERT(nInd < m_nSigListExtraNum);
+  Q_ASSERT(nInd < m_nSigListExtraNum);
 	m_sSigListExtra[nInd].bValid = bValid;
 }
 
@@ -867,61 +916,71 @@ unsigned CDbSigs::GetIjgNum()
 	return m_nSwIjgListNum;
 }
 
-LPTSTR CDbSigs::GetIjgEntry(unsigned nInd)
+QString CDbSigs::GetIjgEntry(unsigned nInd)
 {
 	return m_sSwIjgList[nInd];
 }
 
 // Update the directory used for user database
-void CDbSigs::SetDbDir(CString strDbDir)
+void CDbSigs::SetDbDir(QString strDbDir)
 {
 	m_strDbDir = strDbDir;
 }
 
 
 // Search exceptions for Make/Model in list of ones that don't have Makernotes
-bool CDbSigs::LookupExcMmNoMkr(CString strMake,CString strModel)
+bool CDbSigs::LookupExcMmNoMkr(QString strMake,QString strModel)
 {
 	bool bFound = false;
 	bool bDone = false;
 	unsigned nInd = 0;
-	if (strMake.GetLength() == 0) {
+
+  if (strMake.size() == 0)
+  {
 		bDone = true;
 	}
-	while (!bDone) {
-		if (nInd >= m_nExcMmNoMkrListNum) {
+
+  while (!bDone)
+  {
+    if (nInd >= m_nExcMmNoMkrListNum)
+    {
 			bDone = true;
-		} else {
+    }
+    else
+    {
 			// Perform exact match on Make, case sensitive
 			// Check Make field and possibly Model field (if non-empty)
-			if (_tcscmp(m_sExcMmNoMkrList[nInd].strXMake,strMake) != 0) {
-				// Make did not match
-			} else {
-				// Make matched, now check to see if we need
-				// to compare the Model string
-				if (_tcslen(m_sExcMmNoMkrList[nInd].strXModel) == 0) {
+      if (m_sExcMmNoMkrList[nInd].strXMake == strMake)
+      {
+        // Make matched, now check to see if we need to compare the Model string
+        if (m_sExcMmNoMkrList[nInd].strXModel != strModel)
+        {
 					// No need to compare, we're bDone
 					bFound = true;
 					bDone = true;
-				} else {
-					// Need to check model as well
-					// Since we may like to do a substring match, support wildcards
+        }
+        else
+        {
+          // Need to check model as well. Since we may like to do a substring match, support wildcards
 
-					// FnInd position of "*" if it exists in DB entry
-					LPTSTR pWildcard;
+          // Find position of "*" if it exists in DB entry
+          int pWildcard;
 					unsigned nCompareLen;
-					pWildcard = _tcschr(m_sExcMmNoMkrList[nInd].strXModel,'*');
-					if (pWildcard != NULL) {
+          pWildcard = m_sExcMmNoMkrList[nInd].strXModel.indexOf(QChar('*'));
+
+          if (pWildcard != -1)
+          {
 						// Wildcard present
-						nCompareLen = pWildcard - (m_sExcMmNoMkrList[nInd].strXModel);
-					} else {
+            nCompareLen = m_sExcMmNoMkrList[nInd].strXModel.size() - pWildcard;  //!! - 1
+          }
+          else
+          {
 						// No wildcard, do full match
-						nCompareLen = _tcslen(m_sExcMmNoMkrList[nInd].strXModel);
+            nCompareLen = m_sExcMmNoMkrList[nInd].strXModel.size();
 					}
 
-					if (_tcsnccmp(m_sExcMmNoMkrList[nInd].strXModel,strModel,nCompareLen) != 0) {
-						// No match
-					} else {
+          if (m_sExcMmNoMkrList[nInd].strXModel.left(nCompareLen) == strModel)
+          {
 						// Matched as well, we're bDone
 						bFound = true;
 						bDone = true;
@@ -937,34 +996,42 @@ bool CDbSigs::LookupExcMmNoMkr(CString strMake,CString strModel)
 }
 
 // Search exceptions for Make/Model in list of ones that are always edited
-bool CDbSigs::LookupExcMmIsEdit(CString strMake,CString strModel)
+bool CDbSigs::LookupExcMmIsEdit(QString strMake,QString strModel)
 {
 	bool bFound = false;
 	bool bDone = false;
 	unsigned nInd = 0;
-	if (strMake.GetLength() == 0) {
+
+  if (strMake.size() == 0)
+  {
 		bDone = true;
 	}
-	while (!bDone) {
-		if (nInd >= m_nExcMmIsEditListNum) {
+
+  while (!bDone)
+  {
+    if (nInd >= m_nExcMmIsEditListNum)
+    {
 			bDone = true;
-		} else {
+    }
+    else
+    {
 			// Perform exact match, case sensitive
 			// Check Make field and possibly Model field (if non-empty)
-			if (_tcscmp(m_sExcMmIsEditList[nInd].strXMake,strMake) != 0) {
-				// Make did not match
-			} else {
+      if (m_sExcMmIsEditList[nInd].strXMake == strMake)
+      {
 				// Make matched, now check to see if we need
 				// to compare the Model string
-				if (_tcslen(m_sExcMmIsEditList[nInd].strXModel) == 0) {
+        if (m_sExcMmIsEditList[nInd].strXModel.size() == 0)
+        {
 					// No need to compare, we're bDone
 					bFound = true;
 					bDone = true;
-				} else {
+        }
+        else
+        {
 					// Need to check model as well
-					if (_tcscmp(m_sExcMmIsEditList[nInd].strXModel,strModel) != 0) {
-						// No match
-					} else {
+          if (m_sExcMmIsEditList[nInd].strXModel == strModel)
+          {
 						// Matched as well, we're bDone
 						bFound = true;
 						bDone = true;
@@ -978,45 +1045,6 @@ bool CDbSigs::LookupExcMmIsEdit(CString strMake,CString strModel)
 	
 	return bFound;
 }
-
-
-// -----------------------------------------------------------------------
-// Sample string indicator database
-// -----------------------------------------------------------------------
-
-
-// Sample list of software programs that also use the IJG encoder
-LPTSTR CDbSigs::m_sSwIjgList[] = {
-	_T("GIMP"),
-	_T("IrfanView"),
-	_T("idImager"),
-	_T("FastStone Image Viewer"),
-	_T("NeatImage"),
-	_T("Paint.NET"),
-	_T("Photomatix"),
-	_T("XnView"),
-	_T("*"),
-};
-
-
-// Sample list of software programs marked by EXIF.COMMENT field
-//
-// NOTE: Have not included the following indicators as they
-//       also appear in some digicams in addition to software encoders.
-//   "LEAD Technologies"
-//   "U-Lead Systems"
-//   "Intel(R) JPEG Library" (unsure if ever in hardware)
-//
-LPTSTR CDbSigs::m_sXComSwList[] = {
-	_T("gd-jpeg"),
-	_T("Photoshop"),
-	_T("ACD Systems"),
-	_T("AppleMark"),
-	_T("PICResize"),
-	_T("NeatImage"),
-	_T("*"),
-};
-
 
 // Software signature list (m_sSigList) is located in "Signatures.inl"
 

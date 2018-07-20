@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -27,17 +27,17 @@
 //
 #pragma once
 
-#ifndef __AFXWIN_H__
-	#error include 'stdafx.h' before including this file for PCH
-#endif
+//#ifndef __AFXWIN_H__
+//	#error include 'stdafx.h' before including this file for PCH
+//#endif
 
 #include "resource.h"       // main symbols
 
 #include "snoop.h"
-#include "JPEGsnoopDoc.h"
+#include "JPEGsnoopCore.h"
+//#include "JPEGsnoopDoc.h"
 #include "SnoopConfig.h"
 
-#include "afxwinappex.h"	//xxx
 
 #include "JPEGsnoopCore.h"
 
@@ -47,23 +47,27 @@
 
 // Define global variable for application log
 extern CDocLog*	glb_pDocLog;
+// Main config options
+extern CSnoopConfig *m_pAppConfig;
+// Needs to be accessed by JfifDec
+extern CDbSigs*		m_pDbSigs;
 
+extern CJPEGsnoopCore *pJPEGsnoopCore;
 
-class CJPEGsnoopApp : public CWinApp
+class CJPEGsnoopApp // : public CWinApp
 {
 public:
 	CJPEGsnoopApp();
 	~CJPEGsnoopApp();
 
-
 // Overrides
 public:
-	virtual BOOL	InitInstance();
+        virtual bool	InitInstance();
 
 // Implementation
-	afx_msg void	OnAppAbout();
+//	afx_msg void	OnAppAbout();
 
-	DECLARE_MESSAGE_MAP()
+//	DECLARE_MESSAGE_MAP()
 
 private:
 	void			MyOnFileOpen();
@@ -71,22 +75,22 @@ private:
 
 	void			DoCmdLineCore();
 	void			CmdLineHelp();
-	void			CmdLineMessage(CString strMsg);
+        void			CmdLineMessage(QString strMsg);
 	void			CmdLineDoneMessage();
 
 	void			CheckUpdates(bool bForceNow);
 	bool			CheckUpdatesWww();
 	bool			CheckEula();
-	CString			RemoveTokenWithSeparators(CString& strText, LPCTSTR szCharSet);
-	CString			RemoveTokenFromCharset(CString& strText, LPCTSTR szCharSet);
-	CJPEGsnoopDoc*	GetCurDoc();
+        QString			RemoveTokenWithSeparators(QString& strText, QString szCharSet);
+        QString			RemoveTokenFromCharset(QString& strText, QString szCharSet);
+//	CJPEGsnoopDoc*	GetCurDoc();
 	void			DocReprocess();
 	void			DocImageDirty();
 	void			HandleAutoReprocess();
 
-	HINSTANCE		LoadAppLangResourceDLL();	// MFC override
+//	HINSTANCE		LoadAppLangResourceDLL();	// MFC override
 
-	afx_msg void	OnOptionsDhtexpand();
+/*	afx_msg void	OnOptionsDhtexpand();
 	afx_msg void	OnOptionsMakernotes();
 	afx_msg void	OnOptionsScandump();
 	afx_msg void	OnOptionsDecodescan();
@@ -117,21 +121,16 @@ private:
 	afx_msg void	OnUpdateScansegmentHistogram(CCmdUI *pCmdUI);
 	afx_msg void	OnOptionsHideuknownexiftags();
 	afx_msg void	OnUpdateOptionsHideuknownexiftags(CCmdUI *pCmdUI);
-	afx_msg void	OnFileBatchprocess();
+        afx_msg void	OnFileBatchprocess(); */
 
 public:
-	// Main config options
-	CSnoopConfig*	m_pAppConfig;
-
-	// Needs to be accessed by JfifDec
-	CDbSigs*		m_pDbSigs;
 
 private:
 	bool			m_bFatal;		// Fatal error occurred (e.g. mem alloc)
 
 public:
-	afx_msg void OnOptionsRelaxedparsing();
-	afx_msg void OnUpdateOptionsRelaxedparsing(CCmdUI *pCmdUI);
+//	afx_msg void OnOptionsRelaxedparsing();
+//	afx_msg void OnUpdateOptionsRelaxedparsing(CCmdUI *pCmdUI);
 };
 
 extern CJPEGsnoopApp theApp;
