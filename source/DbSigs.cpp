@@ -279,6 +279,8 @@ bool CDbSigs::BufWriteStr(unsigned char *pBuf,QString strIn,uint32_t nMaxBytes,b
   pBufUni = (wchar_t *)pBufBase;
   pBufAsc = pBufBase;
 
+  /* //CAL! Commented out the following until unicode equivalent available
+
 #ifdef UNICODE
 	// Create non-Unicode version of string
 	// Ref: http://social.msdn.microsoft.com/Forums/vstudio/en-US/85f02321-de88-47d2-98c8-87daa839a98e/how-to-convert-cstring-to-const-char-?forum=vclanguage
@@ -294,7 +296,7 @@ bool CDbSigs::BufWriteStr(unsigned char *pBuf,QString strIn,uint32_t nMaxBytes,b
   uint32_t	nStrLen;
   uint32_t	nChInd;
   nStrLen = strIn.size();
-/*
+
   for (nChInd=0;(nChInd<nStrLen)&&(nOffsetBytes+nCharSz-1<nMaxBytes);nChInd++)
   {
     if (bUni)

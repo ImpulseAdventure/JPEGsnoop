@@ -588,7 +588,7 @@ void MainWindow::open()
   dialog.setNameFilters(filters);
   dialog.setFileMode(QFileDialog::ExistingFile);
   dialog.setOption(QFileDialog::ReadOnly);
-  dialog.setDirectory("/Users/bob/Downloads");
+  //dialog.setDirectory(...); // TODO: Preserve last directory
 
   if(dialog.exec())
   {
@@ -751,7 +751,6 @@ void MainWindow::saveLog()
   dialog.setWindowModality(Qt::WindowModal);
   dialog.setAcceptMode(QFileDialog::AcceptSave);
   dialog.setNameFilters(filters);
-//  dialog.setDirectory("/Users/bob/Downloads");
   dialog.selectFile(fileInfo.absoluteFilePath() + "/" + fileInfo.baseName() + ".txt");
 
   if (dialog.exec() != QDialog::Accepted)
