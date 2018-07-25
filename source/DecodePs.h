@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -27,10 +27,10 @@
 #define DECODEPS_H
 
 #include "WindowBuf.h"
-#include "snoop.h"
-#include "SnoopConfig.h"
+//#include "snoop.h"
 
-#include "Dib.h"
+class CDocLog;
+class CSnoopConfig;
 
 //
 // Structure used for each IPTC field
@@ -154,13 +154,21 @@ struct tsImageInfo
 class CDecodePs
 {
 public:
-  CDecodePs(CwindowBuf * pWBuf, CDocLog * pLog);
+  CDecodePs(CwindowBuf *pWBuf, CDocLog * pLog, CSnoopConfig *pAppConfig);
   ~CDecodePs(void);
 
   void Reset();
 
-  bool DecodePsd(uint32_t nPos, CDIB * pDibTemp, uint32_t &nWidth, uint32_t &nHeight);
+  bool DecodePsd(uint32_t nPos, QImage * pDibTemp, int32_t &nWidth, int32_t &nHeight);
   bool PhotoshopParseImageResourceBlock(uint32_t &nPos, uint32_t nIndent);
+
+  bool m_bPsd;
+  uint32_t m_nQualitySaveAs;
+  uint32_t m_nQualitySaveForWeb;
+
+  bool m_bDisplayLayer;
+  uint32_t m_nDisplayLayerInd;
+  bool m_bDisplayImage;
 
 private:
   CDecodePs &operator = (const CDecodePs&);
@@ -209,8 +217,8 @@ private:
   void PhotoshopParseLayerSelectId(uint32_t &nPos, uint32_t nIndent);
   void PhotoshopParseJpegQuality(uint32_t &nPos, uint32_t nIndent, uint32_t nPosEnd);
 
-  bool PhotoshopParseLayerMaskInfo(uint32_t &nPos, uint32_t nIndent, CDIB * pDibTemp);
-  bool PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, CDIB * pDibTemp);
+  bool PhotoshopParseLayerMaskInfo(uint32_t &nPos, uint32_t nIndent, QImage * pDibTemp);
+  bool PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, QImage * pDibTemp);
   bool PhotoshopParseLayerRecord(uint32_t &nPos, uint32_t nIndent, tsLayerInfo * psLayerInfo);
   bool PhotoshopParseLayerMask(uint32_t &nPos, uint32_t nIndent);
   bool PhotoshopParseLayerBlendingRanges(uint32_t &nPos, uint32_t nIndent);
@@ -238,7 +246,6 @@ private:
 
   quint8 Buf(uint32_t offset, bool bClean);
 
-private:
   // Configuration
   CSnoopConfig * m_pAppConfig;
 
@@ -247,15 +254,6 @@ private:
   CDocLog *m_pLog;
 
   bool m_bAbort;                // Abort continued decode?
-
-public:
-  bool m_bPsd;
-  uint32_t m_nQualitySaveAs;
-  uint32_t m_nQualitySaveForWeb;
-
-  bool m_bDisplayLayer;
-  uint32_t m_nDisplayLayerInd;
-  bool m_bDisplayImage;
 };
 
 #endif

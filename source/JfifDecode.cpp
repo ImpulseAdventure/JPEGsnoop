@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -27,20 +27,114 @@
 
 #include "JfifDecode.h"
 #include "snoop.h"
-#include "JPEGsnoop.h"          // for m_pAppConfig get
-
+//#include "JPEGsnoop.h"          // for m_pAppConfig get
+#include "SnoopConfig.h"
+#include "DbSigs.h"
+#include "DocLog.h"
+#include "DbSigs.h"
 #include "WindowBuf.h"
-
 #include "Md5.h"
-
 #include "UrlString.h"
 #include "DbSigs.h"
-
 #include "General.h"
 
 // Maximum number of component values to extract into array for display
-static const quint32 MAX_anValues = 64;
+static const uint32_t MAX_anValues = 64;
 
+
+//-----------------------------------------------------------------------------
+// Initialize the JFIF decoder. Several class pointers are provided
+// as parameters, so that we can directly access the output log, the
+// file buffer and the image scan decoder.
+// Loads up the signature database.
+//
+// INPUT:
+// - pLog                       Ptr to log file class
+// - pWBuf                      Ptr to Window Buf class
+// - pImgDec            Ptr to Image Decoder class
+//
+// PRE:
+// - Requires that CDocLog, CwindowBuf and CimgDecode classes
+//   are already initialized
+//
+CjfifDecode::CjfifDecode(CDocLog *pLog, CDbSigs *pDbSigs, CwindowBuf *pWBuf, CimgDecode *pImgDec, CSnoopConfig *pAppConfig, QObject *_parent) :
+  QObject(_parent), m_pLog(pLog), m_pDbSigs(pDbSigs), m_pWBuf(pWBuf), m_pImgDec(pImgDec), m_pAppConfig(pAppConfig)
+{
+  if(DEBUG_EN)
+    m_pAppConfig->DebugLogAdd("CjfifDecode::CjfifDecode() Begin");
+
+  // Need to zero out the private members
+  m_bOutputDB = false;          // mySQL output for web
+
+  // Enable verbose reporting
+  m_bVerbose = false;
+
+  m_pImgSrcDirty = true;
+
+  // Generate lookup tables for Huffman codes
+  GenLookupHuffMask();
+
+  // Window status bar is not ready yet, wait for call to SetStatusBar()
+  m_pStatBar = 0;
+
+  // Reset decoding state
+  Reset();
+
+  // Load the local database (if it exists)
+//@@  m_pDbSigs->DatabaseExtraLoad();
+
+  // Allocate the Photoshop decoder
+  m_pPsDec = new CDecodePs(pWBuf, pLog, m_pAppConfig);
+
+  connect(m_pAppConfig, SIGNAL(ImgSrcChanged()), this, SLOT(ImgSrcChanged()));
+  connect(_parent, SIGNAL(ImgSrcChanged()), this, SLOT(ImgSrcChanged()));
+
+  if(!m_pPsDec)
+  {
+    Q_ASSERT(false);
+    return;
+  }
+
+#ifdef SUPPORT_DICOM
+  // Allocate the DICOM decoder
+  m_pDecDicom = new CDecodeDicom(pWBuf, pLog);
+
+  if(!m_pDecDicom)
+  {
+    Q_ASSERT(false);
+    return;
+  }
+
+  if(DEBUG_EN)
+    m_pAppConfig->DebugLogAdd("CjfifDecode::CjfifDecode() Checkpoint 5");
+#endif
+}
+
+//-----------------------------------------------------------------------------
+// Destructor
+CjfifDecode::~CjfifDecode()
+{
+  // Free the Photoshop decoder
+  if(m_pPsDec)
+  {
+    delete m_pPsDec;
+
+    m_pPsDec = NULL;
+  }
+
+#ifdef SUPPORT_DICOM
+  // Free the DICOM decoder
+  if(m_pDecDicom)
+  {
+    delete m_pDecDicom;
+
+    m_pDecDicom = NULL;
+  }
+#endif
+
+}
+
+//-----------------------------------------------------------------------------
 // Clear out internal members
 void CjfifDecode::Reset()
 {
@@ -134,110 +228,9 @@ void CjfifDecode::Reset()
   m_bStateSos = false;
   m_bStateSosOk = false;
   m_bStateEoi = false;
-
 }
 
-// Initialize the JFIF decoder. Several class pointers are provided
-// as parameters, so that we can directly access the output log, the
-// file buffer and the image scan decoder.
-// Loads up the signature database.
-//
-// INPUT:
-// - pLog                       Ptr to log file class
-// - pWBuf                      Ptr to Window Buf class
-// - pImgDec            Ptr to Image Decoder class
-//
-// PRE:
-// - Requires that CDocLog, CwindowBuf and CimgDecode classes
-//   are already initialized
-//
-CjfifDecode::CjfifDecode(CDocLog *pLog, CwindowBuf *pWBuf, CimgDecode *pImgDec)
-{
-  // Ideally this would be passed by constructor, but simply access
-  // directly for now.
-
-//  m_pAppConfig = pAppConfig;
-
-  if(DEBUG_EN)
-    m_pAppConfig->DebugLogAdd("CjfifDecode::CjfifDecode() Begin");
-
-//  Q_ASSERT(m_pAppConfig);
-  Q_ASSERT(pLog);
-  Q_ASSERT(pWBuf);
-  Q_ASSERT(pImgDec);
-
-  // Need to zero out the private members
-  m_bOutputDB = false;          // mySQL output for web
-
-  // Enable verbose reporting
-  m_bVerbose = false;
-
-  m_pImgSrcDirty = true;
-
-  // Generate lookup tables for Huffman codes
-  GenLookupHuffMask();
-
-  // Window status bar is not ready yet, wait for call to SetStatusBar()
-  m_pStatBar = NULL;
-
-  // Save copies of other class pointers
-  m_pLog = pLog;
-  m_pWBuf = pWBuf;
-  m_pImgDec = pImgDec;
-
-  // Reset decoding state
-  Reset();
-
-  // Load the local database (if it exists)
-//@@  m_pDbSigs->DatabaseExtraLoad();
-
-  // Allocate the Photoshop decoder
-  m_pPsDec = new CDecodePs(pWBuf, pLog);
-
-  if(!m_pPsDec)
-  {
-    Q_ASSERT(false);
-    return;
-  }
-
-#ifdef SUPPORT_DICOM
-  // Allocate the DICOM decoder
-  m_pDecDicom = new CDecodeDicom(pWBuf, pLog);
-
-  if(!m_pDecDicom)
-  {
-    Q_ASSERT(false);
-    return;
-  }
-
-  if(DEBUG_EN)
-    m_pAppConfig->DebugLogAdd("CjfifDecode::CjfifDecode() Checkpoint 5");
-#endif
-}
-
-// Destructor
-CjfifDecode::~CjfifDecode()
-{
-  // Free the Photoshop decoder
-  if(m_pPsDec)
-  {
-    delete m_pPsDec;
-
-    m_pPsDec = NULL;
-  }
-
-#ifdef SUPPORT_DICOM
-  // Free the DICOM decoder
-  if(m_pDecDicom)
-  {
-    delete m_pDecDicom;
-
-    m_pDecDicom = NULL;
-  }
-#endif
-
-}
-
+//-----------------------------------------------------------------------------
 // Asynchronously update a local pointer to the status bar once
 // it becomes available. Note that the status bar is not ready by
 // the time of the CjfifDecode class constructor call.
@@ -253,6 +246,7 @@ void CjfifDecode::SetStatusBar(QStatusBar * pStatBar)
   m_pStatBar = pStatBar;
 }
 
+//-----------------------------------------------------------------------------
 // Indicate that the source of the image scan data
 // has been dirtied. Either the source has changed
 // or some of the View2 options have changed.
@@ -265,6 +259,7 @@ void CjfifDecode::ImgSrcChanged()
   m_pImgSrcDirty = true;
 }
 
+//-----------------------------------------------------------------------------
 // Set the AVI mode flag for this file
 //
 // POST:
@@ -277,6 +272,7 @@ void CjfifDecode::SetAviMode(bool bIsAvi, bool bIsMjpeg)
   m_bAviMjpeg = bIsMjpeg;
 }
 
+//-----------------------------------------------------------------------------
 // Fetch the AVI mode flag for this file
 //
 // PRE:
@@ -293,6 +289,7 @@ void CjfifDecode::GetAviMode(bool & bIsAvi, bool & bIsMjpeg)
   bIsMjpeg = m_bAviMjpeg;
 }
 
+//-----------------------------------------------------------------------------
 // Fetch the starting file position of the embedded thumbnail
 //
 // PRE:
@@ -306,6 +303,7 @@ uint32_t CjfifDecode::GetPosEmbedStart()
   return m_nPosEmbedStart;
 }
 
+//-----------------------------------------------------------------------------
 // Fetch the ending file position of the embedded thumbnail
 //
 // PRE:
@@ -319,6 +317,7 @@ uint32_t CjfifDecode::GetPosEmbedEnd()
   return m_nPosEmbedEnd;
 }
 
+//-----------------------------------------------------------------------------
 // Determine if the last analysis revealed a JFIF with known markers
 //
 // RETURN:
@@ -329,6 +328,7 @@ bool CjfifDecode::GetDecodeStatus()
   return m_bImgOK;
 }
 
+//-----------------------------------------------------------------------------
 // Fetch a summary of the JFIF decoder results
 // These details are used in preparation of signature submission to the DB
 //
@@ -362,6 +362,7 @@ void CjfifDecode::GetDecodeSummary(QString & strHash, QString & strHashRot, QStr
   eDbReqSuggest = m_eDbReqSuggest;
 }
 
+//-----------------------------------------------------------------------------
 // Fetch an element from the "standard" luminance quantization table
 //
 // PRE:
@@ -393,6 +394,7 @@ uint32_t CjfifDecode::GetDqtQuantStd(uint32_t nInd)
   }
 }
 
+//-----------------------------------------------------------------------------
 // Fetch the DQT ordering index (with optional zigzag sequence)
 //
 // INPUT:
@@ -431,6 +433,7 @@ uint32_t CjfifDecode::GetDqtZigZagIndex(uint32_t nInd, bool bZigZag)
   }
 }
 
+//-----------------------------------------------------------------------------
 // Reset the DQT tables
 //
 // POST:
@@ -456,6 +459,7 @@ void CjfifDecode::ClearDQT()
   }
 }
 
+//-----------------------------------------------------------------------------
 // Set the DQT matrix element
 //
 // INPUT:
@@ -483,6 +487,7 @@ void CjfifDecode::SetDQTQuick(uint16_t anDqt0[64], uint16_t anDqt1[64])
   m_strImgQuantCss = "NA";
 }
 
+//-----------------------------------------------------------------------------
 // Construct a lookup table for the Huffman code masks
 // The result is a simple bit sequence of zeros followed by
 // an increasing number of 1 bits.
@@ -502,12 +507,13 @@ void CjfifDecode::GenLookupHuffMask()
 
   for(uint32_t len = 0; len < 32; len++)
   {
-    mask = (1 << (len)) - 1;
+    mask = (1 << len) - 1;
     mask <<= 32 - len;
     m_anMaskLookup[len] = mask;
   }
 }
 
+//-----------------------------------------------------------------------------
 // Provide a short-hand alias for the m_pWBuf buffer
 // Also support redirection to a local table in case we are
 // faking out the DHT (eg. for MotionJPEG files).
@@ -540,6 +546,7 @@ uint8_t CjfifDecode::Buf(uint32_t nOffset, bool bClean = false)
   }
 }
 
+//-----------------------------------------------------------------------------
 // Write out a line to the log buffer if we are in verbose mode
 //
 // PRE:
@@ -565,6 +572,7 @@ void CjfifDecode::DbgAddLine(QString strLine)
   }
 }
 
+//-----------------------------------------------------------------------------
 // Convert a UINT32 and decompose into 4 bytes, but support
 // either endian byte-swap mode
 //
@@ -603,6 +611,7 @@ void CjfifDecode::UnByteSwap4(uint32_t nVal, uint32_t &nByte0, uint32_t &nByte1,
   }
 }
 
+//-----------------------------------------------------------------------------
 // Perform conversion from 4 bytes into UINT32 with
 // endian byte-swapping support
 //
@@ -636,6 +645,7 @@ uint32_t CjfifDecode::ByteSwap4(uint32_t nByte0, uint32_t nByte1, uint32_t nByte
   return nVal;
 }
 
+//-----------------------------------------------------------------------------
 // Perform conversion from 2 bytes into half-word with
 // endian byte-swapping support
 //
@@ -667,6 +677,7 @@ uint32_t CjfifDecode::ByteSwap2(uint32_t nByte0, uint32_t nByte1)
   return nVal;
 }
 
+//-----------------------------------------------------------------------------
 // Decode Canon Makernotes
 // Only the most common makernotes are supported; there are a large
 // number of makernotes that have not been documented anywhere.
@@ -906,6 +917,7 @@ CStr2 CjfifDecode::LookupMakerCanonTag(uint32_t nMainTag, uint32_t nSubTag, uint
           sRetVal.bUnknown = true;
           break;
       }                         // switch nSubTag
+
       break;
 
     case 0x000F:
@@ -1034,6 +1046,7 @@ CStr2 CjfifDecode::LookupMakerCanonTag(uint32_t nMainTag, uint32_t nSubTag, uint
   return sRetVal;
 }
 
+//-----------------------------------------------------------------------------
 // Perform decode of EXIF IFD tags including MakerNote tags
 //
 // PRE:
@@ -1630,7 +1643,6 @@ QString CjfifDecode::LookupExifTag(QString strSect, uint32_t nTag, bool & bUnkno
     // handled by the LookupMakerCanonTag() call.
     if(m_strImgExifMake == "Canon")
     {
-
       switch (nTag)
       {
         case 0x0001:
@@ -2114,6 +2126,7 @@ QString CjfifDecode::LookupExifTag(QString strSect, uint32_t nTag, bool & bUnkno
   return QString("???");
 }
 
+//-----------------------------------------------------------------------------
 // Interpret the MakerNote header to determine any applicable MakerNote subtype.
 //
 // PRE:
@@ -2163,7 +2176,8 @@ bool CjfifDecode::DecodeMakerSubType()
       {
         strTmp = "ERROR: Unknown Nikon Makernote Type";
         m_pLog->AddLineErr(strTmp);
-        if(m_pAppConfig->bInteractive)
+
+        if(m_pAppConfig->interactive())
         {
           msgBox.setText(strTmp);
           msgBox.exec();
@@ -2202,7 +2216,7 @@ bool CjfifDecode::DecodeMakerSubType()
       strTmp = "ERROR: Unknown SIGMA Makernote identifier";
       m_pLog->AddLineErr(strTmp);
 
-      if(m_pAppConfig->bInteractive)
+      if(m_pAppConfig->interactive())
       {
         msgBox.setText(strTmp);
         msgBox.exec();
@@ -2215,11 +2229,13 @@ bool CjfifDecode::DecodeMakerSubType()
   else if(m_strImgExifMake == "FUJIFILM")
   {
     strTmp = "";
+
     for(uint32_t ind = 0; ind < 8; ind++)
     {
       if(Buf(m_nPos + ind) != 0)
         strTmp += Buf(m_nPos + ind);
     }
+
     if(strTmp == "FUJIFILM")
     {
       // Valid marker
@@ -2231,7 +2247,8 @@ bool CjfifDecode::DecodeMakerSubType()
     {
       strTmp = "ERROR: Unknown FUJIFILM Makernote identifier";
       m_pLog->AddLineErr(strTmp);
-      if(m_pAppConfig->bInteractive)
+
+      if(m_pAppConfig->interactive())
       {
         msgBox.setText(strTmp);
         msgBox.exec();
@@ -2244,11 +2261,13 @@ bool CjfifDecode::DecodeMakerSubType()
   else if(m_strImgExifMake == "SONY")
   {
     strTmp = "";
+
     for(uint32_t ind = 0; ind < 12; ind++)
     {
       if(Buf(m_nPos + ind) != 0)
         strTmp += Buf(m_nPos + ind);
     }
+
     if(strTmp == "SONY DSC ")
     {
       // Valid marker
@@ -2259,7 +2278,8 @@ bool CjfifDecode::DecodeMakerSubType()
     {
       strTmp = "ERROR: Unknown SONY Makernote identifier";
       m_pLog->AddLineErr(strTmp);
-      if(m_pAppConfig->bInteractive)
+
+      if(m_pAppConfig->interactive())
       {
         msgBox.setText(strTmp);
         msgBox.exec();
@@ -2267,13 +2287,12 @@ bool CjfifDecode::DecodeMakerSubType()
 
       return false;
     }
-
   }                             // SONY
 
   return true;
-
 }
 
+//-----------------------------------------------------------------------------
 // Read two UINT32 from the buffer (8B) and interpret
 // as a rational entry. Convert to floating point.
 // Byte swap as required
@@ -2285,7 +2304,7 @@ bool CjfifDecode::DecodeMakerSubType()
 // RETURN:
 // - Was the conversion successful?
 //
-bool CjfifDecode::DecodeValRational(uint32_t nPos, float &nVal)
+bool CjfifDecode::DecodeValRational(uint32_t nPos, double &nVal)
 {
   int nValNumer;
 
@@ -2303,11 +2322,12 @@ bool CjfifDecode::DecodeValRational(uint32_t nPos, float &nVal)
   }
   else
   {
-    nVal = (float) nValNumer / (float) nValDenom;
+    nVal = static_cast<double>(nValNumer) / static_cast<double>(nValDenom);
     return true;
   }
 }
 
+//-----------------------------------------------------------------------------
 // Read two UINT32 from the buffer (8B) to create a formatted
 // fraction string. Byte swap as required
 //
@@ -2329,6 +2349,7 @@ QString CjfifDecode::DecodeValFraction(uint32_t nPos)
   return strTmp;
 }
 
+//-----------------------------------------------------------------------------
 // Convert multiple coordinates into a formatted GPS string
 //
 // INPUT:
@@ -2343,15 +2364,15 @@ QString CjfifDecode::DecodeValFraction(uint32_t nPos)
 // RETURN:
 // - Was the conversion successful?
 //
-bool CjfifDecode::PrintValGPS(uint32_t nCount, float fCoord1, float fCoord2, float fCoord3, QString & strCoord)
+bool CjfifDecode::PrintValGPS(uint32_t nCount, double fCoord1, double fCoord2, double fCoord3, QString & strCoord)
 {
-  float fTemp;
+  double fTemp;
 
   uint32_t nCoordDeg;
 
   uint32_t nCoordMin;
 
-  float fCoordSec;
+  double fCoordSec;
 
   // TODO: Extend to support 1 & 2 coordinate GPS entries
   if(nCount == 3)
@@ -2362,8 +2383,8 @@ bool CjfifDecode::PrintValGPS(uint32_t nCount, float fCoord1, float fCoord2, flo
 
     if(fCoord3 == 0)
     {
-      fTemp = fCoord2 - (float) nCoordMin;
-      fCoordSec = fTemp * (float) 60.0;
+      fTemp = fCoord2 - static_cast<double>(nCoordMin);
+      fCoordSec = fTemp * static_cast<double>(60.0);
     }
     else
     {
@@ -2381,6 +2402,7 @@ bool CjfifDecode::PrintValGPS(uint32_t nCount, float fCoord1, float fCoord2, flo
 
 }
 
+//-----------------------------------------------------------------------------
 // Read in 3 rational values from the buffer and output as a formatted GPS string
 //
 // INPUT:
@@ -2394,11 +2416,9 @@ bool CjfifDecode::PrintValGPS(uint32_t nCount, float fCoord1, float fCoord2, flo
 //
 bool CjfifDecode::DecodeValGPS(uint32_t nPos, QString & strCoord)
 {
-  float fCoord1 = 0;
-
-  float fCoord2 = 0;
-
-  float fCoord3 = 0;
+  double fCoord1 = 0;
+  double fCoord2 = 0;
+  double fCoord3 = 0;
 
   bool bRet;
 
@@ -2408,11 +2428,13 @@ bool CjfifDecode::DecodeValGPS(uint32_t nPos, QString & strCoord)
     bRet = DecodeValRational(nPos, fCoord1);
     nPos += 8;
   }
+
   if(bRet)
   {
     bRet = DecodeValRational(nPos, fCoord2);
     nPos += 8;
   }
+
   if(bRet)
   {
     bRet = DecodeValRational(nPos, fCoord3);
@@ -2430,6 +2452,7 @@ bool CjfifDecode::DecodeValGPS(uint32_t nPos, QString & strCoord)
   }
 }
 
+//-----------------------------------------------------------------------------
 // Read a UINT16 from the buffer, byte swap as required
 //
 // INPUT:
@@ -2443,6 +2466,7 @@ uint32_t CjfifDecode::ReadSwap2(uint32_t nPos)
   return ByteSwap2(Buf(nPos + 0), Buf(nPos + 1));
 }
 
+//-----------------------------------------------------------------------------
 // Read a UINT32 from the buffer, byte swap as required
 //
 // INPUT:
@@ -2456,6 +2480,7 @@ uint32_t CjfifDecode::ReadSwap4(uint32_t nPos)
   return ByteSwap4(Buf(nPos), Buf(nPos + 1), Buf(nPos + 2), Buf(nPos + 3));
 }
 
+//-----------------------------------------------------------------------------
 // Read a UINT32 from the buffer, force as big endian
 //
 // INPUT:
@@ -2470,6 +2495,7 @@ uint32_t CjfifDecode::ReadBe4(uint32_t nPos)
   return (Buf(nPos) << 24) + (Buf(nPos + 1) << 16) + (Buf(nPos + 2) << 8) + Buf(nPos + 3);
 }
 
+//-----------------------------------------------------------------------------
 // Print hex from array of unsigned char
 //
 // INPUT:
@@ -2523,10 +2549,12 @@ QString CjfifDecode::PrintAsHexUC(uint8_t *anBytes, uint32_t nCount)
     }
 
   }
+
   strFull += "]";
   return strFull;
 }
 
+//-----------------------------------------------------------------------------
 // Print hex from array of unsigned bytes
 //
 // INPUT:
@@ -2551,6 +2579,7 @@ QString CjfifDecode::PrintAsHex8(uint32_t *anBytes, uint32_t nCount)
 
   strFull = "0x[";
   bExceedMaxDisplay = (nCount > nMaxDisplay);
+
   for(uint32_t nInd = 0; nInd < nCount; nInd++)
   {
     if(nInd < nMaxDisplay)
@@ -2578,10 +2607,12 @@ QString CjfifDecode::PrintAsHex8(uint32_t *anBytes, uint32_t nCount)
     }
 
   }
+
   strFull += "]";
   return strFull;
 }
 
+//-----------------------------------------------------------------------------
 // Print hex from array of unsigned words
 //
 // INPUT:
@@ -2605,6 +2636,7 @@ QString CjfifDecode::PrintAsHex32(uint32_t *anWords, uint32_t nCount)
   bool bExceedMaxDisplay;
 
   bExceedMaxDisplay = (nCount > nMaxDisplay);
+
   for(uint32_t nInd = 0; nInd < nCount; nInd++)
   {
     if(nInd < nMaxDisplay)
@@ -2629,10 +2661,12 @@ QString CjfifDecode::PrintAsHex32(uint32_t *anWords, uint32_t nCount)
     }
 
   }
+
   strFull += "]";
   return strFull;
 }
 
+//-----------------------------------------------------------------------------
 // Process all of the entries within an EXIF IFD directory
 // This is used for the main EXIF IFDs as well as MakerNotes
 //
@@ -2683,7 +2717,7 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
 
   QString strValTmp;
 
-  float fValReal;
+  double fValReal;
 
   QString strMaker;
 
@@ -2711,9 +2745,9 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
 
   uint32_t anValues[MAX_anValues];      // Array of decoded values (Uint32)
 
-  signed anValuesS[MAX_anValues];       // Array of decoded values (Int32)
+  int32_t anValuesS[MAX_anValues];       // Array of decoded values (Int32)
 
-  float afValues[MAX_anValues]; // Array of decoded values (float)
+  double afValues[MAX_anValues]; // Array of decoded values (float)
 
   uint32_t nIfdOffset;          // First DWORD decode, usually offset
 
@@ -2754,7 +2788,7 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
     // Mark the image as containing Makernotes
     m_bImgExifMakernotes = true;
 
-    if(!m_pAppConfig->bDecodeMaker)
+    if(!m_pAppConfig->decodeMaker())
     {
       strTmp = QString("    Makernote decode option not enabled.");
       m_pLog->AddLine(strTmp);
@@ -2810,7 +2844,6 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
   // decode accordingly.
   for(uint32_t nIfdEntryInd = 0; nIfdEntryInd < nIfdDirLen; nIfdEntryInd++)
   {
-
     // By default, show single-line value summary
     // bExtraDecode is used to indicate that additional special
     // parsing output is available for this entry
@@ -2877,6 +2910,7 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
     {
       acIfdValOffsetStr[i] = Buf(m_nPos + i);
     }
+
     acIfdValOffsetStr[4] = '\0';
 
     // ... now as an unsigned value
@@ -2916,7 +2950,6 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
 
     switch (nIfdFormat)
     {
-
         // ----------------------------------------
         // --- IFD Entry Type: Unsigned Byte
         // ----------------------------------------
@@ -2950,8 +2983,10 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
               anValues[nInd] = Buf(nPosExifStart + nIfdOffset + nInd);
             }
           }
+
           strValOut = PrintAsHex8(anValues, nIfdNumComps);
         }
+
         strFull += strValOut;
         strFull += "]";
         DbgAddLine(strFull);
@@ -3009,15 +3044,17 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
           // TODO: Clean this up
           if(nVal != 0)
           {
-            cVal = (char) nVal;
+            cVal = static_cast<char>(nVal);
+
             if(!isprint(nVal))
             {
               cVal = '.';
             }
+
             strValOut += cVal;
           }
-
         }
+
         strFull += strValOut;
         DbgAddLine(strFull);
 
@@ -3072,21 +3109,24 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
 
           strValOut = "";
           strFull = "        Unsigned Short=[";
+
           for(uint32_t nInd = 0; nInd < nCompsToDisplay; nInd++)
           {
             if(nInd != 0)
             {
               strValOut += ", ";
             }
+
             anValues[nInd] = ReadSwap2(nPosExifStart + nIfdOffset + (2 * nInd));
             strValTmp = QString("%1").arg(anValues[nInd]);
             strValOut += strValTmp;
           }
+
           strFull += strValOut;
           strFull += "]";
           DbgAddLine(strFull);
-
         }
+
         break;
 
         // ----------------------------------------
@@ -3113,13 +3153,16 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
             anValues[nInd] = ReadSwap4(nPosExifStart + nIfdOffset + (nInd * 4));
           }
         }
+
         strValOut = PrintAsHex32(anValues, nIfdNumComps);
+
         // If we only have a single component, then display both the hex and decimal
         if(nCompsToDisplay == 1)
         {
           strTmp = QString("%1 / %2").arg(strValOut).arg(anValues[0]);
           strValOut = strTmp;
         }
+
         break;
 
         // ----------------------------------------
@@ -3139,11 +3182,13 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
           {
             strValOut += ", ";
           }
+
           strValTmp = DecodeValFraction(nPosExifStart + nIfdOffset + (nInd * 8));
           bRet = DecodeValRational(nPosExifStart + nIfdOffset + (nInd * 8), fValReal);
           afValues[nInd] = fValReal;
           strValOut += strValTmp;
         }
+
         strFull += strValOut;
         strFull += "]";
         DbgAddLine(strFull);
@@ -3170,9 +3215,9 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
           {
             anValues[nInd] = Buf(m_nPos + nInd);
           }
+
           strValOut = PrintAsHex8(anValues, nIfdNumComps);
           strFull += strValOut;
-
         }
         else
         {
@@ -3182,9 +3227,11 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
           {
             anValues[nInd] = Buf(nPosExifStart + nIfdOffset + nInd);
           }
+
           strValOut = PrintAsHex8(anValues, nIfdNumComps);
           strFull += strValOut;
         }
+
         strFull += "]";
         DbgAddLine(strFull);
 
@@ -3242,21 +3289,24 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
           // "signed short".
           strValOut = "";
           strFull = "        Signed Short=[";
+
           for(uint32_t nInd = 0; nInd < nCompsToDisplay; nInd++)
           {
             if(nInd != 0)
             {
               strValOut += ", ";
             }
+
             anValuesS[nInd] = ReadSwap2(nPosExifStart + nIfdOffset + (2 * nInd));
             strValTmp = QString("%1").arg(anValuesS[nInd]);
             strValOut += strValTmp;
           }
+
           strFull += strValOut;
           strFull += "]";
           DbgAddLine(strFull);
-
         }
+
         break;
 
         // ----------------------------------------
@@ -3276,11 +3326,13 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
           {
             strValOut += ", ";
           }
+
           strValTmp = DecodeValFraction(nPosExifStart + nIfdOffset + (nInd * 8));
           bRet = DecodeValRational(nPosExifStart + nIfdOffset + (nInd * 8), fValReal);
           afValues[nInd] = fValReal;
           strValOut += strValTmp;
         }
+
         strFull += strValOut;
         strFull += "]";
         DbgAddLine(strFull);
@@ -3625,6 +3677,7 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
             break;
         }
       }
+
       strValOut += "]";
 
     }
@@ -3637,7 +3690,6 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
       strVal = m_pWBuf->BufReadUniStr2(nPosExifStart + nIfdOffset, nIfdNumComps);
       strValOut += strVal;
       strValOut += "\"";
-
     }
     else if(strIfdTag == "UserComment")
     {
@@ -3648,6 +3700,7 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
       {
         anCharCode[vInd] = Buf(nPosExifStart + nIfdOffset + 0 + vInd);
       }
+
       // Actual string
       strValOut = "\"";
       bool bDone = false;
@@ -3657,6 +3710,7 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
       for(uint32_t vInd = 0; (vInd < nIfdNumComps - 8) && (!bDone); vInd++)
       {
         cTmp = Buf(nPosExifStart + nIfdOffset + 8 + vInd);
+
         if(cTmp == 0)
         {
           bDone = true;
@@ -3666,6 +3720,7 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
           strValOut += cTmp;
         }
       }
+
       strValOut += "\"";
     }
     else if(strIfdTag == "MeteringMode")
@@ -3942,11 +3997,8 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
     if(strIfdTag == "CFAPattern")
     {
       uint32_t nHorzRepeat, nVertRepeat;
-
       uint32_t anCfaVal[16][16];
-
       uint32_t nInd = 0;
-
       uint32_t nVal;
 
       QString strLine, strCol;
@@ -3954,20 +4006,24 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
       nHorzRepeat = anValues[nInd + 0] * 256 + anValues[nInd + 1];
       nVertRepeat = anValues[nInd + 2] * 256 + anValues[nInd + 3];
       nInd += 4;
+
       if((nHorzRepeat < 16) && (nVertRepeat < 16))
       {
         bExtraDecode = true;
         strTmp = QString("    [%1] =").arg(strIfdTag, -36);
         m_pLog->AddLine(strTmp);
+
         for(uint32_t nY = 0; nY < nVertRepeat; nY++)
         {
           strLine = QString("     %1  = [ ").arg("", -36);
+
           for(uint32_t nX = 0; nX < nHorzRepeat; nX++)
           {
             if(nInd < MAX_anValues)
             {
               nVal = anValues[nInd++];
               anCfaVal[nY][nX] = nVal;
+
               switch (nVal)
               {
                 case 0:
@@ -4004,7 +4060,6 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
           m_pLog->AddLine(strLine);
         }
       }
-
     }
 
     if((strIfd == "InteropIFD") && (strIfdTag == "InteroperabilityVersion"))
@@ -4031,7 +4086,8 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
         // Print summary line now, before sub details
         // Disable later summary line
         bExtraDecode = true;
-        if((!m_pAppConfig->bExifHideUnknown) || (!nIfdTagUnknown))
+
+        if((!m_pAppConfig->hideUnknownExif()) || (!nIfdTagUnknown))
         {
           strTmp = QString("    [%1]").arg(strIfdTag, -36);
           m_pLog->AddLine(strTmp);
@@ -4048,7 +4104,8 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
               strRetVal = LookupMakerCanonTag(nIfdTagVal, ind, anValues[ind]);
               strMaker = strRetVal.strTag;
               strValTmp = QString("      [%1] = %2").arg(strMaker, -34).arg(strRetVal.strVal);
-              if((!m_pAppConfig->bExifHideUnknown) || (!strRetVal.bUnknown))
+
+              if((!m_pAppConfig->hideUnknownExif()) || (!strRetVal.bUnknown))
               {
                 m_pLog->AddLine(strValTmp);
               }
@@ -4150,6 +4207,7 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
       // Embedded thumbnail, compression format
       m_nImgExifThumbComp = ReadSwap4(m_nPos);
     }
+
     if((strIfd == "IFD1") && (strIfdTag == "JpegIFOffset"))
     {
       // Embedded thumbnail, offset
@@ -4158,6 +4216,7 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
           .arg(nIfdOffset, 4, 16, QChar('0'))
           .arg(m_nImgExifThumbOffset, 4, 16, QChar('0'));
     }
+
     if((strIfd == "IFD1") && (strIfdTag == "JpegIFByteCount"))
     {
       // Embedded thumbnail, length
@@ -4176,6 +4235,7 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
       //    use of the Make field
 
       m_bImgExifMakeSupported = false;
+
       if(m_strImgExifMake == "Canon")
       {
         m_bImgExifMakeSupported = true;
@@ -4225,9 +4285,8 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
     if(!bExtraDecode)
     {
       // Provide option to skip unknown fields
-      if((!m_pAppConfig->bExifHideUnknown) || (!nIfdTagUnknown))
+      if((!m_pAppConfig->hideUnknownExif()) || (!nIfdTagUnknown))
       {
-
         // If the tag is an ASCII string, we want to wrap with quote marks
         if(nIfdFormat == 2)
         {
@@ -4237,13 +4296,12 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
         {
           strTmp = QString("    [%1] = %2").arg(strIfdTag, -36).arg(strValOut);
         }
-        m_pLog->AddLine(strTmp);
 
+        m_pLog->AddLine(strTmp);
       }
     }
 
     DbgAddLine("");
-
   }                             // for nIfdEntryInd
 
   // =========== EXIF IFD (End) ===========
@@ -4255,6 +4313,7 @@ uint32_t CjfifDecode::DecodeExifIfd(QString strIfd, uint32_t nPosExifStart, uint
   return 0;
 }
 
+//-----------------------------------------------------------------------------
 // Handle APP13 marker
 // This includes:
 // - Photoshop "Save As" and "Save for Web" quality settings
@@ -4315,6 +4374,7 @@ uint32_t CjfifDecode::DecodeApp13Ps()
   return 0;
 }
 
+//-----------------------------------------------------------------------------
 // Start decoding a single ICC header segment @ nPos
 uint32_t CjfifDecode::DecodeIccHeader(uint32_t nPos)
 {
@@ -4564,6 +4624,7 @@ uint32_t CjfifDecode::DecodeIccHeader(uint32_t nPos)
       strTmp1 = QString("? (0x%1)").arg(nPrimPlatSig, 8, 16, QChar('0'));
       break;
   }
+
   strTmp = QString("        %1 : %2 (%3)").arg("Primary platform", -33).arg(strTmp1).arg(Uint2Chars(nPrimPlatSig));
   m_pLog->AddLine(strTmp);
 
@@ -4628,6 +4689,7 @@ uint32_t CjfifDecode::DecodeIccHeader(uint32_t nPos)
       strTmp1 = QString("0x%1").arg(nRenderIntent, 8, 16, QChar('0'));
       break;
   }
+
   strTmp = QString("        %1 : %2").arg("Rendering intent", -33).arg(strTmp1);
   m_pLog->AddLine(strTmp);
 
@@ -4648,6 +4710,7 @@ uint32_t CjfifDecode::DecodeIccHeader(uint32_t nPos)
   return 0;
 }
 
+//-----------------------------------------------------------------------------
 // Provide special output formatter for ICC Date/Time
 // NOTE: It appears that the nParts had to be decoded in the
 //       reverse order from what I had expected, so one should
@@ -4664,8 +4727,7 @@ QString CjfifDecode::DecodeIccDateTime(uint32_t anVal[])
   anParts[3] = (anVal[1] & 0x0000FFFF); // Hour
   anParts[4] = (anVal[0] & 0xFFFF0000) >> 16;   // Min
   anParts[5] = (anVal[0] & 0x0000FFFF); // Sec
-  strDate =
-    QString("%1-%2-%3 %4:%5:%6")
+  strDate = QString("%1-%2-%3 %4:%5:%6")
       .arg(anParts[0], 4, 10, QChar('0'))
       .arg(anParts[1], 2, 10, QChar('0'))
       .arg(anParts[2], 2, 10, QChar('0'))
@@ -4675,6 +4737,7 @@ QString CjfifDecode::DecodeIccDateTime(uint32_t anVal[])
   return strDate;
 }
 
+//-----------------------------------------------------------------------------
 // Parser for APP2 ICC profile marker
 uint32_t CjfifDecode::DecodeApp2IccProfile(uint32_t nLen)
 {
@@ -4708,20 +4771,16 @@ uint32_t CjfifDecode::DecodeApp2IccProfile(uint32_t nLen)
   return 0;
 }
 
+//-----------------------------------------------------------------------------
 // Parser for APP2 FlashPix marker
 uint32_t CjfifDecode::DecodeApp2Flashpix()
 {
-
   QString strTmp;
 
   uint32_t nFpxVer;
-
   uint32_t nFpxSegType;
-
   uint32_t nFpxInteropCnt;
-
   uint32_t nFpxEntitySz;
-
   uint32_t nFpxDefault;
 
   bool bFpxStorage;
@@ -4729,17 +4788,13 @@ uint32_t CjfifDecode::DecodeApp2Flashpix()
   QString strFpxStorageClsStr;
 
   uint32_t nFpxStIndexCont;
-
   uint32_t nFpxStOffset;
-
   uint32_t nFpxStWByteOrder;
-
   uint32_t nFpxStWFormat;
 
   QString strFpxStClsidStr;
 
   uint32_t nFpxStDwOsVer;
-
   uint32_t nFpxStRsvd;
 
   QString streamStr;
@@ -4769,6 +4824,7 @@ uint32_t CjfifDecode::DecodeApp2Flashpix()
       // a "storage". It looks like we should probably be using this to determine
       // that we have a "storage"
       bFpxStorage = false;
+
       if(nFpxEntitySz == 0xFFFFFFFF)
       {
         bFpxStorage = true;
@@ -4790,7 +4846,7 @@ uint32_t CjfifDecode::DecodeApp2Flashpix()
       // BUG: #1112
       //streamStr = m_pWBuf->BufReadUniStr(m_nPos);
       streamStr = m_pWBuf->BufReadUniStr2(m_nPos, MAX_BUF_READ_STR);
-      m_nPos += 2 * ((uint32_t) streamStr.length() + 1);        // 2x because unicode
+      m_nPos += 2 * (static_cast<uint32_t>(streamStr.length()) + 1);        // 2x because unicode
 
       strTmp = QString("        Stream Name = [%1]").arg(streamStr);
       m_pLog->AddLine(strTmp);
@@ -4802,23 +4858,23 @@ uint32_t CjfifDecode::DecodeApp2Flashpix()
         // FIXME:
         // NOTE: Very strange reordering required here. Doesn't seem consistent
         //       This means that other fields are probably wrong as well (endian)
-        strFpxStorageClsStr =
-          QString("%1%2%3%4-%5%6-%7%8-%9%10-%11%12%13%14%15%16").arg(Buf(m_nPos + 3), 2, 16, QChar('0')).arg(Buf(m_nPos + 2), 2,
-                                                                                                             16,
-                                                                                                             QChar('0')).
-          arg(Buf(m_nPos + 1), 2, 16, QChar('0')).arg(Buf(m_nPos + 0), 2, 16, QChar('0')).arg(Buf(m_nPos + 5), 2, 16,
-                                                                                              QChar('0')).arg(Buf(m_nPos + 4), 2,
-                                                                                                              16,
-                                                                                                              QChar('0')).
-          arg(Buf(m_nPos + 7), 2, 16, QChar('0')).arg(Buf(m_nPos + 6), 2, 16, QChar('0')).arg(Buf(m_nPos + 8), 2, 16,
-                                                                                              QChar('0')).arg(Buf(m_nPos + 9), 2,
-                                                                                                              16,
-                                                                                                              QChar('0')).
-          arg(Buf(m_nPos + 10), 2, 16, QChar('0')).arg(Buf(m_nPos + 11), 2, 16, QChar('0')).arg(Buf(m_nPos + 12), 2, 16,
-                                                                                                QChar('0')).arg(Buf(m_nPos + 13),
-                                                                                                                2, 16,
-                                                                                                                QChar('0')).
-          arg(Buf(m_nPos + 14), 2, 16, QChar('0')).arg(Buf(m_nPos + 15), 2, 16, QChar('0'));
+        strFpxStorageClsStr = QString("%1%2%3%4-%5%6-%7%8-%9%10-%11%12%13%14%15%16")
+            .arg(Buf(m_nPos + 3), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 2), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 1), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 0), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 5), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 4), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 7), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 6), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 8), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 9), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 10), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 11), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 12), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 13), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 14), 2, 16, QChar('0'))
+            .arg(Buf(m_nPos + 15), 2, 16, QChar('0'));
         m_nPos += 16;
         strTmp = QString("        Storage Class = [%1]").arg(strFpxStorageClsStr);
         m_pLog->AddLine(strTmp);
@@ -4826,7 +4882,6 @@ uint32_t CjfifDecode::DecodeApp2Flashpix()
     }
 
     return 0;
-
   }
   else if(nFpxSegType == 2)
   {
@@ -4855,19 +4910,23 @@ uint32_t CjfifDecode::DecodeApp2Flashpix()
     // NOTE: Very strange reordering required here. Doesn't seem consistent!
     //       This means that other fields are probably wrong as well (endian)
     strFpxStClsidStr =
-      QString("%1%2%3%4-%5%6-%7%8-%9%10-%11%12%13%14%15%16").arg(Buf(m_nPos + 3), 2, 16, QChar('0')).arg(Buf(m_nPos + 2), 2, 16,
-                                                                                                         QChar('0')).
-      arg(Buf(m_nPos + 1), 2, 16, QChar('0')).arg(Buf(m_nPos + 0), 2, 16, QChar('0')).arg(Buf(m_nPos + 5), 2, 16,
-                                                                                          QChar('0')).arg(Buf(m_nPos + 4), 2, 16,
-                                                                                                          QChar('0')).
-      arg(Buf(m_nPos + 7), 2, 16, QChar('0')).arg(Buf(m_nPos + 6), 2, 16, QChar('0')).arg(Buf(m_nPos + 8), 2, 16,
-                                                                                          QChar('0')).arg(Buf(m_nPos + 9), 2, 16,
-                                                                                                          QChar('0')).
-      arg(Buf(m_nPos + 10), 2, 16, QChar('0')).arg(Buf(m_nPos + 11), 2, 16, QChar('0')).arg(Buf(m_nPos + 12), 2, 16,
-                                                                                            QChar('0')).arg(Buf(m_nPos + 13), 2,
-                                                                                                            16,
-                                                                                                            QChar('0')).
-      arg(Buf(m_nPos + 14), 2, 16, QChar('0')).arg(Buf(m_nPos + 15), 2, 16, QChar('0'));
+      QString("%1%2%3%4-%5%6-%7%8-%9%10-%11%12%13%14%15%16")
+        .arg(Buf(m_nPos + 3), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 2), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 1), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 0), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 5), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 4), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 7), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 6), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 8), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 9), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 10), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 11), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 12), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 13), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 14), 2, 16, QChar('0'))
+        .arg(Buf(m_nPos + 15), 2, 16, QChar('0'));
     m_nPos += 16;
     nFpxStRsvd = (Buf(m_nPos++) << 8) + Buf(m_nPos++);
 
@@ -4898,6 +4957,7 @@ uint32_t CjfifDecode::DecodeApp2Flashpix()
   }
 }
 
+//-----------------------------------------------------------------------------
 // Decode the DHT marker segment (Huffman Tables)
 // In some cases (such as for MotionJPEG), we fake out
 // the DHT tables (when bInject=true) with a standard table
@@ -4938,7 +4998,6 @@ void CjfifDecode::DecodeDHT(bool bInject)
   m_pLog->AddLine(strTmp);
 
   uint32_t nDhtClass_Tc;        // Range 0..1
-
   uint32_t nDhtHuffTblId_Th;    // Range 0..3
 
   // In various places, added m_bStateAbort check to allow us
@@ -4966,6 +5025,7 @@ void CjfifDecode::DecodeDHT(bool bInject)
       //m_bStateAbort = true; // Stop decoding
       break;
     }
+
     if(nDhtHuffTblId_Th >= MAX_DHT_DEST_ID)
     {
       strTmp = QString("ERROR: Invalid DHT Dest ID (%1). Aborting DHT Load.").arg(nDhtHuffTblId_Th);
@@ -4982,11 +5042,8 @@ void CjfifDecode::DecodeDHT(bool bInject)
     }
 
 #define DECODE_DHT_MAX_DHT 256
-
     uint32_t anDhtCodeVal[DECODE_DHT_MAX_DHT + 1];  // Should only need max 162 codes
-
     uint32_t nDhtInd;
-
     uint32_t nDhtCodesTotal;
 
     // Clear out the code list
@@ -4999,14 +5056,15 @@ void CjfifDecode::DecodeDHT(bool bInject)
     // read in earlier
     nDhtCodesTotal = 0;
     nDhtInd = 0;
+
     for(uint32_t nIndLen = 1; ((!m_bStateAbort) && (nIndLen <= MAX_DHT_CODELEN)); nIndLen++)
     {
       // Keep a total count of the number of DHT codes read
       nDhtCodesTotal += m_anDhtNumCodesLen_Li[nIndLen];
 
       strFull = QString("    Codes of length %1 bits (%2 total): ")
-      .arg(nIndLen, 2, 10, QChar('0'))
-      .arg(m_anDhtNumCodesLen_Li[nIndLen], 3, 10, QChar('0'));
+          .arg(nIndLen, 2, 10, QChar('0'))
+          .arg(m_anDhtNumCodesLen_Li[nIndLen], 3, 10, QChar('0'));
 
       for(uint32_t nIndCode = 0; ((!m_bStateAbort) && (nIndCode < m_anDhtNumCodesLen_Li[nIndLen])); nIndCode++)
       {
@@ -5015,6 +5073,7 @@ void CjfifDecode::DecodeDHT(bool bInject)
         {
           strFull = "                                         ";
         }
+
         nTmpVal = Buf(m_nPos++);
         strTmp = QString("%1 ").arg(nTmpVal, 2, 16, QChar('0'));
         strFull += strTmp;
@@ -5038,15 +5097,17 @@ void CjfifDecode::DecodeDHT(bool bInject)
           nDhtInd++;
           strTmp = QString("Excessive DHT entries (%1)... skipping").arg(nDhtInd);
           m_pLog->AddLineErr(strTmp);
+
           if(!m_bStateAbort)
           {
             DecodeErrCheck(true);
           }
         }
-
       }
+
       m_pLog->AddLine(strFull);
     }
+
     strTmp = QString("    Total number of codes: %1").arg(nDhtCodesTotal, 3, 10, QChar('0'));
     m_pLog->AddLine(strTmp);
 
@@ -5056,26 +5117,28 @@ void CjfifDecode::DecodeDHT(bool bInject)
     uint32_t nCodeVal = 0;
 
     nDhtInd = 0;
-    if(m_pAppConfig->bOutputDHTexpand)
+
+    if(m_pAppConfig->expandDht())
     {
       m_pLog->AddLine("");
       m_pLog->AddLine("  Expanded Form of Codes:");
     }
+
     for(uint32_t nBitLen = 1; ((!m_bStateAbort) && (nBitLen <= 16)); nBitLen++)
     {
       if(m_anDhtNumCodesLen_Li[nBitLen] > 0)
       {
-        if(m_pAppConfig->bOutputDHTexpand)
+        if(m_pAppConfig->expandDht())
         {
           strTmp = QString("    Codes of length %1 bits:").arg(nBitLen, 2, 10, QChar('0'));
           m_pLog->AddLine(strTmp);
         }
+
         // Codes exist for this bit-length
         // Walk through and generate the bitvalues
         for(uint32_t bit_ind = 1; ((!m_bStateAbort) && (bit_ind <= m_anDhtNumCodesLen_Li[nBitLen])); bit_ind++)
         {
           uint32_t nDecVal = nCodeVal;
-
           uint32_t nBinBit;
 
           char acBinStr[17] = "";
@@ -5084,13 +5147,14 @@ void CjfifDecode::DecodeDHT(bool bInject)
 
           // If the user has enabled output of DHT expanded tables,
           // report the bit-string sequences.
-          if(m_pAppConfig->bOutputDHTexpand)
+          if(m_pAppConfig->expandDht())
           {
             for(uint32_t nBinInd = nBitLen; nBinInd >= 1; nBinInd--)
             {
               nBinBit = (nDecVal >> (nBinInd - 1)) & 1;
               acBinStr[nBinStrLen++] = (nBinBit) ? '1' : '0';
             }
+
             acBinStr[nBinStrLen] = '\0';
             strFull = QString("      %1 = %2").arg(acBinStr).arg(anDhtCodeVal[nDhtInd], 2, 16, QChar('0'));
 
@@ -5116,9 +5180,7 @@ void CjfifDecode::DecodeDHT(bool bInject)
           // Store the lookup value
           // Shift left to MSB of 32-bit
           uint32_t nTmpMask = m_anMaskLookup[nBitLen];
-
           uint32_t nTmpBits = nDecVal << (32 - nBitLen);
-
           uint32_t nTmpCode = anDhtCodeVal[nDhtInd];
 
           bRet = m_pImgDec->SetDhtEntry(nDhtHuffTblId_Th, nDhtClass_Tc, nDhtLookupInd, nBitLen, nTmpBits, nTmpMask, nTmpCode);
@@ -5132,6 +5194,7 @@ void CjfifDecode::DecodeDHT(bool bInject)
           nDhtInd++;
         }
       }
+
       // For each loop iteration (on bit length), we shift the code value
       nCodeVal <<= 1;
     }
@@ -5140,13 +5203,13 @@ void CjfifDecode::DecodeDHT(bool bInject)
     uint32_t nTmpSize = nDhtLookupInd;
 
     bRet = m_pImgDec->SetDhtSize(nDhtHuffTblId_Th, nDhtClass_Tc, nTmpSize);
+
     if(!m_bStateAbort)
     {
       DecodeErrCheck(bRet);
     }
 
     m_pLog->AddLine("");
-
   }
 
   if(bInject)
@@ -5157,6 +5220,7 @@ void CjfifDecode::DecodeDHT(bool bInject)
   }
 }
 
+//-----------------------------------------------------------------------------
 // Check return value of previous call. If failed, then ask
 // user if they wish to continue decoding. If no, then flag to
 // the decoder that we're done (avoids continuous failures)
@@ -5164,7 +5228,7 @@ void CjfifDecode::DecodeErrCheck(bool bRet)
 {
   if(!bRet)
   {
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText("Do you want to continue decoding?");
       msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
@@ -5177,6 +5241,7 @@ void CjfifDecode::DecodeErrCheck(bool bRet)
   }
 }
 
+//-----------------------------------------------------------------------------
 // This routine is called after the expected fields of the marker segment
 // have been processed. The file position should line up with the offset
 // dictated by the marker length. If a mismatch is detected, report an
@@ -5190,7 +5255,6 @@ bool CjfifDecode::ExpectMarkerEnd(uint32_t nMarkerStart, uint32_t nMarkerLen)
   QString strTmp;
 
   uint32_t nMarkerEnd = nMarkerStart + nMarkerLen;
-
   uint32_t nMarkerExtra = nMarkerEnd - m_nPos;
 
   if(m_nPos < nMarkerEnd)
@@ -5198,7 +5262,8 @@ bool CjfifDecode::ExpectMarkerEnd(uint32_t nMarkerStart, uint32_t nMarkerLen)
     // The length indicates that there is more data than we processed
     strTmp = QString("  WARNING: Marker length longer than expected");
     m_pLog->AddLineWarn(strTmp);
-    if(!m_pAppConfig->bRelaxedParsing)
+
+    if(!m_pAppConfig->relaxedParsing())
     {
       // Abort
       m_pLog->AddLineErr("  Stopping decode");
@@ -5218,7 +5283,8 @@ bool CjfifDecode::ExpectMarkerEnd(uint32_t nMarkerStart, uint32_t nMarkerLen)
     // The length indicates that there is less data than we processed
     strTmp = QString("  WARNING: Marker length shorter than expected");
     m_pLog->AddLineWarn(strTmp);
-    if(!m_pAppConfig->bRelaxedParsing)
+
+    if(!m_pAppConfig->relaxedParsing())
     {
       // Abort
       m_pLog->AddLineErr("  Stopping decode");
@@ -5258,6 +5324,7 @@ bool CjfifDecode::ExpectMarkerEnd(uint32_t nMarkerStart, uint32_t nMarkerLen)
   return true;
 }
 
+//-----------------------------------------------------------------------------
 // Validate an unsigned value to ensure it is in allowable range
 // - If the value is outside the range, an error is shown and
 //   the parsing stops if relaxed parsing is not enabled
@@ -5299,7 +5366,8 @@ bool CjfifDecode::ValidateValue(uint32_t &nVal, uint32_t nMin, uint32_t nMax, QS
       strErr = QString("  ERROR: %1 value too large (Actual = %2, Expected <= %3)").arg(strName).arg(nVal).arg(nMax);
       m_pLog->AddLineErr(strErr);
     }
-    if(!m_pAppConfig->bRelaxedParsing)
+
+    if(!m_pAppConfig->relaxedParsing())
     {
       // Defined as fatal error
       // TODO: Replace with glb_strMsgStopDecode?
@@ -5327,9 +5395,9 @@ bool CjfifDecode::ValidateValue(uint32_t &nVal, uint32_t nMin, uint32_t nMax, QS
       return true;
     }
   }
-
 }
 
+//-----------------------------------------------------------------------------
 // This is the primary JFIF marker parser. It reads the
 // marker value at the current file position and launches the
 // specific parser routine. This routine exits when
@@ -5341,31 +5409,24 @@ uint32_t CjfifDecode::DecodeMarker()
   char acIdentifier[MAX_IDENTIFIER];
 
   QString strTmp;
-
   QString strFull;              // Used for concatenation
 
   uint32_t nLength;             // General purpose
 
   uint32_t nTmpVal;
-
-  quint8 nTmpVal1;
+  uint8_t nTmpVal1;
 
   uint16_t nTmpVal2;
 
   uint32_t nCode;
-
   uint32_t nPosEnd;
-
   uint32_t nPosSaved;      // General-purpose saved position in file
-
   uint32_t nPosExifStart;
-
   uint32_t nRet;                // General purpose return value
 
   bool bRet;
 
   uint32_t nPosMarkerStart;        // Offset for current marker
-
   uint32_t nColTransform = 0;   // Color Transform from APP14 marker
 
   // For DQT
@@ -5392,9 +5453,11 @@ uint32_t CjfifDecode::DecodeMarker()
           .arg(m_nPos, 8, 16, QChar('0'));
       m_pLog->AddLineErr(strTmp);
     }
+
     m_nPos++;
     return DECMARK_ERR;
   }
+
   m_nPos++;
 
   // Read the current marker code
@@ -5448,7 +5511,7 @@ uint32_t CjfifDecode::DecodeMarker()
       acIdentifier[MAX_IDENTIFIER - 1] = 0;     // Null terminate just in case
       strTmp = QString("  Identifier      = [%1]").arg(acIdentifier);
       m_pLog->AddLine(strTmp);
-      m_nPos += (uint32_t) strlen(acIdentifier) + 1;
+      m_nPos += static_cast<uint32_t>(strlen(acIdentifier)) + 1;
 
       if(strcmp(acIdentifier, "Ducky") != 0)
       {
@@ -5462,6 +5525,7 @@ uint32_t CjfifDecode::DecodeMarker()
         strTmp = QString("  Photoshop Save For Web Quality = [%1]").arg(m_nImgQualPhotoshopSfw);
         m_pLog->AddLine(strTmp);
       }
+
       // Restore original position in file to a point
       // after the section
       m_nPos = nPosSaved + nLength;
@@ -5517,7 +5581,6 @@ uint32_t CjfifDecode::DecodeMarker()
         default:
           strTmp = QString("  ColorTransform    = %1 [???]").arg(nColTransform);
           break;
-
       }
 
       m_pLog->AddLine(strTmp);
@@ -5552,7 +5615,7 @@ uint32_t CjfifDecode::DecodeMarker()
       acIdentifier[MAX_IDENTIFIER - 1] = 0;     // Null terminate just in case
       strTmp = QString("  Identifier      = [%1]").arg(acIdentifier);
       m_pLog->AddLine(strTmp);
-      m_nPos += (uint32_t) strlen(acIdentifier) + 1;
+      m_nPos += static_cast<uint32_t>(strlen(acIdentifier)) + 1;
 
       if(strcmp(acIdentifier, "Photoshop 3.0") != 0)
       {
@@ -5582,7 +5645,7 @@ uint32_t CjfifDecode::DecodeMarker()
       acIdentifier[MAX_IDENTIFIER - 1] = 0;     // Null terminate just in case
       strTmp = QString("  Identifier      = [%1]").arg(acIdentifier);
       m_pLog->AddLine(strTmp);
-      m_nPos += (uint32_t) strlen(acIdentifier);
+      m_nPos += static_cast<uint32_t>(strlen(acIdentifier));
 
       if(strncmp(acIdentifier, "http://ns.adobe.com/xap/1.0/\x00", 29) == 0)
       {                         //@@
@@ -5597,7 +5660,6 @@ uint32_t CjfifDecode::DecodeMarker()
         // updated to support unicode properly.
 
         uint32_t nPosMarkerEnd = nPosSaved + nLength - 1;
-
         uint32_t sXmpLen = nPosMarkerEnd - m_nPos;
 
         uint8_t cXmpChar;
@@ -5661,10 +5723,12 @@ uint32_t CjfifDecode::DecodeMarker()
         strTmp = "";
 
         strFull = "  Identifier TIFF = ";
+
         for(uint32_t i = 0; i < 8; i++)
         {
-          acIdentifierTiff[i] = (uint8_t) Buf(m_nPos++);
+          acIdentifierTiff[i] = static_cast<uint8_t>(Buf(m_nPos++));
         }
+
         strTmp = PrintAsHexUC(acIdentifierTiff, 8);
         strFull += strTmp;
         m_pLog->AddLine(strFull);
@@ -5724,9 +5788,9 @@ uint32_t CjfifDecode::DecodeMarker()
         }
 
         nIfdCount = 0;
+
         while(!exif_done)
         {
-
           m_pLog->AddLine("");
 
           strTmp = QString("IFD%1").arg(nIfdCount);
@@ -5766,22 +5830,24 @@ uint32_t CjfifDecode::DecodeMarker()
           m_pLog->AddLine("");
           DecodeExifIfd("SubIFD", nPosExifStart, m_nImgExifSubIfdPtr);
         }
+
         if(m_nImgExifMakerPtr != 0)
         {
           m_pLog->AddLine("");
           DecodeExifIfd("MakerIFD", nPosExifStart, m_nImgExifMakerPtr);
         }
+
         if(m_nImgExifGpsIfdPtr != 0)
         {
           m_pLog->AddLine("");
           DecodeExifIfd("GPSIFD", nPosExifStart, m_nImgExifGpsIfdPtr);
         }
+
         if(m_nImgExifInteropIfdPtr != 0)
         {
           m_pLog->AddLine("");
           DecodeExifIfd("InteropIFD", nPosExifStart, m_nImgExifInteropIfdPtr);
         }
-
       }
       else
       {
@@ -5838,7 +5904,7 @@ uint32_t CjfifDecode::DecodeMarker()
       acIdentifier[MAX_IDENTIFIER - 1] = 0;     // Null terminate just in case
       strTmp = QString("  Identifier      = [%1]").arg(acIdentifier);
       m_pLog->AddLine(strTmp);
-      m_nPos += (uint32_t) strlen(acIdentifier) + 1;
+      m_nPos += static_cast<uint32_t>(strlen(acIdentifier)) + 1;
 
       if(strcmp(acIdentifier, "FPXR") == 0)
       {
@@ -5931,6 +5997,7 @@ uint32_t CjfifDecode::DecodeMarker()
           {
             strFull += ".";
           }
+
           if((i % 32) == 31)
           {
             m_pLog->AddLine(strFull);
@@ -5960,7 +6027,7 @@ uint32_t CjfifDecode::DecodeMarker()
         // Only process remainder if it is JFIF. This marker
         // is also used for application-specific functions.
 
-        m_nPos += (uint32_t) (strlen(m_acApp0Identifier) + 1);
+        m_nPos += static_cast<uint32_t>((strlen(m_acApp0Identifier)) + 1);
 
         m_nImgVersionMajor = Buf(m_nPos++);
         m_nImgVersionMinor = Buf(m_nPos++);
@@ -6145,6 +6212,7 @@ uint32_t CjfifDecode::DecodeMarker()
           {
             strDqtPrecision = "16 bits";
           }
+
           strTmp = QString("  Precision=%1"), strDqtPrecision;
           m_pLog->AddLine(strTmp);
         }
@@ -6177,6 +6245,7 @@ uint32_t CjfifDecode::DecodeMarker()
           {
             strDqtZigZagOrder = "Alternate coeff scan seqeunce";
           }
+
           strTmp = QString("  Coeff Scan Sequence=%s"), strDqtZigZagOrder;
           m_pLog->AddLine(strTmp);
 
@@ -6192,11 +6261,13 @@ uint32_t CjfifDecode::DecodeMarker()
               nTmpVal = Buf(m_nPos++);
               strTmp = QString("%u"), nTmpVal;
               strSequence += strTmp;
+
               if(nInd != 63)
               {
                 strSequence += ", ";
               }
             }
+
             strTmp = QString("  Custom sequence = [ %s ]"), strSequence;
             m_pLog->AddLine(strTmp);
           }
@@ -6228,7 +6299,7 @@ uint32_t CjfifDecode::DecodeMarker()
         {
           m_pLog->AddLineErr(QString("ERROR: Destination ID <Tq> = %1, >= %2").arg(nDqtQuantDestId_Tq).arg(MAX_DQT_DEST_ID));
 
-          if(!m_pAppConfig->bRelaxedParsing)
+          if(!m_pAppConfig->relaxedParsing())
           {
             m_pLog->AddLineErr("  Stopping decode");
             return DECMARK_ERR;
@@ -6275,15 +6346,15 @@ uint32_t CjfifDecode::DecodeMarker()
             if(m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]] != 0)
             {
               m_afStdQuantLumCompare[glb_anZigZag[nCoeffInd]] =
-                (float) (glb_anStdQuantLum[glb_anZigZag[nCoeffInd]]) /
-                (float) (m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]]);
+                static_cast<double>((glb_anStdQuantLum[glb_anZigZag[nCoeffInd]])) /
+                static_cast<double>((m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]]));
               dComparePercent = 100.0 *
-                (double) (m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]]) /
-                (double) (glb_anStdQuantLum[glb_anZigZag[nCoeffInd]]);
+                static_cast<double>((m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]])) /
+                static_cast<double>((glb_anStdQuantLum[glb_anZigZag[nCoeffInd]]));
             }
             else
             {
-              m_afStdQuantLumCompare[glb_anZigZag[nCoeffInd]] = (float) 999.99;
+              m_afStdQuantLumCompare[glb_anZigZag[nCoeffInd]] = 999.99;
               dComparePercent = 999.99;
             }
           }
@@ -6292,15 +6363,15 @@ uint32_t CjfifDecode::DecodeMarker()
             if(m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]] != 0)
             {
               m_afStdQuantChrCompare[glb_anZigZag[nCoeffInd]] =
-                (float) (glb_anStdQuantChr[glb_anZigZag[nCoeffInd]]) /
-                (float) (m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]]);
+                static_cast<double>((glb_anStdQuantChr[glb_anZigZag[nCoeffInd]])) /
+                static_cast<double>((m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]]));
               dComparePercent = 100.0 *
-                (double) (m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]]) /
-                (double) (glb_anStdQuantChr[glb_anZigZag[nCoeffInd]]);
+                static_cast<double>((m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]])) /
+                static_cast<double>((glb_anStdQuantChr[glb_anZigZag[nCoeffInd]]));
             }
             else
             {
-              m_afStdQuantChrCompare[glb_anZigZag[nCoeffInd]] = (float) 999.99;
+              m_afStdQuantChrCompare[glb_anZigZag[nCoeffInd]] = 999.99;
             }
           }
 
@@ -6310,7 +6381,6 @@ uint32_t CjfifDecode::DecodeMarker()
           // Check just in case entire table are ones (Quality 100)
           if(m_anImgDqtTbl[nDqtQuantDestId_Tq][glb_anZigZag[nCoeffInd]] != 1)
             bQuantAllOnes = 0;
-
         }                       // 0..63
 
         // Note that the DQT table that we are saving is already
@@ -6356,7 +6426,6 @@ uint32_t CjfifDecode::DecodeMarker()
            */
 
           m_pLog->AddLine(strFull);
-
         }
 
         // Perform some statistical analysis of the quality factor
@@ -6444,6 +6513,7 @@ uint32_t CjfifDecode::DecodeMarker()
         if(!ValidateValue(nDAC_Cs, 0, 255, "Conditioning table value <Cs>", true, 0))
           return DECMARK_ERR;
       }
+
       if(!ExpectMarkerEnd(nPosMarkerStart, nLength))
         return DECMARK_ERR;
 
@@ -6465,6 +6535,7 @@ uint32_t CjfifDecode::DecodeMarker()
 
       if(!ExpectMarkerEnd(nPosMarkerStart, nLength))
         return DECMARK_ERR;
+
       break;
 
     case JFIF_EXP:
@@ -6520,10 +6591,12 @@ uint32_t CjfifDecode::DecodeMarker()
       // (non-differential) with Huffman coding. Progressive, Lossless,
       // Differential and Arithmetic coded modes are not supported.
       m_bImgSofUnsupported = true;
+
       if(nCode == JFIF_SOF0)
       {
         m_bImgSofUnsupported = false;
       }
+
       if(nCode == JFIF_SOF1)
       {
         m_bImgSofUnsupported = false;
@@ -6544,6 +6617,7 @@ uint32_t CjfifDecode::DecodeMarker()
       m_nSofPrecision_P = Buf(m_nPos++);        // P
       strTmp = QString("  Precision = %1").arg(m_nSofPrecision_P);
       m_pLog->AddLine(strTmp);
+
       if(!ValidateValue(m_nSofPrecision_P, 2, 16, "Precision <P>", true, 8))
         return DECMARK_ERR;
 
@@ -6570,19 +6644,21 @@ uint32_t CjfifDecode::DecodeMarker()
       //   m_nSofSampsPerLine_X = X
       //   m_nSofNumLines_Y = Y
       m_eImgLandscape = ENUM_LANDSCAPE_YES;
+
       if(m_nSofNumLines_Y > m_nSofSampsPerLine_X)
         m_eImgLandscape = ENUM_LANDSCAPE_NO;
+
       strTmp = QString("  Raw Image Orientation = %1").arg(m_eImgLandscape == ENUM_LANDSCAPE_YES ? "Landscape" : "Portrait");
       m_pLog->AddLine(strTmp);
 
       m_nSofNumComps_Nf = Buf(m_nPos++);        // Nf, range 1..255
       strTmp = QString("  Number of Img components = %1").arg(m_nSofNumComps_Nf);
       m_pLog->AddLine(strTmp);
+
       if(!ValidateValue(m_nSofNumComps_Nf, 1, 255, "Number of Img components <Nf>", true, 1))
         return DECMARK_ERR;
 
       uint32_t nCompIdent;
-
       uint32_t anSofSampFact[MAX_SOF_COMP_NF];
 
       m_nSofHorzSampFactMax_Hmax = 0;
@@ -6644,13 +6720,13 @@ uint32_t CjfifDecode::DecodeMarker()
         // Create subsampling ratio
         // - Protect against division-by-zero
         QString strSubsampH = "?";
-
         QString strSubsampV = "?";
 
         if(m_anSofHorzSampFact_Hi[nCompIdent] > 0)
         {
           strSubsampH = QString("%1").arg(m_nSofHorzSampFactMax_Hmax / m_anSofHorzSampFact_Hi[nCompIdent]);
         }
+
         if(m_anSofVertSampFact_Vi[nCompIdent] > 0)
         {
           strSubsampV = QString("%1").arg(m_nSofVertSampFactMax_Vmax / m_anSofVertSampFact_Vi[nCompIdent]);
@@ -6711,8 +6787,8 @@ uint32_t CjfifDecode::DecodeMarker()
         {
           strFull += " (???)";  // Unknown
         }
-        m_pLog->AddLine(strFull);
 
+        m_pLog->AddLine(strFull);
       }
 
       // Test for bad input, clean up if bad
@@ -6746,12 +6822,10 @@ uint32_t CjfifDecode::DecodeMarker()
 
         // Store the Precision (to handle 12-bit decode)
         m_pImgDec->SetPrecision(m_nSofPrecision_P);
-
       }
 
       if(!m_bStateAbort)
       {
-
         // Set the component sampling factors (chroma subsampling)
         // FIXME: check ranging
         for(uint32_t nCompInd = 1; nCompInd <= m_nSofNumComps_Nf; nCompInd++)
@@ -6768,7 +6842,6 @@ uint32_t CjfifDecode::DecodeMarker()
         m_bImgOK = true;
 
         m_bStateSofOk = true;
-
       }
 
       if(!ExpectMarkerEnd(nPosMarkerStart, nLength))
@@ -6811,11 +6884,13 @@ uint32_t CjfifDecode::DecodeMarker()
           {
             bDoneSearch = true;
           }
+
           if(m_nPos >= m_pWBuf->GetPosEof())
           {
             bDoneSearch = true;
           }
         }
+
         strTmp = QString("    Skipped %1 bytes").arg(m_nPos - nSkipStart);
         m_pLog->AddLineErr(strTmp);
 
@@ -6826,9 +6901,11 @@ uint32_t CjfifDecode::DecodeMarker()
       // Assume COM field valid length (ie. >= 2)
       strFull = "    Comment=";
       m_strComment = "";
+
       for(uint32_t ind = 0; ind < nLength - 2; ind++)
       {
         nTmpVal1 = Buf(m_nPos++);
+
         if(isprint(nTmpVal1))
         {
           strTmp = QString("%1").arg(nTmpVal1);
@@ -6839,6 +6916,7 @@ uint32_t CjfifDecode::DecodeMarker()
           m_strComment += ".";
         }
       }
+
       strFull += m_strComment;
       m_pLog->AddLine(strFull);
 
@@ -6928,7 +7006,7 @@ uint32_t CjfifDecode::DecodeMarker()
       strTmp = QString("  Successive approximation = 0x%1").arg(m_nSosSuccApprox_A, 2, 16, QChar('0'));
       m_pLog->AddLine(strTmp);
 
-      if(m_pAppConfig->bOutputScanDump)
+      if(m_pAppConfig->scanDump())
       {
         m_pLog->AddLine("");
         m_pLog->AddLine("  Scan Data: (after bitstuff removed)");
@@ -6992,7 +7070,7 @@ uint32_t CjfifDecode::DecodeMarker()
           }
         }
 
-        if(m_pAppConfig->bOutputScanDump && (!bSkipDone))
+        if(m_pAppConfig->scanDump() && (!bSkipDone))
         {
           // Only display 20 lines of scan data
           if(nSkipPos > 640)
@@ -7037,24 +7115,25 @@ uint32_t CjfifDecode::DecodeMarker()
         }
 
       }
+
       m_pLog->AddLine(strFull);
 
 //              }
 
       // --- PASS 2 ---
       // If the option is set, start parsing!
-      if(m_pAppConfig->bDecodeScanImg && m_bImgSofUnsupported)
+      if(m_pAppConfig->decodeImage() && m_bImgSofUnsupported)
       {
         // SOF marker was of type we don't support, so skip decoding
         m_pLog->AddLineWarn("  NOTE: Scan parsing doesn't support this SOF mode.");
 #ifndef DEBUG_YCCK
       }
-      else if(m_pAppConfig->bDecodeScanImg && (m_nSofNumComps_Nf == 4))
+      else if(m_pAppConfig->decodeImage() && (m_nSofNumComps_Nf == 4))
       {
         m_pLog->AddLineWarn("  NOTE: Scan parsing doesn't support CMYK files yet.");
 #endif
       }
-      else if(m_pAppConfig->bDecodeScanImg && !m_bImgSofUnsupported)
+      else if(m_pAppConfig->decodeImage() && !m_bImgSofUnsupported)
       {
         if(!m_bStateSofOk)
         {
@@ -7067,7 +7146,6 @@ uint32_t CjfifDecode::DecodeMarker()
         else if(!m_bStateDhtOk)
         {
           m_pLog->AddLineWarn("  NOTE: Scan decode disabled as DHT not decoded.");
-
         }
         else
         {
@@ -7087,7 +7165,6 @@ uint32_t CjfifDecode::DecodeMarker()
             m_pImgSrcDirty = false;
           }
         }
-
       }
 
       m_bStateSosOk = true;
@@ -7113,6 +7190,7 @@ uint32_t CjfifDecode::DecodeMarker()
       {
         m_nImgRstEn = false;
       }
+
       strTmp = QString("  interval   = %1").arg(m_nImgRstInterval);
       m_pLog->AddLine(strTmp);
       m_nPos += 4;
@@ -7180,7 +7258,7 @@ uint32_t CjfifDecode::DecodeMarker()
       strTmp = QString("  WARNING: Restart marker [0xFF%1] detected outside scan").arg(nCode, 2, 16, QChar('0'));
       m_pLog->AddLineWarn(strTmp);
 
-      if(!m_pAppConfig->bRelaxedParsing)
+      if(!m_pAppConfig->relaxedParsing())
       {
         // Abort
         m_pLog->AddLineErr("  Stopping decode");
@@ -7214,7 +7292,7 @@ uint32_t CjfifDecode::DecodeMarker()
       strTmp = QString("  WARNING: Unknown marker [0xFF%1]").arg(nCode, 2, 16, QChar('0'));
       m_pLog->AddLineWarn(strTmp);
 
-      if(!m_pAppConfig->bRelaxedParsing)
+      if(!m_pAppConfig->relaxedParsing())
       {
         // Abort
         m_pLog->AddLineErr("  Stopping decode");
@@ -7246,6 +7324,7 @@ uint32_t CjfifDecode::DecodeMarker()
   return DECMARK_OK;
 }
 
+//-----------------------------------------------------------------------------
 // Print out a header for the current JFIF marker code
 void CjfifDecode::AddHeader(uint32_t nCode)
 {
@@ -7487,6 +7566,7 @@ void CjfifDecode::AddHeader(uint32_t nCode)
   m_pLog->AddLine(strTmp);
 }
 
+//-----------------------------------------------------------------------------
 // Update the status bar with a message
 void CjfifDecode::SetStatusText(QString strText)
 {
@@ -7500,9 +7580,9 @@ void CjfifDecode::SetStatusText(QString strText)
 
   emit(strText, 0);
   QCoreApplication::processEvents();
-  qDebug() << strText;
 }
 
+//-----------------------------------------------------------------------------
 // Generate a special output form of the current image's
 // compression signature and other characteristics. This is only
 // used during development and batch import to build the MySQL repository.
@@ -7549,29 +7629,34 @@ void CjfifDecode::OutputSpecial()
     {
 
       strFull = "";
+
       for(uint32_t nY = 0; nY < 8; nY++)
       {
         strFull += "'";
+
         for(uint32_t nX = 0; nX < 8; nX++)
         {
           // Rotate the matrix if necessary!
           nMatrixInd = (m_eImgLandscape != ENUM_LANDSCAPE_NO) ? (nY * 8 + nX) : (nX * 8 + nY);
           strTmp = QString("%1").arg(m_anImgDqtTbl[nDqtInd][nMatrixInd]);
           strFull += strTmp;
+
           if(nX != 7)
           {
             strFull += ",";
           }
         }
+
         strFull += "', ";
+
         if(nY == 3)
         {
           m_pLog->AddLine(strFull);
           strFull = "";
         }
       }
-      m_pLog->AddLine(strFull);
 
+      m_pLog->AddLine(strFull);
     }
 
     strFull = "";
@@ -7586,9 +7671,9 @@ void CjfifDecode::OutputSpecial()
 
     m_pLog->AddLine("*** DB OUTPUT END ***");
   }
-
 }
 
+//-----------------------------------------------------------------------------
 // Generate the compression signatures (both unrotated and
 // rotated) in advance of submitting to the database.
 void CjfifDecode::PrepareSignature()
@@ -7744,7 +7829,7 @@ void CjfifDecode::PrepareSignatureSingle(bool bRotate)
 //  m_strHash = QCryptographicHash::hash(reinterpret_cast<char *>(pHashIn), QCryptographicHash::Md5).toHex();
 }
 
-
+//-----------------------------------------------------------------------------
 // Generate the compression signatures for the thumbnails
 void CjfifDecode::PrepareSignatureThumb()
 {
@@ -7754,6 +7839,7 @@ void CjfifDecode::PrepareSignatureThumb()
   PrepareSignatureThumbSingle(true);
 }
 
+//-----------------------------------------------------------------------------
 // Prepare the image signature for later submission
 // NOTE: ASCII vars are used (instead of unicode) to support usage of MD5 library
 void CjfifDecode::PrepareSignatureThumbSingle(bool bRotate)
@@ -7792,6 +7878,7 @@ void CjfifDecode::PrepareSignatureThumbSingle(bool bRotate)
       bDqtDefined = true;
     }
   }
+
   if(!bDqtDefined)
   {
     m_strHashThumb = "NONE";
@@ -7893,9 +7980,9 @@ void CjfifDecode::PrepareSignatureThumbSingle(bool bRotate)
         .arg(sMd5.digest32[2], 8, 16, QChar('0'))
         .arg(sMd5.digest32[3], 8, 16, QChar('0'));
   }
-
 }
 
+//-----------------------------------------------------------------------------
 // Compare the image compression signature & metadata against the database.
 // This is the routine that is also responsible for creating an
 // "Image Assessment" -- ie. whether the image may have been edited or not.
@@ -7943,7 +8030,7 @@ bool CjfifDecode::CompareSignature(bool bQuiet = false)
   strHashOut += m_strHashRot;
   m_pLog->AddLine(strHashOut);
 
-  strTmp = QString("  File Offset:         %1 bytes").arg(m_pAppConfig->nPosStart, 1);
+  strTmp = QString("  File Offset:         %1 bytes").arg(m_pAppConfig->startPos(), 1);
   m_pLog->AddLine(strTmp);
 
   // Output the CSS
@@ -8266,34 +8353,36 @@ bool CjfifDecode::CompareSignature(bool bQuiet = false)
   // ============================================
 
   bool bEditDefinite = false;
-
   bool bEditLikely = false;
-
   bool bEditNot = false;
-
   bool bEditNotUnknownSw = false;
 
   if(bCurXps)
   {
     bEditDefinite = true;
   }
+
   if(!bCurXmm)
   {
     bEditDefinite = true;
   }
+
   if(bCurXextrasw)
   {
     bEditDefinite = true;
   }
+
   if(bCurXcomsw)
   {
     bEditDefinite = true;
   }
+
   if(bSrchXsw)
   {
     // Software field matches known software string
     bEditDefinite = true;
   }
+
   if(m_pDbSigs->LookupExcMmIsEdit(m_strImgExifMake, m_strImgExifModel))
   {
     // Make/Model is in exception list of ones that mark known software
@@ -8324,7 +8413,6 @@ bool CjfifDecode::CompareSignature(bool bQuiet = false)
   // Filter down remaining scenarios
   if(!bEditDefinite && !bEditLikely)
   {
-
     if(bSrchXmmUsig)
     {
       // DB cam signature matches DQT & make/model
@@ -8363,7 +8451,6 @@ bool CjfifDecode::CompareSignature(bool bQuiet = false)
       // but no compression signatures in the database match this
       // particular make/model. Therefore, result is UNSURE.
     }
-
   }
 
   // Now make final assessment call
@@ -8400,13 +8487,15 @@ bool CjfifDecode::CompareSignature(bool bQuiet = false)
   }
 
   // If the file offset is non-zero, then don't ask for submit or show assessment
-  if(m_pAppConfig->nPosStart != 0)
+  if(m_pAppConfig->startPos() != 0)
   {
     m_pLog->AddLine("  ASSESSMENT not done as file offset non-zero");
+
     if(bQuiet)
     {
       m_pLog->Enable();
     }
+
     return false;
   }
 
@@ -8443,16 +8532,17 @@ bool CjfifDecode::CompareSignature(bool bQuiet = false)
   {
     m_pLog->AddLineErr("  ASSESSMENT: *** Failed to complete ***");
   }
+
   m_pLog->AddLine("");
 
   // Determine if user should add entry to DB
   bool bDbReqAdd = false;       // Ask user to add
-
   bool bDbReqAddAuto = false;   // Automatically add (in batch operation)
 
   // TODO: This section should be rewritten to reduce complexity
 
   m_eDbReqSuggest = DB_ADD_SUGGEST_UNSET;
+
   if(m_eImgEdited == EDITED_NO)
   {
     bDbReqAdd = false;
@@ -8538,9 +8628,9 @@ bool CjfifDecode::CompareSignature(bool bQuiet = false)
   // Return a value that indicates whether or not we should add this
   // entry to the database
   return bDbReqAddAuto;
-
 }
 
+//-----------------------------------------------------------------------------
 // Build the image data string that will be sent to the database repository
 // This data string contains the compression siganture and a few special
 // fields such as image dimensions, etc.
@@ -8552,7 +8642,6 @@ void CjfifDecode::PrepareSendSubmit(QString strQual, teSource eUserSource, QStri
 {
   // Generate the DQT arrays suitable for posting
   QString strTmp1;
-
   QString asDqt[4];
 
   uint32_t nMatrixInd;
@@ -8573,12 +8662,14 @@ void CjfifDecode::PrepareSendSubmit(QString strQual, teSource eUserSource, QStri
         // Not a big deal if we get it wrong as we still add
         // both pre- and post-rotated sigs.
         nMatrixInd = (m_eImgLandscape != ENUM_LANDSCAPE_NO) ? nInd : glb_anQuantRotate[nInd];
+
         if((nInd % 8 == 0) && (nInd != 0))
         {
           asDqt[nSet].append("!");
         }
 
         asDqt[nSet].append(QString("%1").arg(m_anImgDqtTbl[nSet][nMatrixInd]));
+
         if(nInd % 8 != 7)
         {
           asDqt[nSet].append(",");
@@ -8616,6 +8707,7 @@ void CjfifDecode::PrepareSendSubmit(QString strQual, teSource eUserSource, QStri
     strSig0 = m_strHashRot;
     strSig1 = m_strHash;
   }
+
   if(m_strHashThumb <= m_strHashThumbRot)
   {
     strSigThm0 = m_strHashThumb;
@@ -8628,19 +8720,20 @@ void CjfifDecode::PrepareSendSubmit(QString strQual, teSource eUserSource, QStri
   }
 
   SendSubmit(m_strImgExifMake, m_strImgExifModel, strQual, asDqt[0], asDqt[1], asDqt[2], asDqt[3], m_strImgQuantCss,
-             strSig0, strSig1, strSigThm0, strSigThm1, (float) m_adImgDqtQual[0], (float) m_adImgDqtQual[1], nOrigW, nOrigH,
+             strSig0, strSig1, strSigThm0, strSigThm1, static_cast<double>(m_adImgDqtQual[0]), static_cast<double>(m_adImgDqtQual[1]), nOrigW, nOrigH,
              m_strSoftware, m_strComment, eMaker, eUserSource, strUserSoftware, m_strImgExtras,
              strUserNotes, m_eImgLandscape, nOrigThumbW, nOrigThumbH);
 
 }
 
+//-----------------------------------------------------------------------------
 // Send the compression signature string to the local database file
 // in addition to the web repository if the user has enabled it.
 void CjfifDecode::SendSubmit(QString strExifMake, QString strExifModel, QString strQual,
                              QString strDqt0, QString strDqt1, QString strDqt2, QString strDqt3,
                              QString strCss,
                              QString strSig, QString strSigRot, QString strSigThumb,
-                             QString strSigThumbRot, float fQFact0, float fQFact1, uint32_t nImgW, uint32_t nImgH,
+                             QString strSigThumbRot, double fQFact0, double fQFact1, uint32_t nImgW, uint32_t nImgH,
                              QString strExifSoftware, QString strComment, teMaker eMaker,
                              teSource eUserSource, QString strUserSoftware, QString strExtra,
                              QString strUserNotes, uint32_t nExifLandscape, uint32_t nThumbX, uint32_t nThumbY)
@@ -8658,7 +8751,7 @@ void CjfifDecode::SendSubmit(QString strExifMake, QString strExifModel, QString 
 #ifndef BATCH_DO
   if(m_bSigExactInDB)
   {
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
       msgBox.setText("Compression signature already in database");
   }
   else
@@ -8666,7 +8759,7 @@ void CjfifDecode::SendSubmit(QString strExifMake, QString strExifModel, QString 
     // Now append it to the local database and resave
 //@@    m_pDbSigs->DatabaseExtraAdd(strExifMake, strExifModel, strQual, strSig, strSigRot, strCss, eUserSource, strUserSoftware);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText("Added Compression signature to database");
     }
@@ -8675,7 +8768,7 @@ void CjfifDecode::SendSubmit(QString strExifMake, QString strExifModel, QString 
 
   // Is automatic internet update enabled?
 //@@  if(!m_pAppConfig->bDbSubmitNet)
-  if(!m_pAppConfig->bDbSubmitNet)
+  if(!m_pAppConfig->submitDbNet())
   {
     return;
   }
@@ -8779,7 +8872,7 @@ void CjfifDecode::SendSubmit(QString strExifMake, QString strExifModel, QString 
     nFormDataLen = strFormData.length();
 
 #ifdef DEBUG_SIG
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strFormDataPre);
       msgBox.setText(strFormData);
@@ -8796,7 +8889,7 @@ void CjfifDecode::SendSubmit(QString strExifMake, QString strExifModel, QString 
 		hINet = InternetOpen("JPEGsnoop/1.0"), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0 ;
 		if ( !hINet )
 		{
-			if (m_pAppConfig->bInteractive)
+      if (m_pAppConfig->interactive())
         msgBox.setText("InternetOpen Failed");
 			return;
 		}
@@ -8888,7 +8981,7 @@ void CjfifDecode::SendSubmit(QString strExifMake, QString strExifModel, QString 
 
       TRACE("Submit Failed! - %s", szErr);
 
-      if(m_pAppConfig->bInteractive)
+      if(m_pAppConfig->interactive())
         msgBox.setText(szErr);
 
       pEx->Delete();
@@ -8907,6 +9000,7 @@ void CjfifDecode::SendSubmit(QString strExifMake, QString strExifModel, QString 
   }
 }
 
+//-----------------------------------------------------------------------------
 // Parse the embedded JPEG thumbnail. This routine is a much-reduced
 // version of the main JFIF parser, in that it focuses primarily on the
 // DQT tables.
@@ -9035,6 +9129,7 @@ void CjfifDecode::DecodeEmbeddedThumb()
               strTmp = QString("    Precision=%1").arg(strPrecision);
               m_pLog->AddLine(strTmp);
               strTmp = QString("    Destination ID=%1").arg(nDqtQuantDestId_Tq);
+
               // NOTE: The mapping between destination IDs and the actual
               // usage is defined in the SOF marker which is often later.
               // In nearly all images, the following is true. However, I have
@@ -9090,11 +9185,9 @@ void CjfifDecode::DecodeEmbeddedThumb()
                   bRet = m_pImgDec->SetDqtEntry(nDqtQuantDestId_Tq, nY * 8 + nX,
                                                 glb_anUnZigZag[nY * 8 + nX], m_anImgDqtTbl[nDqtQuantDestId_Tq][nY * 8 + nX]);
                   DecodeErrCheck(bRet);
-
                 }
 
                 m_pLog->AddLine(strFull);
-
               }
             }
 
@@ -9202,12 +9295,12 @@ void CjfifDecode::DecodeEmbeddedThumb()
       m_strHashThumb = "ERR: Len=0";
       m_strHashThumbRot = "ERR: Len=0";
     }
-
   }                             // if JPEG compressed
 
   m_nPos = nPosSaved;
 }
 
+//-----------------------------------------------------------------------------
 // Lookup the EXIF marker name from the code value
 bool CjfifDecode::GetMarkerName(uint32_t nCode, QString & markerStr)
 {
@@ -9245,6 +9338,7 @@ bool CjfifDecode::GetMarkerName(uint32_t nCode, QString & markerStr)
   return true;
 }
 
+//-----------------------------------------------------------------------------
 // Determine if the file is an AVI MJPEG.
 // If so, parse the headers.
 // TODO: Expand this function to use sub-functions for each block type
@@ -9440,11 +9534,11 @@ bool CjfifDecode::DecodeAvi()
         strTmp = QString("      -[FourCC Codec] = [%1]").arg(fccHandler);
         m_pLog->AddLine(strTmp);
 
-        float fSampleRate = 0;
+        double fSampleRate = 0;
 
         if(dwScale != 0)
         {
-          fSampleRate = (float) dwRate / (float) dwScale;
+          fSampleRate = static_cast<double>(dwRate) / static_cast<double>(dwScale);
         }
 
         strTmp = QString("      -[Sample Rate]  = [%.2f]").arg(fSampleRate);
@@ -9651,28 +9745,32 @@ bool CjfifDecode::DecodeAvi()
   // Reset file position
   m_nPos = nPosSaved;
 
+  if(DEBUG_EN)
+    m_pAppConfig->DebugLogAdd("CfifDecode::DecodeAvi() End");
+
   return m_bAviMjpeg;
 }
 
+//-----------------------------------------------------------------------------
 // This is the primary JFIF parsing routine.
 // The main loop steps through all of the JFIF markers and calls
 // DecodeMarker() each time until we reach the end of file or an error.
 // Finally, we invoke the compression signature search function.
 //
-// Processing starts at the file offset m_pAppConfig->nPosStart
+// Processing starts at the file offset m_pAppConfig->startPos()
 //
 // INPUT:
 // - inFile                                             = Input file pointer
 //
 // PRE:
-// - m_pAppConfig->nPosStart    = Starting file offset for decode
+// - m_pAppConfig->startPos()    = Starting file offset for decode
 //
-void CjfifDecode::ProcessFile(QFile * inFile)
+void CjfifDecode::ProcessFile(QFile *inFile)
 {
   QString strTmp;
 
   if(DEBUG_EN)
-    m_pAppConfig->DebugLogAdd("CfifDecode::ProcessFile() Checkpoint 1");
+    m_pAppConfig->DebugLogAdd("CfifDecode::ProcessFile() Begin");
 
   // Reset the JFIF decoder state as we may be redoing another file
   Reset();
@@ -9710,7 +9808,7 @@ void CjfifDecode::ProcessFile(QFile * inFile)
     strTmp = "File too large. Skipping.";
     m_pLog->AddLineErr(strTmp);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
       msgBox.setText(strTmp);
 
     return;
@@ -9719,13 +9817,12 @@ void CjfifDecode::ProcessFile(QFile * inFile)
   if(DEBUG_EN)
     m_pAppConfig->DebugLogAdd("CfifDecode::ProcessFile() Checkpoint 3");
 
-  qDebug() << m_pAppConfig;
 
   m_nPosFileEnd = static_cast < uint32_t >(nPosFileEnd);
 
   uint32_t nStartPos;
 
-  nStartPos = m_pAppConfig->nPosStart;
+  nStartPos = m_pAppConfig->startPos();
   m_nPos = nStartPos;
   m_nPosEmbedStart = nStartPos; // Save the embedded file start position
 
@@ -9735,20 +9832,17 @@ void CjfifDecode::ProcessFile(QFile * inFile)
   m_pLog->AddLine(QString("Start Offset: 0x%1").arg(nStartPos, 8, 16, QChar('0')));
 
   // ----------------------------------------------------------------
-
   // Test for AVI file
   // - Detect header
   // - start from beginning of file
   DecodeAvi();
   // TODO: Should we skip decode of file if not MJPEG?
-
   // ----------------------------------------------------------------
 
   // Test for PSD file
   // - Detect header
   // - FIXME: start from current offset?
   uint32_t nWidth = 0;
-
   uint32_t nHeight = 0;
 
 #ifdef PS_IMG_DEC_EN
@@ -9756,9 +9850,10 @@ void CjfifDecode::ProcessFile(QFile * inFile)
   // the current DIB. After decoding, flag the DIB as ready for display.
 
   // Attempt decode as PSD
-  bool bDecPsdOk = false;
+  bool bDecPsdOk;
 
 //@@  bDecPsdOk = m_pPsDec->DecodePsd(nStartPos, &m_pImgDec->m_pDibTemp, nWidth, nHeight);
+  bDecPsdOk = false;
 
   if(bDecPsdOk)
   {
@@ -9802,9 +9897,9 @@ void CjfifDecode::ProcessFile(QFile * inFile)
     // Adjust start of JPEG decoding if we are currently without an offset
     if(nStartPos == 0)
     {
-      m_pAppConfig->nPosStart = nPosJpeg;
+      m_pAppConfig->startPos() = nPosJpeg;
 
-      nStartPos = m_pAppConfig->nPosStart;
+      nStartPos = m_pAppConfig->startPos();
       m_nPos = nStartPos;
       m_nPosEmbedStart = nStartPos;     // Save the embedded file start position
 
@@ -9820,9 +9915,9 @@ void CjfifDecode::ProcessFile(QFile * inFile)
   // Decode as JPEG JFIF file
 
   // If we are in a non-zero offset, add this to extras
-  if(m_pAppConfig->nPosStart != 0)
+  if(m_pAppConfig->startPos() != 0)
   {
-    strTmp = QString("[Offset]=[%1],").arg(m_pAppConfig->nPosStart);
+    strTmp = QString("[Offset]=[%1],").arg(m_pAppConfig->startPos());
     m_strImgExtras += strTmp;
   }
 
@@ -9883,9 +9978,7 @@ void CjfifDecode::ProcessFile(QFile * inFile)
       // NOTE: The following assumes m_anSofHorzSampFact_Hi and m_anSofVertSampFact_Vi
       // are non-zero as otherwise we'll have a divide-by-0 exception.
       uint32_t nCompIdent = m_anSofQuantCompId[SCAN_COMP_CB];
-
       uint32_t nCssFactH = m_nSofHorzSampFactMax_Hmax / m_anSofHorzSampFact_Hi[nCompIdent];
-
       uint32_t nCssFactV = m_nSofVertSampFactMax_Vmax / m_anSofVertSampFact_Vi[nCompIdent];
 
       if(m_eImgLandscape != ENUM_LANDSCAPE_NO)
@@ -9910,7 +10003,7 @@ void CjfifDecode::ProcessFile(QFile * inFile)
     PrepareSignature();
 
     // Compare compression signature
-    if(m_pAppConfig->bSigSearch)
+    if(m_pAppConfig->searchSig())
     {
       // In the case of lossless files, there won't be any DQT and
       // hence no compression signatures to compare. Therefore, skip this process.
@@ -9951,6 +10044,7 @@ void CjfifDecode::ProcessFile(QFile * inFile)
 
 }
 
+//-----------------------------------------------------------------------------
 // Determine if the analyzed file is in a state ready for image
 // extraction. Confirms that the important JFIF markers have been
 // detected in the previous analysis.
@@ -10026,8 +10120,8 @@ bool CjfifDecode::ExportJpegPrepare(QString strFileIn, bool bForceSoi, bool bFor
       // We're missing the SOI but the user has requested
       // that we force an SOI, so let's fix things up
     }
-
   }
+
   if(!m_bStateSos)
   {
     strTmp = QString("  ERROR: Missing marker: %1").arg("SOS");
@@ -10041,11 +10135,13 @@ bool CjfifDecode::ExportJpegPrepare(QString strFileIn, bool bForceSoi, bool bFor
     bExtractWarn = true;
     strMissing += "DQT ";
   }
+
   if(!m_bStateDht)
   {
     bExtractWarn = true;
     strMissing += "DHT ";
   }
+
   if(!m_bStateSof)
   {
     bExtractWarn = true;
@@ -10063,7 +10159,7 @@ bool CjfifDecode::ExportJpegPrepare(QString strFileIn, bool bForceSoi, bool bFor
   {
     strTmp = QString("ERROR: Invalid SOI-EOI order. Export aborted.");
     m_pLog->AddLineErr(strTmp);
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
       msgBox.setText(strTmp);
     return false;
   }
@@ -10073,6 +10169,7 @@ bool CjfifDecode::ExportJpegPrepare(QString strFileIn, bool bForceSoi, bool bFor
 
 #define EXPORT_BUF_SIZE 131072
 
+//-----------------------------------------------------------------------------
 // Export the embedded JPEG image at the current position in the file (with overlays)
 // (may be the primary image or even an embedded thumbnail).
 bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
@@ -10089,18 +10186,21 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
   {
     strTmp = QString("ERROR: Can't overwrite source file. Aborting export.");
     m_pLog->AddLineErr(strTmp);
-    if(m_pAppConfig->bInteractive)
+
+    if(m_pAppConfig->interactive())
       msgBox.setText(strTmp);
 
     return false;
   }
 
   Q_ASSERT(strFileIn != "");
+
   if(strFileIn == "")
   {
     strTmp = QString("ERROR: Export but source filename empty");
     m_pLog->AddLineErr(strTmp);
-    if(m_pAppConfig->bInteractive)
+
+    if(m_pAppConfig->interactive())
       msgBox.setText(strTmp);
 
     return false;
@@ -10119,7 +10219,7 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
     strError = QString("ERROR: Couldn't open file for write [%1]: [%2]").arg(strFileOut).arg(pFileOutput->errorString());
     m_pLog->AddLineErr(strError);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strError);
       msgBox.exec();
@@ -10135,7 +10235,8 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
   {
     strTmp = QString("ERROR: Source file length error. Please Reprocess first.");
     m_pLog->AddLineErr(strTmp);
-    if(m_pAppConfig->bInteractive)
+
+    if(m_pAppConfig->interactive())
       msgBox.setText(strTmp);
 
     if(pFileOutput)
@@ -10144,6 +10245,7 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
 
       pFileOutput = NULL;
     }
+
     return false;
   }
 
@@ -10165,7 +10267,6 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
     if(pFileOutput)
     {
       delete pFileOutput;
-
       pFileOutput = NULL;
     }
 
@@ -10229,6 +10330,7 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
     {
       nCopyLeft = EXPORT_BUF_SIZE;
     }
+
     for(uint32_t ind1 = 0; ind1 < nCopyLeft; ind1++)
     {
       pBuf[ind1] = Buf(ind + ind1, !bOverlayEn);
@@ -10262,7 +10364,6 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
   if(pFileOutput)
   {
     delete pFileOutput;
-
     pFileOutput = NULL;
   }
 
@@ -10273,6 +10374,7 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
   return true;
 }
 
+//-----------------------------------------------------------------------------
 // Export a subset of the file with no overlays or mods
 bool CjfifDecode::ExportJpegDoRange(QString strFileIn, QString strFileOut, uint32_t nStart, uint32_t nEnd)
 {
@@ -10287,7 +10389,7 @@ bool CjfifDecode::ExportJpegDoRange(QString strFileIn, QString strFileOut, uint3
   {
     strTmp = "ERROR: Can't overwrite source file. Aborting export.";
     m_pLog->AddLineErr(strTmp);
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
       msgBox.setText(strTmp);
 
     return false;
@@ -10299,7 +10401,7 @@ bool CjfifDecode::ExportJpegDoRange(QString strFileIn, QString strFileOut, uint3
   {
     strTmp = QString("ERROR: Export but source filename empty");
     m_pLog->AddLineErr(strTmp);
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
       msgBox.setText(strTmp);
 
     return false;
@@ -10314,7 +10416,7 @@ bool CjfifDecode::ExportJpegDoRange(QString strFileIn, QString strFileOut, uint3
     strError = QString("ERROR: Couldn't open file for write [%1]: [%2]").arg(strFileOut).arg(pFileOutput->errorString());
     m_pLog->AddLineErr(strError);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strError);
       msgBox.exec();
@@ -10339,9 +10441,9 @@ bool CjfifDecode::ExportJpegDoRange(QString strFileIn, QString strFileOut, uint3
     if(pFileOutput)
     {
       delete pFileOutput;
-
       pFileOutput = NULL;
     }
+
     return false;
   }
 
@@ -10382,7 +10484,6 @@ bool CjfifDecode::ExportJpegDoRange(QString strFileIn, QString strFileOut, uint3
   if(pFileOutput)
   {
     delete pFileOutput;
-
     pFileOutput = NULL;
   }
 

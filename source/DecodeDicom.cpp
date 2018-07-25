@@ -18,7 +18,9 @@
 
 
 
-#include "stdafx.h"
+//#include "stdafx.h"
+
+#include <QtGlobal>
 
 #include "DecodeDicom.h"
 #include "snoop.h"
@@ -26,13 +28,14 @@
 
 #include "WindowBuf.h"
 
+
 // Do we want to display extended DICOM tag info?
 //#ifdef DICOM_TAG_EXTENDED
 
 
 // Forward declarations
-struct tsDicomTag	asDicomTags[];
-struct tsDicomTagSpec	asTagSpecial[];
+extern struct tsDicomTag	asDicomTags[];
+extern struct tsDicomTagSpec	asTagSpecial[];
 
 CDecodeDicom::CDecodeDicom(CwindowBuf* pWBuf,CDocLog* pLog)
 {
@@ -43,7 +46,7 @@ CDecodeDicom::CDecodeDicom(CwindowBuf* pWBuf,CDocLog* pLog)
 	// Ideally this would be passed by constructor, but simply access
 	// directly for now.
 	CJPEGsnoopApp*	pApp;
-	pApp = (CJPEGsnoopApp*)AfxGetApp();
+//	pApp = (CJPEGsnoopApp*)AfxGetApp();
     m_pAppConfig = pApp->m_pAppConfig;
 
 	Reset();
@@ -73,7 +76,7 @@ CDecodeDicom::~CDecodeDicom(void)
 // RETURN:
 // - Byte from file
 //
-BYTE CDecodeDicom::Buf(unsigned long offset,bool bClean=false)
+quint8 CDecodeDicom::Buf(unsigned long offset,bool bClean=false)
 {
 	return m_pWBuf->Buf(offset,bClean);
 }
@@ -84,17 +87,17 @@ BYTE CDecodeDicom::Buf(unsigned long offset,bool bClean=false)
 bool CDecodeDicom::GetTagHeader(unsigned long nPos,tsTagDetail &sTagDetail)
 {
 	unsigned	nVR = 0;
-	CString		strError;
-	unsigned	nTagGroup;
-	unsigned	nTagElement;
-	CString		strTagName = _T("");
+	QString		strError;
+    quint32	nTagGroup;
+    quint32	nTagElement;
+	QString		strTagName = "";
 
 	unsigned	nLen = 0;
 	unsigned	nOffset = 0;
-	CString		strVR = _T("");
+	QString		strVR = "";
 
 	bool		bTagOk = false;
-	CString		strTag = _T("");
+	QString		strTag = "";
 
 	bool		bVrExplicit;
 	bool		bLen4B;
@@ -110,19 +113,20 @@ bool CDecodeDicom::GetTagHeader(unsigned long nPos,tsTagDetail &sTagDetail)
 	bool		bFoundTag;
 	unsigned	nFldInd = 0;
 	bFoundTag = FindTag(nTagGroup,nTagElement,nFldInd);
+
 	if (!bFoundTag) {
 		// Check for group length entry
 		// FIXME:
 		// Reference: Part 5, Section 7.2
 		if (nTagElement == 0x0000) {
-			strTagName.Format(_T("Group Length (Group=%04X)"),nTagGroup);
+            strTagName.arg(nTagGroup, 4, 16, QChar('0')); // Format("Group Length (Group=%04X)"),nTagGroup;
 			bTagOk = true;
 		} else {
 			/*
-			strError.Format(_T("ERROR: Unknown Tag ID (%04X,%04X) @ 0x%08X"),nTagGroup,nTagElement,nPos);
+			strError.Format("ERROR: Unknown Tag ID (%04X,%04X) @ 0x%08X"),nTagGroup,nTagElement,nPos;
 			m_pLog->AddLineErr(strError);
 			*/
-			strTagName.Format(_T("??? (%04X,%04X)"),nTagGroup,nTagElement);
+            strTagName.arg(nTagGroup, 4, 16, QChar('0')).arg(nTagElement, 4, 16, QChar('0')); // .Format("??? (%04X,%04X)"),nTagGroup,nTagElement;
 			bTagOk = false;
 		}
 	} else {
@@ -138,7 +142,7 @@ bool CDecodeDicom::GetTagHeader(unsigned long nPos,tsTagDetail &sTagDetail)
 	}
 	strVR = m_pWBuf->BufReadStrn(nPos+4,2);
 	nVR = m_pWBuf->BufX(nPos+4,2,false);
-	
+
 
 	// Value Representation (VR)
 	// Reference: Part 5, Section 6.2
@@ -224,13 +228,13 @@ bool CDecodeDicom::GetTagHeader(unsigned long nPos,tsTagDetail &sTagDetail)
 			// 4B length
 			// - Skip over 2B field (should be 0)
 			nLen = m_pWBuf->BufX(nPos+6,2,true);
-			ASSERT(nLen == 0);
+            Q_ASSERT(nLen == 0);
 			nLen = m_pWBuf->BufX(nPos+8,4,true);
 			nOffset = 12;
 		}
 	} else {
 		// Implicit VR
-		strVR = _T("??");
+		strVR = "??";
 		// 4B length
 		nLen = m_pWBuf->BufX(nPos+4,4,true);
 		nOffset = 8;
@@ -249,14 +253,14 @@ bool CDecodeDicom::GetTagHeader(unsigned long nPos,tsTagDetail &sTagDetail)
 			if (nLen == 0xFFFFFFFF) {
 				// Undefined length. So expect encapsulated data with delimiter
 				// Expect we aren't already in encapsulated mode
-				ASSERT(m_bJpegEncap == false);
+                Q_ASSERT(m_bJpegEncap == false);
 				// Indicate we are now starting an encapsulation
 				m_bJpegEncap = true;
 				// Next tag should be offset header
 				m_bJpegEncapOffsetNext = true;
 			} else {
 				// FIXME: handle native type
-				ASSERT(false);
+                Q_ASSERT(false);
 			}
 		}
 	} else {
@@ -264,8 +268,8 @@ bool CDecodeDicom::GetTagHeader(unsigned long nPos,tsTagDetail &sTagDetail)
 		if ((nTagGroup == 0xFFFE) && (nTagElement == 0xE000)) {
 			// Is this an offset header?
 			if (m_bJpegEncapOffsetNext) {
-				ASSERT(nTagGroup == 0xFFFE);
-				ASSERT(nTagElement == 0xE000);
+                Q_ASSERT(nTagGroup == 0xFFFE);
+                Q_ASSERT(nTagElement == 0xE000);
 				// Clear next flag since we've handled it
 				m_bJpegEncapOffsetNext = false;
 				// This is an offset header
@@ -292,15 +296,15 @@ bool CDecodeDicom::GetTagHeader(unsigned long nPos,tsTagDetail &sTagDetail)
 #ifdef DICOM_TAG_EXTENDED
 	// Extended tag info
 	if (bTagIsOffsetHdr) {
-		strTag.Format(_T("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X [OffsetHdr] %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName);
+		strTag.Format("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X [OffsetHdr] %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName;
 	} else if (bTagIsJpeg) {
-		strTag.Format(_T("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X [JPEG] %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName);
+		strTag.Format("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X [JPEG] %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName;
 	} else {
-		strTag.Format(_T("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName);
+		strTag.Format("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName;
 	}
 #else
-	// Simple tag info	
-	strTag.Format(_T("%s"),(LPCTSTR)strTagName);
+	// Simple tag info
+    strTag = strTagName;
 #endif
 
 	// Assign struct
@@ -326,17 +330,17 @@ bool CDecodeDicom::GetTagHeader(unsigned long nPos,tsTagDetail &sTagDetail)
 }
 
 #if 0
-bool CDecodeDicom::DecodeTagHeader(unsigned long nPos,CString &strTag,CString &strVR,unsigned &nLen,unsigned &nOffset,unsigned long &nPosJpeg)
+bool CDecodeDicom::DecodeTagHeader(unsigned long nPos,QString &strTag,QString &strVR,unsigned &nLen,unsigned &nOffset,unsigned long &nPosJpeg)
 {
 	unsigned	nVR = 0;
-	CString		strError;
+	QString		strError;
 	unsigned	nTagGroup;
 	unsigned	nTagElement;
-	CString		strTagName = _T("");
+	QString		strTagName = "";
 
 	// Assign defaults
-	strTag = _T("");
-	strVR = _T("");
+	strTag = "";
+	strVR = "";
 	nLen = 0;
 	nOffset = 0;
 
@@ -353,11 +357,11 @@ bool CDecodeDicom::DecodeTagHeader(unsigned long nPos,CString &strTag,CString &s
 		// FIXME:
 		// Reference: Part 5, Section 7.2
 		if (nTagElement == 0x0000) {
-			strTagName.Format(_T("Group Length (Group=%04X)"),nTagGroup);
+			strTagName.Format("Group Length (Group=%04X)"),nTagGroup;
 		} else {
-			strError.Format(_T("ERROR: Unknown Tag ID (%04X,%04X) @ 0x%08X"),nTagGroup,nTagElement,nPos);
+			strError.Format("ERROR: Unknown Tag ID (%04X,%04X) @ 0x%08X"),nTagGroup,nTagElement,nPos;
 			m_pLog->AddLineErr(strError);
-			strTagName.Format(_T("??? (%04X,%04X)"),nTagGroup,nTagElement);
+			strTagName.Format("??? (%04X,%04X)"),nTagGroup,nTagElement;
 		}
 	} else {
 		strTagName = asDicomTags[nFldInd].strTagName;
@@ -371,7 +375,7 @@ bool CDecodeDicom::DecodeTagHeader(unsigned long nPos,CString &strTag,CString &s
 	}
 	strVR = m_pWBuf->BufReadStrn(nPos+4,2);
 	nVR = m_pWBuf->BufX(nPos+4,2,false);
-	
+
 
 	// Value Representation (VR)
 	// Reference: Part 5, Section 6.2
@@ -457,13 +461,13 @@ bool CDecodeDicom::DecodeTagHeader(unsigned long nPos,CString &strTag,CString &s
 			// 4B length
 			// - Skip over 2B field (should be 0)
 			nLen = m_pWBuf->BufX(nPos+6,2,true);
-			ASSERT(nLen == 0);
+            Q_ASSERT(nLen == 0);
 			nLen = m_pWBuf->BufX(nPos+8,4,true);
 			nOffset = 12;
 		}
 	} else {
 		// Implicit VR
-		strVR = _T("??");
+		strVR = "??";
 		// 4B length
 		nLen = m_pWBuf->BufX(nPos+4,4,true);
 		nOffset = 8;
@@ -482,14 +486,14 @@ bool CDecodeDicom::DecodeTagHeader(unsigned long nPos,CString &strTag,CString &s
 			if (nLen == 0xFFFFFFFF) {
 				// Undefined length. So expect encapsulated data with delimiter
 				// Expect we aren't already in encapsulated mode
-				ASSERT(m_bJpegEncap == false);
+                Q_ASSERT(m_bJpegEncap == false);
 				// Indicate we are now starting an encapsulation
 				m_bJpegEncap = true;
 				// Next tag should be offset header
 				m_bJpegEncapOffsetNext = true;
 			} else {
 				// FIXME: handle native type
-				ASSERT(false);
+                Q_ASSERT(false);
 			}
 		}
 	} else {
@@ -497,8 +501,8 @@ bool CDecodeDicom::DecodeTagHeader(unsigned long nPos,CString &strTag,CString &s
 		if ((nTagGroup == 0xFFFE) && (nTagElement == 0xE000)) {
 			// Is this an offset header?
 			if (m_bJpegEncapOffsetNext) {
-				ASSERT(nTagGroup == 0xFFFE);
-				ASSERT(nTagElement == 0xE000);
+                Q_ASSERT(nTagGroup == 0xFFFE);
+                Q_ASSERT(nTagElement == 0xE000);
 				// Clear next flag since we've handled it
 				m_bJpegEncapOffsetNext = false;
 				// This is an offset header
@@ -518,15 +522,15 @@ bool CDecodeDicom::DecodeTagHeader(unsigned long nPos,CString &strTag,CString &s
 #ifdef DICOM_TAG_EXTENDED
 	// Extended tag info
 	if (bTagIsOffsetHdr) {
-		strTag.Format(_T("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X [OffsetHdr] %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName);
+		strTag.Format("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X [OffsetHdr] %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName;
 	} else if (bTagIsJpeg) {
-		strTag.Format(_T("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X [JPEG] %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName);
+		strTag.Format("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X [JPEG] %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName;
 	} else {
-		strTag.Format(_T("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName);
+		strTag.Format("@ 0x%08X (%04X,%04X) VR=[%2s] Len=0x%08X %s"),nPos,nTagGroup,nTagElement,strVR,nLen,strTagName;
 	}
 #else
-	// Simple tag info	
-	strTag.Format(_T("%s"),strTagName);
+	// Simple tag info
+	strTag.Format("%s"),strTagName;
 #endif
 
 	if (bTagIsJpeg) {
@@ -546,9 +550,9 @@ bool CDecodeDicom::DecodeDicom(unsigned long nPos,unsigned long nPosFileEnd,unsi
 {
 	unsigned		nLen;
 	unsigned		nOffset;
-	CString			strTag;
-	CString			strSig;
-	CString	 		strVR;
+	QString			strTag;
+	QString			strSig;
+	QString	 		strVR;
 
 
 	m_bDicom = false;
@@ -559,12 +563,12 @@ bool CDecodeDicom::DecodeDicom(unsigned long nPos,unsigned long nPosFileEnd,unsi
 
 	// DICOM Prefix
 	strSig = m_pWBuf->BufReadStrn(nPos,4);
-	if (strSig == _T("DICM")) {
+	if (strSig == "DICM") {
 		m_bDicom = true;
-		m_pLog->AddLine(_T(""));
-		m_pLog->AddLineHdr(_T("*** DICOM File Decoding ***"));
-		m_pLog->AddLine(_T("Decoding DICOM format..."));
-		m_pLog->AddLine(_T(""));
+		m_pLog->AddLine("");
+		m_pLog->AddLineHdr("*** DICOM File Decoding ***");
+		m_pLog->AddLine("Decoding DICOM format...");
+		m_pLog->AddLine("");
 	} else {
 		return false;
 	}
@@ -619,8 +623,8 @@ bool CDecodeDicom::DecodeDicom(unsigned long nPos,unsigned long nPosFileEnd,unsi
 		// If not, just report as hex for now
 
 		// Now determine enum value
-		CString		strValTrunc = _T("");
-		CString		strDesc = _T("");
+		QString		strValTrunc = "";
+		QString		strDesc = "";
 		bool		bIsEnum = false;
 		strValTrunc = m_pWBuf->BufReadStrn(nPos,200);
 		bIsEnum = LookupEnum(sTagDetail.nTagGroup,sTagDetail.nTagElement,strValTrunc,strDesc);
@@ -635,7 +639,7 @@ bool CDecodeDicom::DecodeDicom(unsigned long nPos,unsigned long nPosFileEnd,unsi
 		if (nPos >= nPosFileEnd) {
 			bDone = true;
 		}
-	
+
 	} // bDone
 
 
@@ -645,41 +649,41 @@ bool CDecodeDicom::DecodeDicom(unsigned long nPos,unsigned long nPosFileEnd,unsi
 
 // Create indent string
 // - Returns a sequence of spaces according to the indent level
-CString CDecodeDicom::ParseIndent(unsigned nIndent)
+QString CDecodeDicom::ParseIndent(unsigned nIndent)
 {
-	CString	strIndent = _T("");
+	QString	strIndent = "";
 	for (unsigned nInd=0;nInd<nIndent;nInd++) {
-		strIndent += _T("  ");
+		strIndent += "  ";
 	}
 	return strIndent;
 }
 
 // Display a formatted string field
 // - Report the value with the field name (strField) and current indent level (nIndent)
-void CDecodeDicom::ReportFldStr(unsigned nIndent,CString strField,CString strVal)
+void CDecodeDicom::ReportFldStr(unsigned nIndent,QString strField,QString strVal)
 {
-	CString		strIndent;
-	CString		strLine;
+	QString		strIndent;
+	QString		strLine;
 
 	strIndent = ParseIndent(nIndent);
-	strLine.Format(_T("%s%-50s = \"%s\""),(LPCTSTR)strIndent,(LPCTSTR)strField,(LPCTSTR)strVal);
+    strLine.arg(strIndent).arg(strField, -50).arg(strVal); //Format("%s%-50s = \"%s\""),(LPCTSTR)strIndent,(LPCTSTR)strField,(LPCTSTR)strVal;
 	m_pLog->AddLine(strLine);
 }
 
 // Display a formatted string field with encoded value
 // - Report the value with the field name (strField) and current indent level (nIndent)
-void CDecodeDicom::ReportFldStrEnc(unsigned nIndent,CString strField,CString strVal,CString strEncVal)
+void CDecodeDicom::ReportFldStrEnc(unsigned nIndent,QString strField,QString strVal,QString strEncVal)
 {
-	CString		strIndent;
-	CString		strLine;
+	QString		strIndent;
+	QString		strLine;
 
 	strIndent = ParseIndent(nIndent);
-	strLine.Format(_T("%s%-50s = %s \"%s\""),(LPCTSTR)strIndent,(LPCTSTR)strField,(LPCTSTR)strEncVal,(LPCTSTR)strVal);
-	m_pLog->AddLine(strLine);
+    strLine.arg(strIndent).arg(strField, -50).arg(strVal); //Format("%s%-50s = \"%s\""),(LPCTSTR)strIndent,(LPCTSTR)strField,(LPCTSTR)strVal;
+    m_pLog->AddLine(strLine);
 }
 
 // Locate a field ID in the constant Meta Tag array
-// 
+//
 // INPUT:
 // - nTagGroup				= Meta Tag (High)
 // - nTagElement				= Meta Tag (Low)
@@ -732,40 +736,40 @@ bool CDecodeDicom::FindTag(unsigned nTagGroup,unsigned nTagElement,unsigned &nFl
 // - nPosStart		= Field byte array file position start
 // - nLen			= Field byte array length
 //
-void CDecodeDicom::ReportFldHex(unsigned nIndent,CString strField,unsigned long nPosStart,unsigned nLen)
+void CDecodeDicom::ReportFldHex(unsigned nIndent,QString strField,unsigned long nPosStart,unsigned nLen)
 {
-	CString		strIndent;
+	QString		strIndent;
 	unsigned	nByte;
-	CString		strPrefix;
-	CString		strByteHex;
-	CString		strByteAsc;
-	CString		strValHex;
-	CString		strValAsc;
-	CString		strLine;
+	QString		strPrefix;
+	QString		strByteHex;
+	QString		strByteAsc;
+	QString		strValHex;
+	QString		strValAsc;
+	QString		strLine;
 
 	strIndent = ParseIndent(nIndent);
 
 	if (nLen == 0) {
 		// Print out the header row, but no data will be shown
-		strLine.Format(_T("%s%-50s = "),(LPCTSTR)strIndent,(LPCTSTR)strField);
+        strLine.arg(strIndent).arg(strField, -50); // ("%s%-50s = "),(LPCTSTR)strIndent,(LPCTSTR)strField;
 		m_pLog->AddLine(strLine);
 		// Nothing to report, exit now
 		return;
 	} else if (nLen <= DC_HEX_MAX_INLINE) {
 		// Define prefix for row
-		strPrefix.Format(_T("%s%-50s = "),(LPCTSTR)strIndent,(LPCTSTR)strField);
+        strPrefix.arg(strIndent).arg(strField, -50); // .Format("%s%-50s = "),(LPCTSTR)strIndent,(LPCTSTR)strField;
 	} else {
 #if 0
 		// Print out header row
-		strLine.Format(_T("%s%-50s ="),(LPCTSTR)strIndent,(LPCTSTR)strField);
+		strLine.Format("%s%-50s ="),(LPCTSTR)strIndent,(LPCTSTR)strField;
 		m_pLog->AddLine(strLine);
 		// Define prefix for next row
-		//strPrefix.Format(_T("%s"),(LPCTSTR)strIndent);
-		strPrefix.Format(_T("%s%-50s   "),(LPCTSTR)strIndent,_T(""));
+		//strPrefix.Format("%s"),(LPCTSTR)strIndent;
+		strPrefix.Format("%s%-50s   "),(LPCTSTR)strIndent,_T("");
 #else
 		// Define prefix for row
 		//FIXME: Only report field on first row
-		strPrefix.Format(_T("%s%-50s = "),(LPCTSTR)strIndent,(LPCTSTR)strField);
+        strPrefix.arg(strIndent).arg(strField, -50); //.Format("%s%-50s = "),(LPCTSTR)strIndent,(LPCTSTR)strField;
 #endif
 	}
 
@@ -775,32 +779,32 @@ void CDecodeDicom::ReportFldHex(unsigned nIndent,CString strField,unsigned long 
 	unsigned	nRowOffset = 0;
 	bool		bDone = false;
 	unsigned	nLenClip;
-	nLenClip = min(nLen,DC_HEX_TOTAL);
-	strValHex = _T("");
-	strValAsc = _T("");
+    nLenClip = qMin(nLen, unsigned(DC_HEX_TOTAL));
+	strValHex = "";
+	strValAsc = "";
 	while (!bDone) {
 		// Have we reached the end of the data we wish to display?
 		if (nRowOffset>=nLenClip) {
 			bDone = true;
 		} else {
 			// Reset the cumulative hex/ascii value strings
-			strValHex = _T("");
-			strValAsc = _T("");
+			strValHex = "";
+			strValAsc = "";
 			// Build the hex/ascii value strings
 			for (unsigned nInd=0;nInd<DC_HEX_MAX_ROW;nInd++) {
 				if ((nRowOffset+nInd)<nLenClip) {
 					nByte = m_pWBuf->Buf(nPosStart+nRowOffset+nInd);
-					strByteHex.Format(_T("%02X "),nByte);
+                    strByteHex.arg(nByte, 2, 16, QChar('0')); // .Format("%02X "),nByte;
 					// Only display printable characters
 					if (isprint(nByte)) {
-						strByteAsc.Format(_T("%c"),nByte);
+                        strByteAsc.arg(nByte); // .Format("%c"),nByte;
 					} else {
-						strByteAsc = _T(".");
+						strByteAsc = ".";
 					}
 				} else {
 					// Pad out to end of row
-					strByteHex.Format(_T("   "));
-					strByteAsc = _T(" ");
+                    strByteHex = "   ";
+					strByteAsc = " ";
 				}
 				// Build up the strings
 				strValHex += strByteHex;
@@ -808,7 +812,7 @@ void CDecodeDicom::ReportFldHex(unsigned nIndent,CString strField,unsigned long 
 			}
 
 			// Generate the line with Hex and ASCII representations
-			strLine.Format(_T("%s | 0x%s | %s"),(LPCTSTR)strPrefix,(LPCTSTR)strValHex,(LPCTSTR)strValAsc);
+            strLine.arg(strPrefix, " | 0x", strValHex, " | ", strValAsc); // .Format("%s | 0x%s | %s"),(LPCTSTR)strPrefix,(LPCTSTR)strValHex,(LPCTSTR)strValAsc;
 			m_pLog->AddLine(strLine);
 
 			// Now increment file offset
@@ -818,7 +822,7 @@ void CDecodeDicom::ReportFldHex(unsigned nIndent,CString strField,unsigned long 
 
 	// If we had to clip the display length, then show ellipsis now
 	if (nLenClip < nLen) {
-		strLine.Format(_T("%s | ..."),(LPCTSTR)strPrefix);
+        strLine.arg(strPrefix, " | ..."); // .Format("%s | ..."),(LPCTSTR)strPrefix;
 		m_pLog->AddLine(strLine);
 	}
 
@@ -828,27 +832,27 @@ void CDecodeDicom::ReportFldHex(unsigned nIndent,CString strField,unsigned long 
 // Display a formatted enumerated type field
 // - Look up enumerated constant (nVal) for the given field (eEnumField)
 // - Report the value with the field name (strField) and current indent level (nIndent)
-void CDecodeDicom::ReportFldEnum(unsigned nIndent,CString strField,unsigned nTagGroup,unsigned nTagElement,CString strVal)
+void CDecodeDicom::ReportFldEnum(unsigned nIndent,QString strField,unsigned nTagGroup,unsigned nTagElement,QString strVal)
 {
-	CString		strIndent;
-	CString		strDesc;
-	CString		strLine;
+	QString		strIndent;
+	QString		strDesc;
+	QString		strLine;
 	bool		bFound;
 
 	strIndent = ParseIndent(nIndent);
 
 	bFound = LookupEnum(nTagGroup,nTagElement,strVal,strDesc);
 	if (bFound) {
-		strLine.Format(_T("%s%-50s = %s"),(LPCTSTR)strIndent,(LPCTSTR)strField,(LPCTSTR)strDesc);
+        strLine.arg(strIndent).arg(strField, -50).arg(strDesc); // .Format("%s%-50s = %s"),(LPCTSTR)strIndent,(LPCTSTR)strField,(LPCTSTR)strDesc;
 		m_pLog->AddLine(strLine);
 	} else {
-		ASSERT(false);
+        Q_ASSERT(false);
 	}
 }
 
 // Look up the enumerated constant (nVal) for the specified field (eEnumField)
 // - Returns "" if the field wasn't found
-bool CDecodeDicom::LookupEnum(unsigned nTagGroup,unsigned nTagElement,CString strVal,CString &strDesc)
+bool CDecodeDicom::LookupEnum(unsigned nTagGroup,unsigned nTagElement,QString strVal,QString &strDesc)
 {
 	// Find the enum value
 	bool		bFound = false;
@@ -862,7 +866,7 @@ bool CDecodeDicom::LookupEnum(unsigned nTagGroup,unsigned nTagElement,CString st
 				strDesc = asTagSpecial[nEnumInd].strDefinition;
 			}
 		}
-		if (asTagSpecial[nEnumInd].strVal == _T("")) {
+		if (asTagSpecial[nEnumInd].strVal == "") {
 			bDone = true;
 		}
 		if (!bDone) {
@@ -875,4 +879,3 @@ bool CDecodeDicom::LookupEnum(unsigned nTagGroup,unsigned nTagElement,CString st
 // ===============================================================================
 // CONSTANTS
 // ===============================================================================
-

@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,21 +16,23 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <QApplication>
 #include <QDateTime>
 #include <QDebug>
+#include <QDir>
+#include <QStandardPaths>
 
+#include "eula.h"
 #include "JfifDecode.h"
-#include "JPEGsnoop.h"
-//#include "JPEGsnoopCore.h"
+#include "note.h"
 #include "snoop.h"
 
 #include "SnoopConfig.h"
 
+//-----------------------------------------------------------------------------
 // Define the defaults for the application configuration
-CSnoopConfig::CSnoopConfig(CjfifDecode *pJfifDec)
+CSnoopConfig::CSnoopConfig(QObject *_parent) : QObject(_parent)
 {
-  m_pJfifDec = pJfifDec;
-
   // Debug log
   strDebugLogFname = ".\\JPEGsnoop-debug.log";
   fpDebugLog = NULL;
@@ -99,41 +101,20 @@ CSnoopConfig::CSnoopConfig(CjfifDecode *pJfifDec)
   // Reset coach message flags
   CoachReset();
 
+  strReprocess = "You have changed a processing option. To see these changes, you need to Reprocess the file or enable [Auto Reprocessing] in Configuration.";
+
   // Reset the current filename
   strCurFname = "";
 
-  // --------------------------------
-
-  // Determine operating system
-  // Particularly for: WinHTTP functions
-//    OSVERSIONINFO osvi;
-
-//    ZeroMemory(&osvi, sizeof(OSVERSIONINFO));
-//    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-
-//    GetVersionEx(&osvi);
-
-//      bIsWindowsNTorLater = (osvi.dwPlatformId >= VER_PLATFORM_WIN32_NT);
-
-//    bIsWindowsXPorLater =
-//       ( (osvi.dwMajorVersion > 5) ||
-//       ( (osvi.dwMajorVersion == 5) && (osvi.dwMinorVersion >= 1) ));
-
-  /*
-     // Debug code to output the version info
-     QString strTmp;
-     strTmp.Format("OS Version: Platform=[%u] VerMajor=[%u] VerMinor=[%u] (>=NT:%s >=XP:%s)",
-     osvi.dwPlatformId,osvi.dwMajorVersion,osvi.dwMinorVersion,
-     (bIsWindowsNTorLater)?"Y":"N",(bIsWindowsXPorLater)?"Y":"N");
-     AfxMessageBox(strTmp);
-   */
   qDebug() << "CSnoopConfig::CSnoopConfig End";
 }
 
+//-----------------------------------------------------------------------------
 CSnoopConfig::~CSnoopConfig(void)
 {
 }
 
+//-----------------------------------------------------------------------------
 // This is generally called after app initializes and registry has just been loaded.
 void CSnoopConfig::UseDefaults()
 {
@@ -141,6 +122,7 @@ void CSnoopConfig::UseDefaults()
   // But some need copying over
 }
 
+//-----------------------------------------------------------------------------
 // Update the flag to mark the configuration as dirty / modified
 // - This is used later to indicate that a resave is required
 //
@@ -149,6 +131,7 @@ void CSnoopConfig::Dirty(bool mode)
   bDirty = mode;
 }
 
+//-----------------------------------------------------------------------------
 // Fetch all configuration values from the registry
 void CSnoopConfig::RegistryLoad()
 {
@@ -160,7 +143,15 @@ void CSnoopConfig::RegistryLoad()
   if(regUserDbPath == "")
   {
     // None specified, so determine a suitable default
-//    strDbDir = GetDefaultDbDir();
+    strDbDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+
+    QDir appDir(strDbDir);
+
+    if(!appDir.exists())
+    {
+      appDir.mkpath(strDbDir);
+    }
+
     bDirty = true;
   }
   else
@@ -169,10 +160,7 @@ void CSnoopConfig::RegistryLoad()
     strDbDir = regUserDbPath;
   }
 
-  //////////////////
-
   QString strCurDate = QDateTime::currentDateTime().toString("yyyymmdd");
-
   QString regUpdateLastChk = settings.value("General\\UpdateLastChk", "").toString();
 
   // Try to load the registry entry
@@ -221,7 +209,28 @@ void CSnoopConfig::RegistryLoad()
     docImageDirty();
   }
 
+  bEulaAccepted = false;
+
+  if(!bEulaAccepted)
+  {
+    Q_Eula *eulaDlg = new Q_Eula;
+    eulaDlg->exec();
+
+    if(eulaDlg->result())
+    {
+      bEulaAccepted = true;
+      bUpdateAuto = eulaDlg->updateStatus();
+      bDirty = true;
+      RegistryStore();
+    }
+    else
+    {
+      exit(1);
+    }
+  }
+
   printSettings();
+
   // Deprecated Registry strings
   // FIXME: Later on, decide if we should delete deprecated strings if found
   // "General\\ScanImgDec"
@@ -230,6 +239,7 @@ void CSnoopConfig::RegistryLoad()
   // "General\\SigSearchAuto"
 }
 
+//-----------------------------------------------------------------------------
 // Write all configuration parameters to the registry
 // - Skip write if no changes were made (!bDirty)
 //
@@ -272,10 +282,10 @@ void CSnoopConfig::RegistryStore()
 
     // Registry entries are no longer dirty
     bDirty = false;
-    qDebug() << settings.status();
   }
 }
 
+//-----------------------------------------------------------------------------
 void CSnoopConfig::printSettings()
 {
   qDebug() << "strDbDir" << strDbDir;
@@ -308,6 +318,8 @@ void CSnoopConfig::printSettings()
   qDebug() << "bCoachDecodeIdct" << bCoachDecodeIdct;
 
 }
+
+//-----------------------------------------------------------------------------
 // Reset coach messages
 void CSnoopConfig::CoachReset()
 {
@@ -318,9 +330,10 @@ void CSnoopConfig::CoachReset()
   Dirty();
 }
 
+//-----------------------------------------------------------------------------
 // Select a suitable working directory, create it if it doesn't already exist
-QString CSnoopConfig::GetDefaultDbDir()
-{
+//QString CSnoopConfig::GetDefaultDbDir()
+//{
 
 /*	TCHAR szUserProfile[MAX_PATH];
 	TCHAR szFilePath[MAX_PATH];
@@ -388,7 +401,7 @@ QString CSnoopConfig::GetDefaultDbDir()
 		}
 	}
   return szFilePath; */
-}
+//}
 
 // Get the directory path of the JPEGsnoop executable
 // - This is used as a default location for the user signature database
@@ -538,8 +551,6 @@ bool CSnoopConfig::DebugLogCreate()
 //
 bool CSnoopConfig::DebugLogAdd(QString strText)
 {
-  qDebug() << strText;
-
 #ifdef DEBUG_LOG_OUT
 
   if(!bDebugLogEnable)
@@ -614,10 +625,37 @@ bool CSnoopConfig::DebugLogAdd(QString strText)
   return true;
 }
 
+//-----------------------------------------------------------------------------
+
 void CSnoopConfig::docImageDirty()
 {
-  m_pJfifDec->ImgSrcChanged();
+  emit ImgSrcChanged();
 }
+
+//-----------------------------------------------------------------------------
+// If Automatic Reprocessing is enabled, reprocess the file
+// - If Reprocessing is not enabled and the coach message has
+//   not been disabled, inform user of option to enable
+void CSnoopConfig::HandleAutoReprocess()
+{
+  if(bReprocessAuto)
+  {
+    emit reprocess();
+  }
+  else
+  {
+    if(bCoachReprocessAuto)
+    {
+      // Show the coaching dialog
+      Q_Note *note = new Q_Note(strReprocess);
+      note->exec();
+      bCoachReprocessAuto = !note->hideStatus();
+      Dirty();
+    }
+  }
+}
+
+//-----------------------------------------------------------------------------
 
 void CSnoopConfig::onOptionsDhtexpand()
 {
@@ -631,8 +669,10 @@ void CSnoopConfig::onOptionsDhtexpand()
   }
 
   Dirty();
-//  HandleAutoReprocess();
+  HandleAutoReprocess();
 }
+
+//-----------------------------------------------------------------------------
 
 void CSnoopConfig::onOptionsMakernotes()
 {
@@ -646,8 +686,10 @@ void CSnoopConfig::onOptionsMakernotes()
   }
 
   Dirty();
-//  HandleAutoReprocess();
+  HandleAutoReprocess();
 }
+
+//-----------------------------------------------------------------------------
 
 void CSnoopConfig::onOptionsHideuknownexiftags()
 {
@@ -661,9 +703,10 @@ void CSnoopConfig::onOptionsHideuknownexiftags()
   }
 
   Dirty();
-
-//      HandleAutoReprocess();
+  HandleAutoReprocess();
 }
+
+//-----------------------------------------------------------------------------
 
 void CSnoopConfig::onOptionsSignaturesearch()
 {
@@ -677,8 +720,10 @@ void CSnoopConfig::onOptionsSignaturesearch()
   }
 
   Dirty();
-//  HandleAutoReprocess();
+  HandleAutoReprocess();
 }
+
+//-----------------------------------------------------------------------------
 
 void CSnoopConfig::onOptionsRelaxedparsing()
 {
@@ -692,8 +737,10 @@ void CSnoopConfig::onOptionsRelaxedparsing()
   }
 
   Dirty();
-//  HandleAutoReprocess();
+  HandleAutoReprocess();
 }
+
+//-----------------------------------------------------------------------------
 
 void CSnoopConfig::onScansegmentDecodeImage()
 {
@@ -707,8 +754,10 @@ void CSnoopConfig::onScansegmentDecodeImage()
   }
 
   Dirty();
-//  HandleAutoReprocess();
+  HandleAutoReprocess();
 }
+
+//-----------------------------------------------------------------------------
 
 void CSnoopConfig::onScansegmentNoidct()
 {
@@ -717,12 +766,13 @@ void CSnoopConfig::onScansegmentNoidct()
     bDecodeScanImgAc = false;
   }
 
-  qDebug() << "CSnoopConfig::onScansegmentNoidct()" << bDecodeScanImgAc;
+  emit scanImageAc(bDecodeScanImgAc);
   Dirty();
-
   docImageDirty();
-//  HandleAutoReprocess();
+  HandleAutoReprocess();
 }
+
+//-----------------------------------------------------------------------------
 
 void CSnoopConfig::onScansegmentFullidct()
 {
@@ -731,12 +781,13 @@ void CSnoopConfig::onScansegmentFullidct()
     bDecodeScanImgAc = true;
   }
 
-  qDebug() << "CSnoopConfig::onScansegmentFullidct()" << bDecodeScanImgAc;
+  emit scanImageAc(bDecodeScanImgAc);
   Dirty();
-
   docImageDirty();
-//      HandleAutoReprocess();
+  HandleAutoReprocess();
 }
+
+//-----------------------------------------------------------------------------
 
 void CSnoopConfig::onScansegmentHistogram()
 {
@@ -752,8 +803,10 @@ void CSnoopConfig::onScansegmentHistogram()
   Dirty();
 
   docImageDirty();
-//      HandleAutoReprocess();
+  HandleAutoReprocess();
 }
+
+//-----------------------------------------------------------------------------
 
 void CSnoopConfig::onScansegmentHistogramy()
 {
@@ -769,8 +822,10 @@ void CSnoopConfig::onScansegmentHistogramy()
   Dirty();
 
   docImageDirty();
-//      HandleAutoReprocess();
+  HandleAutoReprocess();
 }
+
+//-----------------------------------------------------------------------------
 
 void CSnoopConfig::onScansegmentDump()
 {
@@ -784,6 +839,5 @@ void CSnoopConfig::onScansegmentDump()
   }
 
   Dirty();
-
-//      HandleAutoReprocess();
+  HandleAutoReprocess();
 }

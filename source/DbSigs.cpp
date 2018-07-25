@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,13 +16,17 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <QDataStream>
 #include <QDebug>
 #include <QFile>
 
-#include "DbSigs.h"
+#include "DocLog.h"
 #include "General.h"
-
+//#include "JPEGsnoop.h"
 #include "snoop.h"
+#include "SnoopConfig.h"
+
+#include "DbSigs.h"
 
 #include "Signatures.inl"
 
@@ -53,7 +57,7 @@
 // - m_nXcomSwListNum
 // - m_strDbDir
 //
-CDbSigs::CDbSigs()
+CDbSigs::CDbSigs(CDocLog *pLog, CSnoopConfig *pAppConfig) : m_pDocLog(pLog), m_pAppConfig(pAppConfig)
 {
 	// Count the built-in database
 	bool bDone;
@@ -65,12 +69,22 @@ CDbSigs::CDbSigs()
 
 	while (!bDone)
 	{
-//    if (!_tcscmp(m_sSigList[m_nSigListNum].strXMake,"*"))
     if (m_sSigList[m_nSigListNum].strXMake == "*")
+    {
       bDone = true;
+    }
 		else
+    {
 			m_nSigListNum++;
+      m_qSigList.append(m_sSigList[m_nSigListNum]);
+    }
 	}
+
+  QFile sigFile(m_pAppConfig->dbPath() + "Signatures.dat");
+  sigFile.open(QIODevice::WriteOnly);
+  QDataStream out(&sigFile);
+//  out << m_qSigList;
+  qDebug() << m_qSigList.count();
 
 	// Count number of exceptions in Signatures.inl
 	bDone = false;
@@ -78,7 +92,6 @@ CDbSigs::CDbSigs()
 
 	while (!bDone)
 	{
-//    if (!_tcscmp(m_sExcMmNoMkrList[m_nExcMmNoMkrListNum].strXMake,"*"))
     if (m_sExcMmNoMkrList[m_nExcMmNoMkrListNum].strXMake == "*")
       bDone = true;
 		else
@@ -90,13 +103,11 @@ CDbSigs::CDbSigs()
 
 	while (!bDone)
 	{
-//    if (!_tcscmp(m_sExcMmIsEditList[m_nExcMmIsEditListNum].strXMake,"*"))
     if (m_sExcMmIsEditList[m_nExcMmIsEditListNum].strXMake == "*")
       bDone = true;
 		else
 			m_nExcMmIsEditListNum++;
 	}
-
 
 	bDone = false;
 	m_nSwIjgListNum = 0;
@@ -114,7 +125,6 @@ CDbSigs::CDbSigs()
     << "XnView";
 
   m_nSwIjgListNum = m_sSwIjgList.count();
-
 
 	bDone = false;
 	m_nXcomSwListNum = 0;
@@ -157,38 +167,37 @@ void CDbSigs::SetFirstRun(bool bFirstRun)
 	m_bFirstRun = bFirstRun;
 }
 
-unsigned CDbSigs::GetNumSigsInternal()
+int32_t CDbSigs::GetNumSigsInternal()
 {
 	return m_nSigListNum;
 }
 
-unsigned CDbSigs::GetNumSigsExtra()
+int32_t CDbSigs::GetNumSigsExtra()
 {
 	return m_nSigListExtraNum;
 }
 
-
 // Read an unsigned integer (4B) from the buffer
-bool CDbSigs::BufReadNum(uint8_t *pBuf,unsigned &nOut,unsigned,unsigned &nOffsetBytes)
+bool CDbSigs::BufReadNum(uint8_t *pBuf,uint32_t &nOut,uint32_t,uint32_t &nOffsetBytes)
 {
   Q_ASSERT(pBuf);
 	// TODO: check for buffer bounds
-	nOut = (unsigned)pBuf[nOffsetBytes];
-	nOffsetBytes += sizeof(unsigned);
+  nOut = static_cast<uint32_t>(pBuf[nOffsetBytes]);
+  nOffsetBytes += sizeof(uint32_t);
 	return true;
 }
 
 // Write an unsigned integer (4B) to the buffer
-bool CDbSigs::BufWriteNum(uint8_t *pBuf,unsigned nIn,unsigned,unsigned &nOffsetBytes)
+bool CDbSigs::BufWriteNum(uint8_t *pBuf,uint32_t nIn,uint32_t,uint32_t &nOffsetBytes)
 {
   Q_ASSERT(pBuf);
 	// TODO: check for buffer bounds
   uint8_t *	pBufBase;
-	unsigned*	pBufInt;
+  uint32_t*	pBufInt;
 	pBufBase = &pBuf[nOffsetBytes];
-	pBufInt = (unsigned*)pBufBase;
+  pBufInt = reinterpret_cast<uint32_t *>(pBufBase);
 	pBufInt[0] = nIn;
-	nOffsetBytes += sizeof(unsigned);
+  nOffsetBytes += sizeof(uint32_t);
 	return true;
 }
 
@@ -197,7 +206,7 @@ bool CDbSigs::BufWriteNum(uint8_t *pBuf,unsigned nIn,unsigned,unsigned &nOffsetB
 // Both 16-bit unicode and 8-bit SBCS encoding modes are supported (via bUni)
 // Offset parameter is incremented accordingly
 // Supports both newline and NULL for string termination
-bool CDbSigs::BufReadStr(uint8_t *pBuf,QString &strOut,unsigned nMaxBytes,bool bUni,unsigned &nOffsetBytes)
+bool CDbSigs::BufReadStr(uint8_t *pBuf,QString &strOut,uint32_t nMaxBytes,bool bUni,uint32_t &nOffsetBytes)
 {
   Q_ASSERT(pBuf);
   QString		strOutTmp;
@@ -205,13 +214,13 @@ bool CDbSigs::BufReadStr(uint8_t *pBuf,QString &strOut,unsigned nMaxBytes,bool b
 
 	char		chAsc;
 	wchar_t		chUni;
-	unsigned	nCharSz = ((bUni)?sizeof(wchar_t):sizeof(char));
+  uint32_t	nCharSz = ((bUni)?sizeof(wchar_t):sizeof(char));
 
 	bDone = false;
   strOut = "";
 
   // Ensure we don't overrun the buffer by calculating the last byte index required for each iteration.
-  for (unsigned nInd=nOffsetBytes; (!bDone) && (nInd + nCharSz - 1 < nMaxBytes); nInd += nCharSz)
+  for (uint32_t nInd=nOffsetBytes; (!bDone) && (nInd + nCharSz - 1 < nMaxBytes); nInd += nCharSz)
   {
     if (bUni)
     {
@@ -254,24 +263,21 @@ bool CDbSigs::BufReadStr(uint8_t *pBuf,QString &strOut,unsigned nMaxBytes,bool b
 }
 
 // Return true if we managed to write entire string including terminator without overrunning nMaxBytes
-bool CDbSigs::BufWriteStr(unsigned char *pBuf,QString strIn,unsigned nMaxBytes,bool bUni,unsigned &nOffsetBytes)
+bool CDbSigs::BufWriteStr(unsigned char *pBuf,QString strIn,uint32_t nMaxBytes,bool bUni,uint32_t &nOffsetBytes)
 {
-    Q_ASSERT(pBuf);
+  Q_ASSERT(pBuf);
 
-    bool            bRet = false;
-    char            chAsc;
-    wchar_t         chUni;
-    unsigned        nCharSz = ((bUni)?sizeof(wchar_t):sizeof(char));
-    unsigned char   *pBufBase;
-    wchar_t         *pBufUni;
-    unsigned char   *pBufAsc;
+	bool		bRet = false;
+	char		chAsc;
+	wchar_t		chUni;
+  uint32_t	nCharSz = ((bUni)?sizeof(wchar_t):sizeof(char));
+  unsigned char *pBufBase;
+  wchar_t	*pBufUni;
+  unsigned char		*pBufAsc;
 
 	pBufBase = pBuf + nOffsetBytes;
-    pBufUni = (wchar_t *)pBufBase;
-    pBufAsc = pBufBase;
-
-    // FIXME: Comment out the following until a cross-platform solution can be written
-    /*
+  pBufUni = (wchar_t *)pBufBase;
+  pBufAsc = pBufBase;
 
 #ifdef UNICODE
 	// Create non-Unicode version of string
@@ -285,32 +291,32 @@ bool CDbSigs::BufWriteStr(unsigned char *pBuf,QString strIn,unsigned nMaxBytes,b
 	strIn.UnlockBuffer( );
 #endif
 
-	unsigned	nStrLen;
-	unsigned	nChInd;
-    nStrLen = strIn.size();
-
-    for (nChInd=0;(nChInd<nStrLen)&&(nOffsetBytes+nCharSz-1<nMaxBytes);nChInd++)
+  uint32_t	nStrLen;
+  uint32_t	nChInd;
+  nStrLen = strIn.size();
+/*
+  for (nChInd=0;(nChInd<nStrLen)&&(nOffsetBytes+nCharSz-1<nMaxBytes);nChInd++)
+  {
+    if (bUni)
     {
-        if (bUni)
-        {
 			// Normal handling for unicode
-            chUni = strIn[nChInd];
+      chUni = strIn[nChInd];
 			pBufUni[nChInd] = chUni; 
-        }
-        else
-        {
+    }
+    else
+    {
 #ifdef UNICODE
 			// To avoid Warning C4244: Conversion from 'wchar_t' to 'char' possible loss of data
 			// We need to implement conversion here
 			// Ref: http://stackoverflow.com/questions/4786292/converting-unicode-strings-and-vice-versa
 
-            // Since we have compiled for unicode, the QString character fetch
+      // Since we have compiled for unicode, the QString character fetch
 			// will be unicode char. Therefore we need to use ANSI-converted form.
 			chAsc = pszNonUnicode[nChInd];
 #else
-            // Since we have compiled for non-Unicode, the QString character fetch
+      // Since we have compiled for non-Unicode, the QString character fetch
 			// will be single byte char
-            chAsc = strIn[nChInd];
+      chAsc = strIn[nChInd];
 #endif
 			pBufAsc[nChInd] = chAsc; 
 		}
@@ -320,27 +326,25 @@ bool CDbSigs::BufWriteStr(unsigned char *pBuf,QString strIn,unsigned nMaxBytes,b
 	}
 
 	// Now terminate if we have space
-    if ((nOffsetBytes + nCharSz-1) < nMaxBytes)
+  if ((nOffsetBytes + nCharSz-1) < nMaxBytes)
+  {
+    if (bUni)
     {
-        if (bUni)
-        {
-            chUni = wchar0;
+      chUni = wchar0;
 			pBufUni[nChInd] = chUni;
-        }
-        else
-        {
+    }
+    else
+    {
 			chAsc = char(0);
 			pBufAsc[nChInd] = chAsc;
 		}
 
-        // Advance pointers
+    // Advance pointers
 		nOffsetBytes += nCharSz;
 
 		// Since we managed to include terminator, return is successful
 		bRet = true;
-    }
-
-    */
+  } */
 
 	// Return true if we finished the string write (without exceeding nMaxBytes)
 	// or false otherwise
@@ -350,8 +354,8 @@ bool CDbSigs::BufWriteStr(unsigned char *pBuf,QString strIn,unsigned nMaxBytes,b
 void CDbSigs::DatabaseExtraLoad()
 {
   uint8_t *	pBuf = NULL;
-	unsigned	nBufLenBytes = 0;
-	unsigned	nBufOffset = 0;
+  uint32_t	nBufLenBytes = 0;
+  uint32_t	nBufOffset = 0;
   QString		strError;
 
   Q_ASSERT(m_strDbDir != "");
@@ -408,13 +412,13 @@ void CDbSigs::DatabaseExtraLoad()
 	bool		bDone = false;
   bool		bRet;
 
-	unsigned	nBufOffsetTmp;
+  uint32_t	nBufOffsetTmp;
 	bool		bFileOk = false;
 	bool		bFileModeUni = false;
 
 	bool		bValid;
 
-	unsigned	nNumLoad = 0;				// Number of entries to read
+  uint32_t	nNumLoad = 0;				// Number of entries to read
 	CompSig		sDbLocalEntry;				// Temp entry for load
 	bool		bDbLocalEntryFound;			// Temp entry already in built-in DB?
 	bool		bDbLocalTrimmed = false;	// Did we trim down the DB?
@@ -511,7 +515,7 @@ void CDbSigs::DatabaseExtraLoad()
 			// don't add it to the runtime DB, and mark the local DB as
 			// needing trimming. If so, rewrite the DB.
 
-      for (unsigned ind=0;ind<nNumLoad;ind++)
+      for (uint32_t ind=0;ind<nNumLoad;ind++)
       {
 				sDbLocalEntry.bValid = false;
         sDbLocalEntry.strXMake = "";
@@ -589,7 +593,8 @@ void CDbSigs::DatabaseExtraLoad()
 					m_sSigListExtra[m_nSigListExtraNum].strMSwTrim  = sDbLocalEntry.strMSwTrim;
 					m_sSigListExtra[m_nSigListExtraNum].strMSwDisp  = sDbLocalEntry.strMSwDisp;
 					m_nSigListExtraNum++;
-        } else
+        }
+        else
         {
 					bDbLocalTrimmed = true;
 				}
@@ -607,7 +612,7 @@ void CDbSigs::DatabaseExtraLoad()
 
 	// ----------------------
 
-    pInFile.close();
+  pInFile.close();
 
   if (pBuf)
   {
@@ -646,12 +651,12 @@ void CDbSigs::DatabaseExtraClean()
 	DatabaseExtraStore();
 }
 
-unsigned CDbSigs::DatabaseExtraGetNum()
+uint32_t CDbSigs::DatabaseExtraGetNum()
 {
 	return m_nSigListExtraNum;
 }
 
-CompSig CDbSigs::DatabaseExtraGet(unsigned nInd)
+CompSig CDbSigs::DatabaseExtraGet(uint32_t nInd)
 {
   Q_ASSERT(nInd<m_nSigListExtraNum);
 	return m_sSigListExtra[nInd];
@@ -660,8 +665,8 @@ CompSig CDbSigs::DatabaseExtraGet(unsigned nInd)
 void CDbSigs::DatabaseExtraStore()
 {
   uint8_t *	pBuf = NULL;
-	//unsigned	nBufLenBytes = 0;
-	unsigned	nBufOffset = 0;
+  //uint32_t	nBufLenBytes = 0;
+  uint32_t	nBufOffset = 0;
 
 	bool		bModeUni = true;	// Save in Unicode format
 
@@ -695,16 +700,16 @@ void CDbSigs::DatabaseExtraStore()
 	//bool		bDone = false;
   bool		bRet;
 
-	unsigned	nMaxBufBytes = MAX_BUF_SET_FILE;
+  uint32_t	nMaxBufBytes = MAX_BUF_SET_FILE;
 
   bRet = BufWriteStr(pBuf,"JPEGsnoop",nMaxBufBytes,bModeUni,nBufOffset);
   bRet = BufWriteStr(pBuf,DB_VER_STR,nMaxBufBytes,bModeUni,nBufOffset);
   bRet = BufWriteStr(pBuf,"*DB*",nMaxBufBytes,bModeUni,nBufOffset);
 
   // Determine how many entries will remain (after removing marked deleted entries
-	unsigned nNewExtraNum = m_nSigListExtraNum;
+  uint32_t nNewExtraNum = m_nSigListExtraNum;
 
-  for (unsigned nInd=0;nInd<m_nSigListExtraNum;nInd++)
+  for (uint32_t nInd=0;nInd<m_nSigListExtraNum;nInd++)
   {
     if (!m_sSigListExtra[nInd].bValid)
     {
@@ -714,7 +719,7 @@ void CDbSigs::DatabaseExtraStore()
 
 	bRet = BufWriteNum(pBuf,nNewExtraNum,nMaxBufBytes,nBufOffset);
 
-	for (unsigned nInd=0;nInd<m_nSigListExtraNum;nInd++) {
+  for (uint32_t nInd=0;nInd<m_nSigListExtraNum;nInd++) {
 
 		// Is it marked for deletion (from Manage dialog?)
 		if (!m_sSigListExtra[nInd].bValid) {
@@ -776,17 +781,22 @@ void CDbSigs::DatabaseExtraAdd(QString strExifMake,QString strExifModel,
 		m_sSigListExtra[m_nSigListExtraNum].strCSigRot  = strSigRot;
 		m_sSigListExtra[m_nSigListExtraNum].strXSubsamp = strCss;
 
-		if (eUserSource == ENUM_SOURCE_CAM) { // digicam
+    if (eUserSource == ENUM_SOURCE_CAM)
+    { // digicam
 			m_sSigListExtra[m_nSigListExtraNum].eEditor = ENUM_EDITOR_CAM;
       m_sSigListExtra[m_nSigListExtraNum].strMSwTrim = "";
       m_sSigListExtra[m_nSigListExtraNum].strMSwDisp = "";
-		} else if (eUserSource == ENUM_SOURCE_SW) { // software
+    }
+    else if (eUserSource == ENUM_SOURCE_SW)
+    { // software
 			m_sSigListExtra[m_nSigListExtraNum].eEditor = ENUM_EDITOR_SW;
       m_sSigListExtra[m_nSigListExtraNum].strMSwTrim = "";
 			m_sSigListExtra[m_nSigListExtraNum].strMSwDisp = strUserSoftware; // Not quite right perfect
       m_sSigListExtra[m_nSigListExtraNum].strXMake   = "";
       m_sSigListExtra[m_nSigListExtraNum].strXModel  = "";
-		} else { // user didn't know
+    }
+    else
+    { // user didn't know
 			m_sSigListExtra[m_nSigListExtraNum].eEditor = ENUM_EDITOR_UNSURE;
       m_sSigListExtra[m_nSigListExtraNum].strMSwTrim = "";
 			m_sSigListExtra[m_nSigListExtraNum].strMSwDisp = strUserSoftware; // Not quite right perfect
@@ -803,7 +813,7 @@ bool CDbSigs::SearchSignatureExactInternal(QString strMake, QString strModel, QS
 {
 	bool		bFoundExact = false;
 	bool		bDone = false;
-	unsigned	nInd = 0;
+  int32_t	nInd = 0;
 
   while (!bDone)
   {
@@ -848,13 +858,13 @@ bool CDbSigs::SearchCom(QString strCom)
 }
 
 // Returns total of built-in plus local DB
-unsigned CDbSigs::GetDBNumEntries()
+int32_t CDbSigs::GetDBNumEntries()
 {
 	return (m_nSigListNum + m_nSigListExtraNum);
 }
 
 // Returns total of built-in plus local DB
-unsigned CDbSigs::IsDBEntryUser(unsigned nInd)
+uint32_t CDbSigs::IsDBEntryUser(uint32_t nInd)
 {
   if (nInd < m_nSigListNum)
   {
@@ -867,10 +877,10 @@ unsigned CDbSigs::IsDBEntryUser(unsigned nInd)
 }
 
 // Return a ptr to the struct containing the indexed entry
-bool CDbSigs::GetDBEntry(unsigned nInd,CompSig* pEntry)
+bool CDbSigs::GetDBEntry(int32_t nInd,CompSig* pEntry)
 {
-	unsigned nIndOffset;
-	unsigned nIndMax = GetDBNumEntries();
+  uint32_t nIndOffset;
+  int32_t nIndMax = GetDBNumEntries();
   Q_ASSERT(pEntry);
   Q_ASSERT(nInd<nIndMax);
 
@@ -903,7 +913,7 @@ bool CDbSigs::GetDBEntry(unsigned nInd,CompSig* pEntry)
 	}
 }
 
-void CDbSigs::SetEntryValid(unsigned nInd,bool bValid)
+void CDbSigs::SetEntryValid(uint32_t nInd,bool bValid)
 {
 	// TODO: Bounds check
   Q_ASSERT(nInd < m_nSigListExtraNum);
@@ -911,12 +921,12 @@ void CDbSigs::SetEntryValid(unsigned nInd,bool bValid)
 }
 
 
-unsigned CDbSigs::GetIjgNum()
+uint32_t CDbSigs::GetIjgNum()
 {
 	return m_nSwIjgListNum;
 }
 
-QString CDbSigs::GetIjgEntry(unsigned nInd)
+QString CDbSigs::GetIjgEntry(uint32_t nInd)
 {
 	return m_sSwIjgList[nInd];
 }
@@ -933,7 +943,7 @@ bool CDbSigs::LookupExcMmNoMkr(QString strMake,QString strModel)
 {
 	bool bFound = false;
 	bool bDone = false;
-	unsigned nInd = 0;
+  uint32_t nInd = 0;
 
   if (strMake.size() == 0)
   {
@@ -965,7 +975,7 @@ bool CDbSigs::LookupExcMmNoMkr(QString strMake,QString strModel)
 
           // Find position of "*" if it exists in DB entry
           int pWildcard;
-					unsigned nCompareLen;
+          uint32_t nCompareLen;
           pWildcard = m_sExcMmNoMkrList[nInd].strXModel.indexOf(QChar('*'));
 
           if (pWildcard != -1)
@@ -1000,7 +1010,7 @@ bool CDbSigs::LookupExcMmIsEdit(QString strMake,QString strModel)
 {
 	bool bFound = false;
 	bool bDone = false;
-	unsigned nInd = 0;
+  uint32_t nInd = 0;
 
   if (strMake.size() == 0)
   {

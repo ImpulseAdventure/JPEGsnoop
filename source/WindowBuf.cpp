@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -21,21 +21,12 @@
 
 #include "WindowBuf.h"
 
-// Reset the main state
-//
-void CwindowBuf::Reset()
-{
-  // File handling
-  m_bBufOK = false;             // Initialize the buffer to not loaded yet
-  m_pBufFile = NULL;            // No file open yet
-}
-
 // Constructor for WindowBuf class
 // - Allocates storage for the buffer
 // - Resets state
 // - Clears all buffer overlay bytes
 //
-CwindowBuf::CwindowBuf()
+CwindowBuf::CwindowBuf(CDocLog *pDocLog) : m_pDocLog(pDocLog)
 {
   m_pBuffer = new unsigned char[MAX_BUF];
 
@@ -82,6 +73,15 @@ CwindowBuf::~CwindowBuf()
       m_psOverlay[nInd] = NULL;
     }
   }
+}
+
+// Reset the main state
+//
+void CwindowBuf::Reset()
+{
+  // File handling
+  m_bBufOK = false;             // Initialize the buffer to not loaded yet
+  m_pBufFile = NULL;            // No file open yet
 }
 
 // Accessor for m_bBufOk

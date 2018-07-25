@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -31,15 +31,15 @@
 #include <QObject>
 #include <QString>
 
-#include "DocLog.h"
 #include "ImgDecode.h"
 #include "DecodePs.h"
 #include "DecodeDicom.h"
 #include "WindowBuf.h"
-#include "snoop.h"
-#include "SnoopConfig.h"
+//#include "snoop.h"
 
-#include "DbSigs.h"
+class CDocLog;
+class CSnoopConfig;
+class CDbSigs;
 
 // Disable DICOM support until fully tested
 //#define SUPPORT_DICOM
@@ -139,7 +139,7 @@ class CjfifDecode : public QObject
 
   // Constructor & Initialization
 public:
-  CjfifDecode(CDocLog * pLog, CwindowBuf * pWBuf, CimgDecode * pImgDec);
+  CjfifDecode(CDocLog * pLog, CDbSigs *pDbSigs, CwindowBuf * pWBuf, CimgDecode * pImgDec, CSnoopConfig *pAppConfig, QObject *_parent = 0);
   ~CjfifDecode();
 
   void Reset();
@@ -151,7 +151,6 @@ public:
   // Public accesssor & mutator functions
   void GetAviMode(bool & bIsAvi, bool & bIsMjpeg);
   void SetAviMode(bool bIsAvi, bool bIsMjpeg);
-  void ImgSrcChanged();
   uint32_t GetPosEmbedStart();
   uint32_t GetPosEmbedEnd();
   void GetDecodeSummary(QString & strHash, QString & strHashRot, QString & strImgExifMake, QString & strImgExifModel,
@@ -177,6 +176,9 @@ public:
 signals:
   void updateStatus(QString statusMsg, int);
 
+public slots:
+  void ImgSrcChanged();
+
 private:
   CjfifDecode &operator = (const CjfifDecode&);
   CjfifDecode(CjfifDecode&);
@@ -190,7 +192,7 @@ private:
                   QString strDqt0, QString strDqt1, QString strDqt2, QString strDqt3,
                   QString strCss,
                   QString strSig, QString strSigRot, QString strSigThumb,
-                  QString strSigThumbRot, float fQFact0, float fQFact1, uint32_t nImgW, uint32_t nImgH,
+                  QString strSigThumbRot, double fQFact0, double fQFact1, uint32_t nImgW, uint32_t nImgH,
                   QString strExifSoftware, QString strComment, teMaker eMaker,
                   teSource eUserSource, QString strUserSoftware, QString strExtra,
                   QString strUserNotes, uint32_t nExifLandscape, uint32_t nThumbX, uint32_t nThumbY);
@@ -238,10 +240,10 @@ private:
   void GenLookupHuffMask();
 
   // Field parsing
-  bool DecodeValRational(uint32_t nPos, float &nVal);
+  bool DecodeValRational(uint32_t nPos, double &nVal);
   QString DecodeValFraction(uint32_t nPos);
   bool DecodeValGPS(uint32_t nPos, QString & strCoord);
-  bool PrintValGPS(uint32_t nCount, float fCoord1, float fCoord2, float fCoord3, QString & strCoord);
+  bool PrintValGPS(uint32_t nCount, double fCoord1, double fCoord2, double fCoord3, QString & strCoord);
   QString DecodeIccDateTime(uint32_t anVal[3]);
   QString LookupExifTag(QString strSect, uint32_t nTag, bool & bUnknown);
   CStr2 LookupMakerCanonTag(uint32_t nMainTag, uint32_t nSubTag, uint32_t nVal);
@@ -253,21 +255,22 @@ private:
   // Class variables
   // --------------------------------------
 
-  // Configuration
- //   CSnoopConfig * m_pAppConfig;
+  // Pointers
+  CDocLog *m_pLog;
+  CDbSigs *m_pDbSigs;
+  CwindowBuf *m_pWBuf;
+  CimgDecode *m_pImgDec;
+  CSnoopConfig * m_pAppConfig;
+  CDecodePs *m_pPsDec;
+  CDecodeDicom *m_pDecDicom;
+
   bool m_bVerbose;
   bool m_bOutputDB;
   bool m_bBufFakeDHT;           // Flag to redirect DHT read to AVI DHT over Buffer content
 
-  // General classes required for decoding
-  CwindowBuf *m_pWBuf;
-  CimgDecode *m_pImgDec;
-  CDecodePs *m_pPsDec;
-  CDecodeDicom *m_pDecDicom;
 
   // UI elements & log
   QMessageBox msgBox;
-  CDocLog *m_pLog;
   QStatusBar *m_pStatBar;       // Link to status bar
 
   // Constants
@@ -293,8 +296,8 @@ private:
   // Decoder state
   char m_acApp0Identifier[MAX_IDENTIFIER];      // APP0 type: JFIF, AVI1, etc.
 
-  float m_afStdQuantLumCompare[64];
-  float m_afStdQuantChrCompare[64];
+  double m_afStdQuantLumCompare[64];
+  double m_afStdQuantChrCompare[64];
 
   uint32_t m_anMaskLookup[32];
 

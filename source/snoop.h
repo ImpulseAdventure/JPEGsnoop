@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -30,7 +30,7 @@
 // - Note that when the version number is incremented, I need
 //   to also update the corresponding version numbers in the
 //   JPEGsnoop.rc resource under "Version.VS_VERSION_INFO".
-#define VERSION_STR "2.0.0 (alpha)"
+#define VERSION_STR "1.8.0"
 
 // Version number for the database signatures
 // - This version number has been provided in case I decide
@@ -103,7 +103,7 @@ enum tePreviewMode
   PREVIEW_B,
   PREVIEW_Y,
   PREVIEW_CB,
-  PREVIEW_CR,
+  PREVIEW_CR
 };
 
 enum tePreviewZoom
@@ -119,6 +119,8 @@ enum tePreviewZoom
   PRV_ZOOM_400,
   PRV_ZOOM_800,
   PRV_ZOOMEND,
+  PRV_ZOOM_IN,
+  PRV_ZOOM_OUT
 };
 
 // DB Signature modes
@@ -127,14 +129,14 @@ enum teSource
   ENUM_SOURCE_UNSET = 0,
   ENUM_SOURCE_CAM,
   ENUM_SOURCE_SW,
-  ENUM_SOURCE_UNSURE,
+  ENUM_SOURCE_UNSURE
 };
 
 enum teMaker
 {
   ENUM_MAKER_UNSET = 0,
   ENUM_MAKER_PRESENT,
-  ENUM_MAKER_NONE,
+  ENUM_MAKER_NONE
 };
 
 enum teEdited
@@ -143,14 +145,14 @@ enum teEdited
   EDITED_YES,
   EDITED_NO,
   EDITED_UNSURE,
-  EDITED_YESPROB,               // Probably edited
+  EDITED_YESPROB               // Probably edited
 };
 
 enum teDbAdd
 {
   DB_ADD_SUGGEST_UNSET = 0,
   DB_ADD_SUGGEST_CAM,
-  DB_ADD_SUGGEST_SW,
+  DB_ADD_SUGGEST_SW
 };
 
 enum teEditor
@@ -158,14 +160,14 @@ enum teEditor
   ENUM_EDITOR_UNSET = 0,
   ENUM_EDITOR_CAM,
   ENUM_EDITOR_SW,
-  ENUM_EDITOR_UNSURE,
+  ENUM_EDITOR_UNSURE
 };
 
 enum teLandscape
 {
   ENUM_LANDSCAPE_UNSET = 0,
   ENUM_LANDSCAPE_YES,
-  ENUM_LANDSCAPE_NO,
+  ENUM_LANDSCAPE_NO
 };
 
 enum teOffsetMode
@@ -175,6 +177,7 @@ enum teOffsetMode
   DEC_OFFSET_SRCH2,
   DEC_OFFSET_POS
 };
+
 
 // Define a few coach messages
 

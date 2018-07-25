@@ -8,29 +8,44 @@
 #include <QPlainTextEdit>
 #include <QPainter>
 
+class QPrinter;
+
 class SnoopConfigDialog;
-//class Q_Viewer;
+class Q_Viewer;
 class CjfifDecode;
 class CimgDecode;
 class CwindowBuf;
-
+class CDocLog;
+class CSnoopConfig;
+class CDbSigs;
 
 class MainWindow : public QMainWindow
 {
-    Q_OBJECT
+  Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+  explicit MainWindow(QWidget *parent = 0);
+  ~MainWindow();
 
-  QPlainTextEdit *doc;
-//  Q_Viewer *v;
+  QPlainTextEdit *textEdit;
+
+protected:
+  void closeEvent(QCloseEvent *e) override;
+
+signals:
+  void ImgSrcChanged();
+
+public slots:
+  void updateImage();
+  void reprocess();
 
 private slots:
   void open();
   void saveLog();
   void onConfig();
-  void Quit();
+  void filePrint();
+  void filePrintPreview();
+  void printPreview(QPrinter *);
 
 private:
   MainWindow &operator = (const MainWindow&);
@@ -39,15 +54,22 @@ private:
   void createActions(void);
   void createMenus(void);
   void enableMenus();
+  void AnalyzeFile();
   void AnalyzeFileDo();
   void AnalyzeClose();
 
+  CDocLog *m_pDocLog;
+  CDbSigs *m_pDbSigs;
+  CSnoopConfig *m_pAppConfig;
   SnoopConfigDialog *configDialog;
+  Q_Viewer *imgWindow;
 
   // Decoders and Buffers
   CjfifDecode *m_pJfifDec;
   CimgDecode *m_pImgDec;
   CwindowBuf *m_pWBuf;
+
+  QToolBar *fileToolBar;
 
   QMenu *fileMenu;
   QMenu *editMenu;
@@ -109,6 +131,7 @@ private:
   QAction *zoom400Act;
   QAction *zoom500Act;
   QActionGroup *zoomGroup;
+  QActionGroup *zoomInOutGroup;
 
   // Overlay menu
   QAction *mcuGridAct;
@@ -159,6 +182,12 @@ private:
   bool m_bFileAnalyzed;         // Have we opened and analyzed a file?
   bool m_bFileOpened;           // Is a file currently opened?
 
+  QLabel *rgbHisto;
+  QLabel *yHisto;
+
+  // Coach Messages
+  QString strLoRes;
+  QString strHiRes;
 };
 
 #endif // MAINWINDOW_H

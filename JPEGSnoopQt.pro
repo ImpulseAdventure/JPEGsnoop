@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
+QT += core gui printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -25,12 +25,11 @@ QMAKE_CXXFLAGS += -isystem /usr/include/qt5/QtGui
 QMAKE_CXXFLAGS += -isystem /usr/include/qt5/QtWidgets
 }
 
-QMAKE_CXXFLAGS += -fstrict-aliasing -Wextra -pedantic -Weffc++ -Wfloat-equal -Wswitch-default -Wcast-align -Wcast-qual -Wchar-subscripts -Wcomment -Wdisabled-optimization -Wformat-nonliteral -Wformat-security
-QMAKE_CXXFLAGS += -Wconversion -Wformat-nonliteral -Wformat-y2k -Wformat=2 -Wimport -Winit-self -Winline -Winvalid-pch -Wmissing-format-attribute -Wmissing-include-dirs -Wmissing-noreturn -Wold-style-cast
-QMAKE_CXXFLAGS += -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-enum -Wunreachable-code -Wunused -Wvariadic-macros -Wwrite-strings
-
-#CAL! Added source directory
-INCLUDEPATH += source
+QMAKE_CXXFLAGS += -fstrict-aliasing -Wextra -pedantic -Weffc++ -Wfloat-equal -Wswitch-default -Wcast-align -Wcast-qual -Wchar-subscripts -Wcomment
+QMAKE_CXXFLAGS += -Wdisabled-optimization -Wformat-nonliteral -Wformat-security -Wconversion -Wformat-nonliteral -Wformat-y2k -Wformat=2 -Wimport
+QMAKE_CXXFLAGS += -Winit-self -Winline -Winvalid-pch -Wmissing-format-attribute -Wmissing-include-dirs -Wmissing-noreturn -Wold-style-cast
+QMAKE_CXXFLAGS += -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-enum -Wunreachable-code
+QMAKE_CXXFLAGS += -Wunused -Wvariadic-macros -Wwrite-strings
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
@@ -43,46 +42,47 @@ DEFINES += QT_DEPRECATED_WARNINGS
 # You can also select to disable deprecated APIs only up to a certain version of Qt.
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
-SOURCES =  \
-    source/JfifDecode.cpp \
-    source/DbSigs.cpp \
-    source/DecodePs.cpp \
-    source/DocLog.cpp \
-    source/General.cpp \
-    source/ImgDecode.cpp \
-    source/JPEGsnoopCore.cpp \
-    source/main.cpp \
-    source/mainwindow.cpp \
-    source/Md5.cpp \
-    source/q_decodedetaildlg.cpp \
-    source/SnoopConfig.cpp \
-    source/snoopconfigdialog.cpp \
-    source/WindowBuf.cpp
-SOURCES +=
-SOURCES +=
+SOURCES =  source/main.cpp \
+    source/note.cpp \
+    source/eula.cpp
+SOURCES += source/DbSigs.cpp
+SOURCES += source/DecodePs.cpp
+SOURCES += source/DocLog.cpp
+SOURCES += source/General.cpp
+SOURCES += source/ImgDecode.cpp
+SOURCES += source/JfifDecode.cpp
+SOURCES += source/labelClick.cpp
+SOURCES += source/Md5.cpp
+SOURCES += source/SnoopConfig.cpp
+SOURCES += source/WindowBuf.cpp
+SOURCES += source/mainwindow.cpp
+SOURCES += source/q_decodedetaildlg.cpp
+SOURCES += source/snoopconfigdialog.cpp
+SOURCES += source/Viewer.cpp
 
-
-HEADERS =  \
-    source/JfifDecode.h \
-    source/DbSigs.h \
-    source/WindowBuf.h \
-    source/snoopconfigdialog.h \
-    source/SnoopConfig.h \
-    source/snoop.h \
-    source/q_decodedetaildlg.h \
-    source/Md5.h \
-    source/mainwindow.h \
-    source/JPEGsnoopCore.h \
-    source/JPEGsnoop.h \
-    source/ImgDecode.h \
-    source/General.h \
-    source/DocLog.h \
-    source/DecodePs.h \
-    source/DecodeDicom.h
-HEADERS +=
-HEADERS +=
-
+HEADERS =  source/mainwindow.h \
+    source/note.h \
+    source/eula.h
+HEADERS += source/DbSigs.h
+HEADERS += source/DecodeDicom.h
+HEADERS += source/DecodePs.h
+HEADERS += source/DocLog.h
+HEADERS += source/General.h
+HEADERS += source/ImgDecode.h
+HEADERS += source/JfifDecode.h
+HEADERS += source/labelClick.h
+HEADERS += source/Md5.h
+HEADERS += source/SnoopConfig.h
+HEADERS += source/WindowBuf.h
+HEADERS += source/q_decodedetaildlg.h
+HEADERS += source/snoop.h
+HEADERS += source/snoopconfigdialog.h
+HEADERS += source/Viewer.h
 
 FORMS += \
+    source/snoopconfigdialog.ui \
     source/q_decodedetaildlg.ui \
-    source/snoopconfigdialog.ui
+    source/note.ui \
+    source/eula.ui
+
+RESOURCES = JPEGSnoop.qrc

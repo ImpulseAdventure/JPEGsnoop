@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -37,14 +37,15 @@
 #include "DocLog.h"
 
 class QPlainTextEdit;
+class CDocLog;
 
 // For now, we only ever use MAX_BUF_WINDOW bytes, even though we
 // have allocated MAX_BUF bytes up front. I might change this
 // later. We don't want the window size to be too large as it
 // could have an impact on performance.
-#define MAX_BUF				     262144L
-#define MAX_BUF_WINDOW		 131072L
-#define MAX_BUF_WINDOW_REV 16384L  //1024L
+#define MAX_BUF				     262144
+#define MAX_BUF_WINDOW		 131072
+#define MAX_BUF_WINDOW_REV 16384  //1024L
 
 #define NUM_OVERLAYS		500
 #define MAX_OVERLAY			500     // 500 bytes
@@ -58,7 +59,7 @@ typedef struct
   bool bEn;                     // Enabled? -- not used currently
   uint32_t nStart;              // File position
   uint32_t nLen;                // MCU Length
-  quint8 anData[MAX_OVERLAY];   // Byte data
+  uint8_t anData[MAX_OVERLAY];  // Byte data
 
   // For reporting purposes:
   uint32_t nMcuX;               // Starting MCU X
@@ -73,7 +74,7 @@ typedef struct
 class CwindowBuf
 {
 public:
-  CwindowBuf();
+  CwindowBuf(class CDocLog *pDocLog);
   ~CwindowBuf();
 
 public:
@@ -114,6 +115,8 @@ private:
 
   CwindowBuf &operator = (const CwindowBuf&);
   CwindowBuf(CwindowBuf&);
+
+  CDocLog *m_pDocLog;
 
   unsigned char *m_pBuffer;
   QFile *m_pBufFile;

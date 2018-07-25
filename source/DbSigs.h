@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -31,6 +31,9 @@
 #define DB_VER_STR "03"
 
 #include "snoop.h"
+
+class CDocLog;
+class CSnoopConfig;
 
 // Signature exception structure with metadata fields
 struct CompExcMm
@@ -71,63 +74,67 @@ struct CompSig
 class CDbSigs
 {
 public:
-  CDbSigs();
+  CDbSigs(CDocLog * pLog, CSnoopConfig *pAppConfig);
   ~CDbSigs();
 
-  unsigned GetNumSigsInternal();
-  unsigned GetNumSigsExtra();
+  int32_t GetNumSigsInternal();
+  int32_t GetNumSigsExtra();
+  int32_t GetDBNumEntries();
 
-  unsigned GetDBNumEntries();
-  bool GetDBEntry(unsigned nInd, CompSig * pEntry);
-  unsigned IsDBEntryUser(unsigned nInd);
+  bool GetDBEntry(int32_t nInd, CompSig * pEntry);
+  uint32_t IsDBEntryUser(uint32_t nInd);
 
-  void SetEntryValid(unsigned nInd, bool bValid);
-
-  void DatabaseExtraClean();
-  void DatabaseExtraLoad();
-  void DatabaseExtraStore();
-
-  unsigned DatabaseExtraGetNum();
-  CompSig DatabaseExtraGet(unsigned nInd);
+  uint32_t DatabaseExtraGetNum();
+  CompSig DatabaseExtraGet(uint32_t nInd);
 
   void DatabaseExtraAdd(QString strExifMake, QString strExifModel,
                         QString strQual, QString strSig, QString strSigRot, QString strCss,
                         teSource eUserSource, QString strUserSoftware);
 
-  bool BufReadNum(quint8 * pBuf, unsigned &nOut, unsigned nMaxBytes, unsigned &nOffsetBytes);
-  bool BufReadStr(quint8 * pBuf, QString & strOut, unsigned nMaxBytes, bool bUni, unsigned &nOffsetBytes);
-  bool BufWriteNum(quint8 * pBuf, unsigned nIn, unsigned nMaxBytes, unsigned &nOffsetBytes);
-  bool BufWriteStr(quint8 * pBuf, QString strIn, unsigned nMaxBytes, bool bUni, unsigned &nOffsetBytes);
-
-  bool SearchSignatureExactInternal(QString strMake, QString strModel, QString strSig);
   bool SearchCom(QString strCom);
 
-  bool LookupExcMmNoMkr(QString strMake, QString strModel);
-  bool LookupExcMmIsEdit(QString strMake, QString strModel);
-
-  unsigned GetIjgNum();
-  QString GetIjgEntry(unsigned nInd);
+  uint32_t GetIjgNum();
+  QString GetIjgEntry(uint32_t nInd);
 
   void SetDbDir(QString strDbDir);
   void SetFirstRun(bool bFirstRun);
 
+  bool LookupExcMmNoMkr(QString strMake, QString strModel);
+  bool LookupExcMmIsEdit(QString strMake, QString strModel);
+
 private:
+  CDocLog *m_pDocLog;
+
+  void SetEntryValid(uint32_t nInd, bool bValid);
+
+  void DatabaseExtraClean();
+  void DatabaseExtraLoad();
+  void DatabaseExtraStore();
+
+  bool BufReadNum(quint8 * pBuf, uint32_t &nOut, uint32_t nMaxBytes, uint32_t &nOffsetBytes);
+  bool BufReadStr(quint8 * pBuf, QString & strOut, uint32_t nMaxBytes, bool bUni, uint32_t &nOffsetBytes);
+  bool BufWriteNum(quint8 * pBuf, uint32_t nIn, uint32_t nMaxBytes, uint32_t &nOffsetBytes);
+  bool BufWriteStr(quint8 * pBuf, QString strIn, uint32_t nMaxBytes, bool bUni, uint32_t &nOffsetBytes);
+
+  bool SearchSignatureExactInternal(QString strMake, QString strModel, QString strSig);
+
+  CSnoopConfig *m_pAppConfig;
+
   CompSig m_sSigListExtra[DBEX_ENTRIES_MAX];  // Extra entries
-  unsigned m_nSigListExtraNum;
+  int32_t m_nSigListExtraNum;
 
-  unsigned m_nSigListNum;
+  int32_t m_nSigListNum;
   static const CompSigConst m_sSigList[];       // Built-in entries
+  QList<CompSigConst>m_qSigList;
 
-  unsigned m_nExcMmNoMkrListNum;
+  int32_t m_nExcMmNoMkrListNum;
   static const CompExcMm m_sExcMmNoMkrList[];
 
-  unsigned m_nExcMmIsEditListNum;
+  int32_t m_nExcMmIsEditListNum;
   static const CompExcMm m_sExcMmIsEditList[];
 
-  unsigned m_nSwIjgListNum;
-
-
-  unsigned m_nXcomSwListNum;
+  int32_t m_nSwIjgListNum;
+  int32_t m_nXcomSwListNum;
 
   QString m_strDbDir;           // Database directory
   QStringList m_sXComSwList;

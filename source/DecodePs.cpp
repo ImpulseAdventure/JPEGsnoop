@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -22,7 +22,8 @@
 
 #include "DecodePs.h"
 #include "snoop.h"
-#include "JPEGsnoop.h"          // for m_pAppConfig get
+//#include "JPEGsnoop.h"          // for m_pAppConfig get
+#include "SnoopConfig.h"
 
 #include "WindowBuf.h"
 
@@ -267,25 +268,14 @@ struct tsBimEnum asBimEnums[] = {
   {BIM_T_ENUM_END, 0, "???"},
 };
 
-CDecodePs::CDecodePs(CwindowBuf * pWBuf, CDocLog * pLog)
+CDecodePs::CDecodePs(CwindowBuf *pWBuf, CDocLog *pLog, CSnoopConfig *pAppConfig) : m_pWBuf(pWBuf), m_pLog(pLog), m_pAppConfig(pAppConfig)
 {
-  // Save copies of class pointers
-  m_pWBuf = pWBuf;
-  m_pLog = pLog;
-
   // HACK
   // Only select a single layer to decode into the DIB
   // FIXME: Need to allow user control over this setting
   m_bDisplayLayer = false;
   m_nDisplayLayerInd = 0;
   m_bDisplayImage = true;
-
-  // Ideally this would be passed by constructor, but simply access
-  // directly for now.
-  CJPEGsnoopApp *pApp;
-
-//@@    pApp = (CJPEGsnoopApp*)AfxGetApp();
-//@@  m_pAppConfig = pApp->m_pAppConfig;
 
   Reset();
 }
@@ -313,26 +303,26 @@ CDecodePs::~CDecodePs(void)
 // RETURN:
 // - Byte from file
 //
-BYTE CDecodePs::Buf(uint32_t offset, bool bClean = false)
+uint8_t CDecodePs::Buf(uint32_t offset, bool bClean = false)
 {
   return m_pWBuf->Buf(offset, bClean);
 }
 
 // Determine if the file is a Photoshop PSD
 // If so, parse the headers. Generally want to start at start of file (nPos=0).
-bool CDecodePs::DecodePsd(uint32_t nPos, CDIB * pDibTemp, uint32_t &nWidth, uint32_t &nHeight)
+bool CDecodePs::DecodePsd(uint32_t nPos, QImage * pDibTemp, int32_t &nWidth, int32_t &nHeight)
 {
   QString strTmp;
+  QString strSig;
 
   m_bPsd = false;
-
-  QString strSig;
 
   uint32_t nVer;
 
   strSig = m_pWBuf->BufReadStrn(nPos, 4);
   nPos += 4;
   nVer = m_pWBuf->BufRdAdv2(nPos, PS_BSWAP);
+
   if((strSig == "8BPS") && (nVer == 1))
   {
     m_bPsd = true;
@@ -358,11 +348,13 @@ bool CDecodePs::DecodePsd(uint32_t nPos, CDIB * pDibTemp, uint32_t &nWidth, uint
   nHeight = sImageInfo.nImageHeight;
 
   PhotoshopParseColorModeSection(nPos, 3);
+
   if(bDecOk)
     bDecOk &= PhotoshopParseImageResourcesSection(nPos, 3);
 
   if(bDecOk)
     bDecOk &= PhotoshopParseLayerMaskInfo(nPos, 3, pDibTemp);
+
   if(bDecOk)
   {
     unsigned char *pDibBits = NULL;
@@ -386,24 +378,24 @@ bool CDecodePs::DecodePsd(uint32_t nPos, CDIB * pDibTemp, uint32_t &nWidth, uint
         // Fetch the actual pixel array
 //@@        pDibBits = (unsigned char *) (pDibTemp->GetDIBBitArray());
       }
+
+      pDibTemp = new QImage(nWidth, nHeight, QImage::Format_RGB32);
     }
 #endif
 
     bDecOk &= PhotoshopParseImageData(nPos, 3, &sImageInfo, pDibBits);
     PhotoshopParseReportFldOffset(3, "Image data decode complete:", nPos);
   }
+
   PhotoshopParseReportNote(3, "");
 
-  if(bDecOk)
-  {
-  }
-  else
+  if(!bDecOk)
   {
     m_pLog->AddLineErr("ERROR: There was a problem during decode. Aborting.");
     return false;
   }
-  return true;
 
+  return true;
 }
 
 // Locate a field ID in the constant 8BIM / Image Resource array
@@ -422,7 +414,6 @@ bool CDecodePs::FindBimRecord(uint32_t nBimId, uint32_t &nFldInd)
   uint32_t nInd = 0;
 
   bool bDone = false;
-
   bool bFound = false;
 
   while(!bDone)
@@ -454,13 +445,14 @@ bool CDecodePs::FindBimRecord(uint32_t nBimId, uint32_t &nFldInd)
       {
         nInd++;
       }
-
     }
   }
+
   if(bFound)
   {
     nFldInd = nInd;
   }
+
   return bFound;
 }
 
@@ -476,7 +468,6 @@ bool CDecodePs::LookupIptcField(uint32_t nRecord, uint32_t nDataSet, uint32_t &n
   uint32_t nInd = 0;
 
   bool bDone = false;
-
   bool bFound = false;
 
   while(!bDone)
@@ -498,10 +489,12 @@ bool CDecodePs::LookupIptcField(uint32_t nRecord, uint32_t nDataSet, uint32_t &n
       }
     }
   }
+
   if(bFound)
   {
     nFldInd = nInd;
   }
+
   return bFound;
 }
 
@@ -520,13 +513,10 @@ QString CDecodePs::DecodeIptcValue(teIptcType eIptcType, uint32_t nFldCnt, uint3
 {
   //uint32_t      nFldInd = 0;
   uint32_t nInd;
-
   uint32_t nVal;
 
   QString strField = "";
-
   QString strByte = "";
-
   QString strVal = "";
 
   switch (eIptcType)
@@ -539,29 +529,38 @@ QString CDecodePs::DecodeIptcValue(teIptcType eIptcType, uint32_t nFldCnt, uint3
       nPos += nFldCnt;
       strVal = QString("%1").arg(nVal);
       break;
+
     case IPTC_T_HEX:
       strVal = "[";
+
       for(nInd = 0; nInd < nFldCnt; nInd++)
       {
         strByte = QString("0x%1 ").arg(Buf(nPos++), 2, 16, QChar('0'));
         strVal += strByte;
       }
+
       strVal += "]";
       break;
+
     case IPTC_T_STR:
       strVal = "\"";
+
       for(nInd = 0; nInd < nFldCnt; nInd++)
       {
         strByte = QString("%1").arg(Buf(nPos++));
         strVal += strByte;
       }
+
       strVal += "\"";
       break;
+
     case IPTC_T_UNK:
       strVal = "???";
+
     default:
       break;
   }
+
   return strVal;
 }
 
@@ -571,15 +570,10 @@ QString CDecodePs::DecodeIptcValue(teIptcType eIptcType, uint32_t nFldCnt, uint3
 void CDecodePs::DecodeIptc(uint32_t &nPos, uint32_t nLen, uint32_t nIndent)
 {
   QString strIndent;
-
   QString strTmp;
-
   QString strIptcTypeName;
-
   QString strIptcField;
-
   QString strIptcVal;
-
   QString strByte;
 
   uint32_t nPosStart;
@@ -591,11 +585,13 @@ void CDecodePs::DecodeIptc(uint32_t &nPos, uint32_t nLen, uint32_t nIndent)
   strIndent = PhotoshopParseIndent(nIndent);
   nPosStart = nPos;
   bDone = true;
+
   if(nPos <= nPosStart + nLen)
   {
     // TODO: Should probably check to see if we have at least 5 bytes?
     bDone = false;
   }
+
   while(!bDone)
   {
     nTagMarker = Buf(nPos + 0);
@@ -622,10 +618,11 @@ void CDecodePs::DecodeIptc(uint32_t &nPos, uint32_t nLen, uint32_t nIndent)
       }
 
       strIptcVal = DecodeIptcValue(eIptcType, nDataFieldCnt, nPos);
-      strTmp =
-        QString("%1IPTC [%03u:%03u] %4 = %5").arg(strIndent).arg(nRecordNumber, 3, 10, QChar('0')).arg(nDataSetNumber, 3, 10,
-                                                                                                       QChar('0')).
-        arg(strIptcField).arg(strIptcVal);
+      strTmp = QString("IPTC [%1:%2] %3 = %4").arg(strIndent)
+          .arg(nRecordNumber, 3, 10, QChar('0'))
+          .arg(nDataSetNumber, 3, 10, QChar('0'))
+          .arg(strIptcField)
+          .arg(strIptcVal);
       m_pLog->AddLine(strTmp);
       nPos += nDataFieldCnt;
     }
@@ -635,17 +632,18 @@ void CDecodePs::DecodeIptc(uint32_t &nPos, uint32_t nLen, uint32_t nIndent)
       // I have seen at least one JPEG file that had an IPTC block with all zeros.
       // In this example, the TagMarker check for 0x1C would fail.
       // Since we don't know how to parse it, abort now.
-      strTmp =
-        QString("ERROR: Unknown IPTC TagMarker [0x%02X] @ 0x%08X. Skipping parsing.").arg(nTagMarker, 2, 16,
-                                                                                          QChar('0')).arg(nPos - 5, 8, 16,
-                                                                                                          QChar('0'));
+      strTmp = QString("ERROR: Unknown IPTC TagMarker [0x%1] @ 0x%2. Skipping parsing.")
+          .arg(nTagMarker, 2, 16, QChar('0'))
+          .arg(nPos - 5, 8, 16, QChar('0'));
       m_pLog->AddLineErr(strTmp);
 
 #ifdef DEBUG_LOG
       QString strDebug;
 
-      strDebug =
-        QString("## File=[%1] Block=[%2] Error=[%3]\n").arg(m_pAppConfig->strCurFname, -100).arg("PsDecode", -10).arg(strTmp);
+      strDebug = QString("## File=[%1] Block=[%2] Error=[%3]\n")
+          .arg(m_pAppConfig->strCurFname, -100)
+          .arg("PsDecode", -10)
+          .arg(strTmp);
       qDebug() << (strDebug);
 #endif
 
@@ -673,6 +671,7 @@ QString CDecodePs::PhotoshopParseIndent(uint32_t nIndent)
   {
     strIndent += "  ";
   }
+
   return strIndent;
 }
 
@@ -687,6 +686,7 @@ QString CDecodePs::PhotoshopParseGetLStrAsc(uint32_t &nPos)
   QString strVal = "";
 
   nStrLen = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
+
   if(nStrLen != 0)
   {
     strVal = m_pWBuf->BufReadStrn(nPos, nStrLen);
@@ -695,9 +695,14 @@ QString CDecodePs::PhotoshopParseGetLStrAsc(uint32_t &nPos)
   else
   {
     // 4 byte string
-    strVal = QString("%1%2%3%4").arg(Buf(nPos + 0)).arg(Buf(nPos + 1)).arg(Buf(nPos + 2)).arg(Buf(nPos + 3));
+    strVal = QString("%1%2%3%4")
+        .arg(Buf(nPos + 0))
+        .arg(Buf(nPos + 1))
+        .arg(Buf(nPos + 2))
+        .arg(Buf(nPos + 3));
     nPos += 4;
   }
+
   return strVal;
 }
 
@@ -716,7 +721,7 @@ QString CDecodePs::PhotoshopParseGetBimLStrUni(uint32_t nPos, uint32_t &nPosOffs
 
   char anStrBuf[(PS_MAX_UNICODE_STRLEN + 1) * 2];
 
-  wchar_t acStrBuf[(PS_MAX_UNICODE_STRLEN + 1)];
+//  wchar_t acStrBuf[(PS_MAX_UNICODE_STRLEN + 1)];
 
   char nChVal;
 
@@ -736,6 +741,7 @@ QString CDecodePs::PhotoshopParseGetBimLStrUni(uint32_t nPos, uint32_t &nPosOffs
     {
       nStrLenTrunc = PS_MAX_UNICODE_STRLEN;
     }
+
     for(uint32_t nInd = 0; nInd < nStrLenTrunc; nInd++)
     {
       // Reverse the order of the bytes
@@ -744,6 +750,7 @@ QString CDecodePs::PhotoshopParseGetBimLStrUni(uint32_t nPos, uint32_t &nPosOffs
       nChVal = Buf(nPos + nPosOffset + (nInd * 2) + 1);
       anStrBuf[(nInd * 2) + 0] = nChVal;
     }
+
     // TODO: Replace with call to ByteStr2Unicode()
     // Ensure it is terminated
     anStrBuf[nStrLenTrunc * 2 + 0] = 0;
@@ -754,6 +761,7 @@ QString CDecodePs::PhotoshopParseGetBimLStrUni(uint32_t nPos, uint32_t &nPosOffs
     // Copy into QString
     strVal = QString(anStrBuf);
   }
+
   // Update the file position offset
   nPosOffset += nStrLenActual * 2;
   // Return
@@ -765,11 +773,12 @@ QString CDecodePs::PhotoshopParseGetBimLStrUni(uint32_t nPos, uint32_t &nPosOffs
 void CDecodePs::PhotoshopParseReportNote(uint32_t nIndent, QString strNote)
 {
   QString strIndent;
-
   QString strLine;
 
   strIndent = PhotoshopParseIndent(nIndent);
-  strLine = QString("%1%2").arg(strIndent).arg(strNote, -50);
+  strLine = QString("%1%2")
+      .arg(strIndent)
+      .arg(strNote, -50);
   m_pLog->AddLine(strLine);
 }
 
@@ -778,14 +787,15 @@ void CDecodePs::PhotoshopParseReportNote(uint32_t nIndent, QString strNote)
 void CDecodePs::PhotoshopParseReportFldNum(uint32_t nIndent, QString strField, uint32_t nVal, QString strUnits)
 {
   QString strIndent;
-
   QString strVal;
-
   QString strLine;
 
   strIndent = PhotoshopParseIndent(nIndent);
   strVal = QString("%1").arg(nVal);
-  strLine = QString("%1%2 = %3 %4").arg(strIndent).arg(strField, -50).arg(strVal).arg(strUnits);
+  strLine = QString("%1%2 = %3 %4")
+      .arg(strIndent)
+      .arg(strField, -50)
+      .arg(strVal).arg(strUnits);
   m_pLog->AddLine(strLine);
 }
 
@@ -794,14 +804,15 @@ void CDecodePs::PhotoshopParseReportFldNum(uint32_t nIndent, QString strField, u
 void CDecodePs::PhotoshopParseReportFldBool(uint32_t nIndent, QString strField, uint32_t nVal)
 {
   QString strIndent;
-
   QString strVal;
-
   QString strLine;
 
   strIndent = PhotoshopParseIndent(nIndent);
   strVal = (nVal != 0) ? "true" : "false";
-  strLine = QString("%1%2 = %3").arg(strIndent).arg(strField, -50).arg(strVal);
+  strLine = QString("%1%2 = %3")
+      .arg(strIndent)
+      .arg(strField, -50)
+      .arg(strVal);
   m_pLog->AddLine(strLine);
 }
 
@@ -821,20 +832,14 @@ void CDecodePs::PhotoshopParseReportFldBool(uint32_t nIndent, QString strField, 
 void CDecodePs::PhotoshopParseReportFldHex(uint32_t nIndent, QString strField, uint32_t nPosStart, uint32_t nLen)
 {
   QString strIndent;
-
-  uint32_t nByte;
-
   QString strPrefix;
-
   QString strByteHex;
-
   QString strByteAsc;
-
   QString strValHex;
-
   QString strValAsc;
-
   QString strLine;
+
+  int32_t nByte;
 
   strIndent = PhotoshopParseIndent(nIndent);
 
@@ -871,6 +876,7 @@ void CDecodePs::PhotoshopParseReportFldHex(uint32_t nIndent, QString strField, u
   nLenClip = qMin(nLen, PS_HEX_TOTAL);
   strValHex = "";
   strValAsc = "";
+
   while(!bDone)
   {
     // Have we reached the end of the data we wish to display?
@@ -883,6 +889,7 @@ void CDecodePs::PhotoshopParseReportFldHex(uint32_t nIndent, QString strField, u
       // Reset the cumulative hex/ascii value strings
       strValHex = "";
       strValAsc = "";
+
       // Build the hex/ascii value strings
       for(uint32_t nInd = 0; nInd < PS_HEX_MAX_ROW; nInd++)
       {
@@ -890,6 +897,7 @@ void CDecodePs::PhotoshopParseReportFldHex(uint32_t nIndent, QString strField, u
         {
           nByte = m_pWBuf->Buf(nPosStart + nRowOffset + nInd);
           strByteHex = QString("%1 ").arg(nByte, 2, 16, QChar('0'));
+
           // Only display printable characters
           if(isprint(nByte))
           {
@@ -906,6 +914,7 @@ void CDecodePs::PhotoshopParseReportFldHex(uint32_t nIndent, QString strField, u
           strByteHex = QString("   ");
           strByteAsc = " ";
         }
+
         // Build up the strings
         strValHex += strByteHex;
         strValAsc += strByteAsc;
@@ -932,27 +941,25 @@ void CDecodePs::PhotoshopParseReportFldHex(uint32_t nIndent, QString strField, u
 QString CDecodePs::PhotoshopDispHexWord(uint32_t nVal)
 {
   QString strValHex;
-
   QString strValAsc;
+  QString strByteHex;
+  QString strByteAsc;
+  QString strLine;
 
   uint32_t nByte;
-
-  QString strByteHex;
-
-  QString strByteAsc;
-
-  QString strLine;
 
   // Reset the cumulative hex/ascii value strings
   strValHex = "";
   strValAsc = "";
+
   // Build the hex/ascii value strings
   for(uint32_t nInd = 0; nInd <= 3; nInd++)
   {
     nByte = (nVal & 0xFF000000) >> 24;
     nVal <<= 8;
 
-    strByteHex = QString("%02X ").arg(nByte, 2, 16, QChar('0'));
+    strByteHex = QString("%1 ").arg(nByte, 2, 16, QChar('0'));
+
     // Only display printable characters
     if(isprint(nByte))
     {
@@ -998,10 +1005,12 @@ QString CDecodePs::PhotoshopParseLookupEnum(teBimEnumField eEnumField, uint32_t 
         strVal = asBimEnums[nEnumInd].strVal;
       }
     }
+
     if(asBimEnums[nEnumInd].eBimEnum == BIM_T_ENUM_END)
     {
       bDone = true;
     }
+
     if(!bDone)
     {
       nEnumInd++;
@@ -1024,9 +1033,7 @@ QString CDecodePs::PhotoshopParseLookupEnum(teBimEnumField eEnumField, uint32_t 
 void CDecodePs::PhotoshopParseReportFldEnum(uint32_t nIndent, QString strField, teBimEnumField eEnumField, uint32_t nVal)
 {
   QString strIndent;
-
   QString strVal;
-
   QString strLine;
 
   strIndent = PhotoshopParseIndent(nIndent);
@@ -1042,17 +1049,19 @@ void CDecodePs::PhotoshopParseReportFldEnum(uint32_t nIndent, QString strField, 
 void CDecodePs::PhotoshopParseReportFldFixPt(uint32_t nIndent, QString strField, uint32_t nVal, QString strUnits)
 {
   QString strIndent;
-
   QString strVal;
-
   QString strLine;
 
-  float fVal;
+  double fVal;
 
-  fVal = (nVal / (float) 65536.0);
+  fVal = (static_cast<double>(nVal) / 65536.0);
   strIndent = PhotoshopParseIndent(nIndent);
   strVal = QString("%1").arg(fVal);
-  strLine = QString("%1%2 = %3 %4").arg(strIndent).arg(strField, -50).arg(strVal).arg(strUnits);
+  strLine = QString("%1%2 = %3 %4")
+      .arg(strIndent)
+      .arg(strField, -50)
+      .arg(strVal)
+      .arg(strUnits);
   m_pLog->AddLine(strLine);
 }
 
@@ -1062,9 +1071,7 @@ void CDecodePs::PhotoshopParseReportFldFixPt(uint32_t nIndent, QString strField,
 void CDecodePs::PhotoshopParseReportFldFloatPt(uint32_t nIndent, QString strField, uint32_t nVal, QString strUnits)
 {
   QString strIndent;
-
   QString strVal;
-
   QString strLine;
 
   float fVal;
@@ -1074,35 +1081,35 @@ void CDecodePs::PhotoshopParseReportFldFloatPt(uint32_t nIndent, QString strFiel
   // indicate how floating points are stored.
   union tUnionTmp
   {
-    BYTE nVal[4];
+    uint8_t nVal[4];
     float fVal;
   };
 
   tUnionTmp myUnion;
 
   // NOTE: Empirically determined the byte order for double representation
-  myUnion.nVal[3] = static_cast < BYTE > ((nVal & 0xFF000000) >> 24);
-  myUnion.nVal[2] = static_cast < BYTE > ((nVal & 0x00FF0000) >> 16);
-  myUnion.nVal[1] = static_cast < BYTE > ((nVal & 0x0000FF00) >> 8);
-  myUnion.nVal[0] = static_cast < BYTE > ((nVal & 0x000000FF) >> 0);
+  myUnion.nVal[3] = static_cast <uint8_t> ((nVal & 0xFF000000) >> 24);
+  myUnion.nVal[2] = static_cast <uint8_t> ((nVal & 0x00FF0000) >> 16);
+  myUnion.nVal[1] = static_cast <uint8_t> ((nVal & 0x0000FF00) >> 8);
+  myUnion.nVal[0] = static_cast <uint8_t> ((nVal & 0x000000FF) >> 0);
   fVal = myUnion.fVal;
 
   strIndent = PhotoshopParseIndent(nIndent);
-  strVal = QString("%1").arg(fVal,0,'f',5);
-  strLine = QString("%1%2 = %3 %4").arg(strIndent).arg(strField, -50).arg(strVal).arg(strUnits);
+  strVal = QString("%1").arg(fVal, 0, 'f', 5);
+  strLine = QString("%1%2 = %3 %4")
+      .arg(strIndent)
+      .arg(strField, -50)
+      .arg(strVal).arg(strUnits);
   m_pLog->AddLine(strLine);
 }
 
 // Display a formatted double-precision floating-point field
 // - Convert two 32-bit unsigned integers into Photoshop double-precision floating point
 // - Report the value with the field name (strField) and current indent level (nIndent)
-void CDecodePs::PhotoshopParseReportFldDoublePt(uint32_t nIndent, QString strField, uint32_t nVal1, uint32_t nVal2,
-                                                QString strUnits)
+void CDecodePs::PhotoshopParseReportFldDoublePt(uint32_t nIndent, QString strField, uint32_t nVal1, uint32_t nVal2, QString strUnits)
 {
   QString strIndent;
-
   QString strVal;
-
   QString strLine;
 
   double dVal;
@@ -1112,26 +1119,30 @@ void CDecodePs::PhotoshopParseReportFldDoublePt(uint32_t nIndent, QString strFie
   // indicate how double points are stored.
   union tUnionTmp
   {
-    BYTE nVal[8];
+    uint8_t nVal[8];
     double dVal;
   };
 
   tUnionTmp myUnion;
 
   // NOTE: Empirically determined the byte order for double representation
-  myUnion.nVal[7] = static_cast < BYTE > ((nVal1 & 0xFF000000) >> 24);
-  myUnion.nVal[6] = static_cast < BYTE > ((nVal1 & 0x00FF0000) >> 16);
-  myUnion.nVal[5] = static_cast < BYTE > ((nVal1 & 0x0000FF00) >> 8);
-  myUnion.nVal[4] = static_cast < BYTE > ((nVal1 & 0x000000FF) >> 0);
-  myUnion.nVal[3] = static_cast < BYTE > ((nVal2 & 0xFF000000) >> 24);
-  myUnion.nVal[2] = static_cast < BYTE > ((nVal2 & 0x00FF0000) >> 16);
-  myUnion.nVal[1] = static_cast < BYTE > ((nVal2 & 0x0000FF00) >> 8);
-  myUnion.nVal[0] = static_cast < BYTE > ((nVal2 & 0x000000FF) >> 0);
+  myUnion.nVal[7] = static_cast <uint8_t> ((nVal1 & 0xFF000000) >> 24);
+  myUnion.nVal[6] = static_cast <uint8_t> ((nVal1 & 0x00FF0000) >> 16);
+  myUnion.nVal[5] = static_cast <uint8_t> ((nVal1 & 0x0000FF00) >> 8);
+  myUnion.nVal[4] = static_cast <uint8_t> ((nVal1 & 0x000000FF) >> 0);
+  myUnion.nVal[3] = static_cast <uint8_t> ((nVal2 & 0xFF000000) >> 24);
+  myUnion.nVal[2] = static_cast <uint8_t> ((nVal2 & 0x00FF0000) >> 16);
+  myUnion.nVal[1] = static_cast <uint8_t> ((nVal2 & 0x0000FF00) >> 8);
+  myUnion.nVal[0] = static_cast <uint8_t> ((nVal2 & 0x000000FF) >> 0);
   dVal = myUnion.dVal;
 
   strIndent = PhotoshopParseIndent(nIndent);
-  strVal = QString("%1").arg(dVal,0,'f',5);
-  strLine = QString("%1%2 = %3 %4").arg(strIndent).arg(strField, -50).arg(strVal).arg(strUnits);
+  strVal = QString("%1").arg(dVal, 0, 'f', 5);
+  strLine = QString("%1%2 = %3 %4")
+      .arg(strIndent)
+      .arg(strField, -50)
+      .arg(strVal)
+      .arg(strUnits);
   m_pLog->AddLine(strLine);
 }
 
@@ -1140,7 +1151,6 @@ void CDecodePs::PhotoshopParseReportFldDoublePt(uint32_t nIndent, QString strFie
 void CDecodePs::PhotoshopParseReportFldStr(uint32_t nIndent, QString strField, QString strVal)
 {
   QString strIndent;
-
   QString strLine;
 
   strIndent = PhotoshopParseIndent(nIndent);
@@ -1153,7 +1163,6 @@ void CDecodePs::PhotoshopParseReportFldStr(uint32_t nIndent, QString strField, Q
 void CDecodePs::PhotoshopParseReportFldOffset(uint32_t nIndent, QString strField, uint32_t nOffset)
 {
   QString strIndent;
-
   QString strLine;
 
   strIndent = PhotoshopParseIndent(nIndent);
@@ -1412,6 +1421,7 @@ void CDecodePs::PhotoshopParseGridGuides(uint32_t &nPos, uint32_t nIndent)
 
   if(nNumGuides > 0)
     PhotoshopParseReportNote(nIndent, "-----");
+
   for(uint32_t nInd = 0; nInd < nNumGuides; nInd++)
   {
     strVal = QString("Guide #%1:").arg(nInd);
@@ -1422,6 +1432,7 @@ void CDecodePs::PhotoshopParseGridGuides(uint32_t &nPos, uint32_t nIndent)
     nVal = m_pWBuf->BufRdAdv1(nPos, PS_BSWAP);
     PhotoshopParseReportFldEnum(nIndent + 1, "Direction", BIM_T_ENUM_GRID_GUIDE_DIR, nVal);
   }
+
   if(nNumGuides > 0)
     PhotoshopParseReportNote(nIndent, "-----");
 }
@@ -1496,7 +1507,7 @@ void CDecodePs::PhotoshopParseLayerGroupInfo(uint32_t &nPos, uint32_t nIndent, u
 
   for(uint32_t nInd = 0; nInd < nNumLayers; nInd++)
   {
-    strVal = QString("Layer #%:").arg(nInd);
+    strVal = QString("Layer #%1:").arg(nInd);
     PhotoshopParseReportNote(nIndent, strVal);
     nVal = m_pWBuf->BufRdAdv2(nPos, PS_BSWAP);
     PhotoshopParseReportFldNum(nIndent + 1, "Layer Group", nVal, "");
@@ -1551,6 +1562,7 @@ void CDecodePs::PhotoshopParseLayerSelectId(uint32_t &nPos, uint32_t nIndent)
   uint32_t nNumLayer = m_pWBuf->BufRdAdv2(nPos, PS_BSWAP);
 
   PhotoshopParseReportFldNum(nIndent, "Num selected", nNumLayer, "");
+
   for(uint32_t nInd = 0; nInd < nNumLayer; nInd++)
   {
     nVal = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
@@ -1621,6 +1633,7 @@ void CDecodePs::PhotoshopParseColorModeSection(uint32_t &nPos, uint32_t nIndent)
   uint32_t nColModeLen = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
 
   PhotoshopParseReportFldNum(nIndent, "Length", nColModeLen, "");
+
   if(nColModeLen != 0)
   {
     PhotoshopParseReportFldOffset(nIndent, "Color data", nPos);
@@ -1640,7 +1653,7 @@ void CDecodePs::PhotoshopParseColorModeSection(uint32_t &nPos, uint32_t nIndent)
 // OUTPUT:
 // - nPos               = File position after reading the block
 //
-bool CDecodePs::PhotoshopParseLayerMaskInfo(uint32_t &nPos, uint32_t nIndent, CDIB * pDibTemp)
+bool CDecodePs::PhotoshopParseLayerMaskInfo(uint32_t &nPos, uint32_t nIndent, QImage *pDibTemp)
 {
   QString strVal;
 
@@ -1650,12 +1663,11 @@ bool CDecodePs::PhotoshopParseLayerMaskInfo(uint32_t &nPos, uint32_t nIndent, CD
   nIndent++;
 
   uint32_t nLayerMaskLen = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
-
   uint32_t nPosStart = nPos;
-
   uint32_t nPosEnd = nPosStart + nLayerMaskLen;
 
   PhotoshopParseReportFldNum(nIndent, "Length", nLayerMaskLen, "");
+
   if(nLayerMaskLen == 0)
   {
     return true;
@@ -1664,8 +1676,10 @@ bool CDecodePs::PhotoshopParseLayerMaskInfo(uint32_t &nPos, uint32_t nIndent, CD
   {
     if(bDecOk)
       bDecOk &= PhotoshopParseLayerInfo(nPos, nIndent, pDibTemp);
+
     if(bDecOk)
       bDecOk &= PhotoshopParseGlobalLayerMaskInfo(nPos, nIndent);
+
     if(bDecOk)
     {
       //while ((bDecOk) && (nPos < nPosEnd)) {
@@ -1694,7 +1708,7 @@ bool CDecodePs::PhotoshopParseLayerMaskInfo(uint32_t &nPos, uint32_t nIndent, CD
 // OUTPUT:
 // - nPos               = File position after reading the block
 //
-bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, CDIB * pDibTemp)
+bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, QImage * pDibTemp)
 {
   QString strVal;
 
@@ -1706,6 +1720,7 @@ bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, CDIB *
   uint32_t nLayerLen = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
 
   PhotoshopParseReportFldNum(nIndent, "Length", nLayerLen, "");
+
   if(nLayerLen == 0)
   {
     return bDecOk;
@@ -1725,12 +1740,12 @@ bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, CDIB *
   //   first alpha channel contains the transparency data for the merged result.
   // Therefore, we'll treat it as signed short and take absolute value
   uint16_t nLayerCountU = m_pWBuf->BufRdAdv2(nPos, PS_BSWAP);
-
-  signed short nLayerCountS = (signed short) nLayerCountU;
+  int16_t nLayerCountS = static_cast<int16_t>(nLayerCountU);
 
   uint32_t nLayerCount = abs(nLayerCountS);
 
   PhotoshopParseReportFldNum(nIndent, "Layer count", nLayerCount, "");
+
   if(nLayerCountU & 0x8000)
   {
     PhotoshopParseReportNote(nIndent, "First alpha channel contains transparency for merged result");
@@ -1750,6 +1765,7 @@ bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, CDIB *
 
     strTmp = QString("Layer #%1").arg(nLayerInd);
     PhotoshopParseReportFldOffset(nIndent, strTmp, nPos);
+
     if(bDecOk)
       bDecOk &= PhotoshopParseLayerRecord(nPos, nIndent, &sLayerAllInfo.psLayers[nLayerInd]);
   }
@@ -1758,13 +1774,9 @@ bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, CDIB *
   QString strLine;
 
   uint32_t nNumChans;
-
   uint32_t nWidth;
-
   uint32_t nHeight;
-
   uint32_t nPosLastLayer = 0;
-
   uint32_t nPosLastChan = 0;
 
   for(uint32_t nLayerInd = 0; (bDecOk) && (nLayerInd < nLayerCount); nLayerInd++)
@@ -1798,16 +1810,19 @@ bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, CDIB *
 #endif
 
     nPosLastLayer = nPos;
+
     for(uint32_t nChanInd = 0; (bDecOk) && (nChanInd < nNumChans); nChanInd++)
     {
       nPosLastChan = nPos;
-      strLine =
-        QString("Layer %1/%2, Channel %3/%4").arg(nLayerInd + 1, 3).arg(nLayerCount, 3).arg(nChanInd + 1, 2).arg(nNumChans, 2);
+      strLine = QString("Layer %1/%2, Channel %3/%4")
+          .arg(nLayerInd + 1, 3)
+          .arg(nLayerCount, 3)
+          .arg(nChanInd + 1, 2).arg(nNumChans, 2);
       //m_pLog->AddLine(strLine);
       PhotoshopParseReportNote(nIndent + 1, strLine);
+
       if(bDecOk)
       {
-
         // Fetch the channel ID to determine what RGB channel to map to
         // - Layer 0 (background):           0->R, 1->G, 2->B
         // - Layer n (other):      65535->A, 0->R, 1->G, 2->B
@@ -1821,21 +1836,21 @@ bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, CDIB *
 
         bDecOk &= PhotoshopParseChannelImageData(nPos, nIndent + 1, nWidth, nHeight, nChanID, pDibBits);
       }
-      strLine =
-        QString("CurPos @ 0x%1, bDecOk=%2, LastLayer @ 0x%3, LastChan @ 0x%4").arg(nPos, 8, 16,
-                                                                                   QChar('0')).arg(bDecOk).arg(nPosLastLayer, 8,
-                                                                                                               16,
-                                                                                                               QChar('0')).
-        arg(nPosLastChan, 8, 16, QChar('0'));
+
+      strLine = QString("CurPos @ 0x%1, bDecOk=%2, LastLayer @ 0x%3, LastChan @ 0x%4")
+          .arg(nPos, 8, 16, QChar('0'))
+          .arg(bDecOk).arg(nPosLastLayer, 8, 16, QChar('0'))
+          .arg(nPosLastChan, 8, 16, QChar('0'));
       //m_pLog->AddLine(strLine);
       //PhotoshopParseReportNote(nIndent+1,strLine);
     }
   }
 
   // Pad out to specified length
-  signed nPad;
+  int32_t nPad;
 
   nPad = nPosStart + nLayerLen - nPos;
+
   if(nPad > 0)
   {
     nPos += nPad;
@@ -1847,6 +1862,7 @@ bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, CDIB *
     for(uint32_t nLayerInd = 0; (nLayerInd < sLayerAllInfo.nNumLayers); nLayerInd++)
     {
       nNumChans = sLayerAllInfo.psLayers[nLayerInd].nNumChans;
+
       for(uint32_t nChanInd = 0; (bDecOk) && (nChanInd < nNumChans); nChanInd++)
       {
         delete[]sLayerAllInfo.psLayers[nLayerInd].pnChanLen;
@@ -1855,6 +1871,7 @@ bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, CDIB *
         sLayerAllInfo.psLayers[nLayerInd].pnChanID = NULL;
       }
     }
+
     delete[]sLayerAllInfo.psLayers;
     sLayerAllInfo.psLayers = NULL;
   }
@@ -1924,6 +1941,7 @@ bool CDecodePs::PhotoshopParseLayerRecord(uint32_t &nPos, uint32_t nIndent, tsLa
     pLayerInfo->pnChanID[nChanInd] = nChanID;
     pLayerInfo->pnChanLen[nChanInd] = nChanDataLen;
   }
+
   QString strBlendModeSig = m_pWBuf->BufReadStrn(nPos, 4);
 
   nPos += 4;
@@ -1943,6 +1961,7 @@ bool CDecodePs::PhotoshopParseLayerRecord(uint32_t &nPos, uint32_t nIndent, tsLa
 
   if(bDecOk)
     bDecOk &= PhotoshopParseLayerMask(nPos, nIndent);
+
   if(bDecOk)
     bDecOk &= PhotoshopParseLayerBlendingRanges(nPos, nIndent);
 
@@ -1994,7 +2013,6 @@ bool CDecodePs::PhotoshopParseLayerMask(uint32_t &nPos, uint32_t nIndent)
   }
 
   uint32_t nRectA1, nRectA2, nRectA3, nRectA4;
-
   uint32_t nRectB1, nRectB2, nRectB3, nRectB4;
 
   nRectA1 = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
@@ -2022,17 +2040,20 @@ bool CDecodePs::PhotoshopParseLayerMask(uint32_t &nPos, uint32_t nIndent)
       // User mask density, 1 byte
       nTmp = m_pWBuf->BufRdAdv1(nPos, PS_BSWAP);
     }
+
     if(nMaskParams & (1 << 1))
     {
       // User mask feather, 8 bytes, double
       nTmp = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
       nTmp = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
     }
+
     if(nMaskParams & (1 << 2))
     {
       // Vector mask density, 1 byte
       nTmp = m_pWBuf->BufRdAdv1(nPos, PS_BSWAP);
     }
+
     if(nMaskParams & (1 << 3))
     {
       // Vector mask feather, 8 bytes, double
@@ -2047,7 +2068,6 @@ bool CDecodePs::PhotoshopParseLayerMask(uint32_t &nPos, uint32_t nIndent)
     nRectB2 = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
     nRectB3 = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
     nRectB4 = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
-
   }
 
   return bDecOk;
@@ -2087,6 +2107,7 @@ bool CDecodePs::PhotoshopParseLayerBlendingRanges(uint32_t &nPos, uint32_t nInde
     m_pWBuf->BufRdAdv4(nPos, PS_BSWAP); // unsigned nSrcRng
     m_pWBuf->BufRdAdv4(nPos, PS_BSWAP); // unsigned nDstRng
   }
+
   return bDecOk;
 }
 
@@ -2115,6 +2136,7 @@ bool CDecodePs::PhotoshopParseChannelImageData(uint32_t &nPos, uint32_t nIndent,
     {
       return true;
     }
+
     // Read the line lengths into an array
     // -   LOOP [nHeight]
     // -     16-bit: row length
@@ -2124,6 +2146,7 @@ bool CDecodePs::PhotoshopParseChannelImageData(uint32_t &nPos, uint32_t nIndent,
     anRowLen = new uint32_t[nHeight];
 
     Q_ASSERT(anRowLen);
+
     for(uint32_t nRow = 0; nRow < nHeight; nRow++)
     {
       anRowLen[nRow] = m_pWBuf->BufRdAdv2(nPos, PS_BSWAP);
@@ -2133,7 +2156,6 @@ bool CDecodePs::PhotoshopParseChannelImageData(uint32_t &nPos, uint32_t nIndent,
     for(uint32_t nRow = 0; (bDecOk) && (nRow < nHeight); nRow++)
     {
       uint32_t nRowLen = anRowLen[nRow];
-
       bDecOk = PhotoshopDecodeRowRle(nPos, nWidth, nHeight, nRow, nRowLen, nChan, pDibBits);
     }                           //nRow
 
@@ -2143,7 +2165,6 @@ bool CDecodePs::PhotoshopParseChannelImageData(uint32_t &nPos, uint32_t nIndent,
       delete[]anRowLen;
       anRowLen = NULL;
     }
-
   }
   else if(nCompressionMethod == 0)
   {
@@ -2152,11 +2173,11 @@ bool CDecodePs::PhotoshopParseChannelImageData(uint32_t &nPos, uint32_t nIndent,
     {
       return true;
     }
+
     for(uint32_t nRow = 0; (bDecOk) && (nRow < nHeight); nRow++)
     {
       bDecOk = PhotoshopDecodeRowUncomp(nPos, nWidth, nHeight, nRow, nChan, pDibBits);
     }
-
   }
   else
   {
@@ -2187,10 +2208,11 @@ bool CDecodePs::PhotoshopDecodeRowUncomp(uint32_t &nPos, uint32_t nWidth, uint32
     if(pDibBits)
     {
       nRowActual = nHeight - nRow - 1;  // Need to flip vertical for DIB
-      nPixByte = (nRowActual * nWidth + nCol) * sizeof(RGBQUAD);
+      nPixByte = (nRowActual * nWidth + nCol) * sizeof(QRgb);
 
       // Assign the RGB pixel map
       pDibBits[nPixByte + 3] = 0;
+
       if(nChanID == 0)
       {
         pDibBits[nPixByte + 2] = nVal;
@@ -2208,7 +2230,6 @@ bool CDecodePs::PhotoshopDecodeRowUncomp(uint32_t &nPos, uint32_t nWidth, uint32
       }
     }                           // pDibBits
 #endif
-
   }                             // nCol
 
   return bDecOk;
@@ -2219,37 +2240,31 @@ bool CDecodePs::PhotoshopDecodeRowRle(uint32_t &nPos, uint32_t nWidth, uint32_t 
 {
   bool bDecOk = true;
 
+  char nRleRunS;
+
   unsigned char nRleRun;
-
-  signed char nRleRunS;
-
-  uint32_t nRleRunCnt;
-
   unsigned char nRleVal;
 
+  uint32_t nRleRunCnt;
   uint32_t nRowOffsetComp;      // Row offset (compressed size)
-
   uint32_t nRowOffsetDecomp;    // Row offset (decompressed size)
-
   uint32_t nRowOffsetDecompLast;
-
   uint32_t nRowActual;
-
   uint32_t nPixByte;
 
   // Decompress the row data
   nRowOffsetComp = 0;
   nRowOffsetDecomp = 0;
   nRowOffsetDecompLast = 0;
+
   while((bDecOk) && (nRowOffsetComp < nRowLen))
   {
-
     // Save the position in the row before decompressing
     // the current RLE encoded entry
     nRowOffsetDecompLast = nRowOffsetDecomp;
 
     nRleRun = m_pWBuf->BufRdAdv1(nPos, PS_BSWAP);
-    nRleRunS = (signed char) (nRleRun);
+    nRleRunS = static_cast<char>(nRleRun);
     nRowOffsetComp++;
 
     if(nRleRunS < 0)
@@ -2264,12 +2279,14 @@ bool CDecodePs::PhotoshopDecodeRowRle(uint32_t &nPos, uint32_t nWidth, uint32_t 
       if(pDibBits)
       {
         nRowActual = nHeight - nRow - 1;        // Need to flip vertical for DIB
+
         for(uint32_t nRunInd = 0; nRunInd < nRleRunCnt; nRunInd++)
         {
-          nPixByte = (nRowActual * nWidth + nRowOffsetDecompLast + nRunInd) * sizeof(RGBQUAD);
+          nPixByte = (nRowActual * nWidth + nRowOffsetDecompLast + nRunInd) * sizeof(QRgb);
 
           // Assign the RGB pixel map
           pDibBits[nPixByte + 3] = 0;
+
           if(nChanID == 0)
           {
             pDibBits[nPixByte + 2] = nRleVal;
@@ -2288,13 +2305,12 @@ bool CDecodePs::PhotoshopDecodeRowRle(uint32_t &nPos, uint32_t nWidth, uint32_t 
         }                       // nRunInd
       }                         // pDibBits
 #endif
-
     }
     else
     {
-
       // Copy the next bytes as-is
       nRleRunCnt = 1 + nRleRunS;
+
       for(uint32_t nRunInd = 0; nRunInd < nRleRunCnt; nRunInd++)
       {
         nRleVal = m_pWBuf->BufRdAdv1(nPos, PS_BSWAP);
@@ -2305,10 +2321,11 @@ bool CDecodePs::PhotoshopDecodeRowRle(uint32_t &nPos, uint32_t nWidth, uint32_t 
         if(pDibBits)
         {
           nRowActual = nHeight - nRow - 1;      // Need to flip vertical for DIB
-          nPixByte = (nRowActual * nWidth + nRowOffsetDecompLast + nRunInd) * sizeof(RGBQUAD);
+          nPixByte = (nRowActual * nWidth + nRowOffsetDecompLast + nRunInd) * sizeof(QRgb);
 
           // Assign the RGB pixel map
           pDibBits[nPixByte + 3] = 0;
+
           if(nChanID == 0)
           {
             pDibBits[nPixByte + 2] = nRleVal;
@@ -2329,7 +2346,6 @@ bool CDecodePs::PhotoshopDecodeRowRle(uint32_t &nPos, uint32_t nWidth, uint32_t 
 
       }                         // nRunInd
     }                           // nRleRunS
-
   }                             // nRowOffsetComp
 
   // Now that we've finished the row, compare the decompressed size
@@ -2366,9 +2382,7 @@ bool CDecodePs::PhotoshopParseImageData(uint32_t &nPos, uint32_t nIndent, tsImag
 
   //----
   uint32_t nWidth = psImageInfo->nImageWidth;
-
   uint32_t nHeight = psImageInfo->nImageHeight;
-
   uint32_t nNumChans = psImageInfo->nNumChans;
 
   //----
@@ -2398,6 +2412,7 @@ bool CDecodePs::PhotoshopParseImageData(uint32_t &nPos, uint32_t nIndent, tsImag
     anRowLen = new uint32_t[nNumChans * nHeight];
 
     Q_ASSERT(anRowLen);
+
     for(uint32_t nRow = 0; nRow < (nNumChans * nHeight); nRow++)
     {
       anRowLen[nRow] = m_pWBuf->BufRdAdv2(nPos, PS_BSWAP);
@@ -2420,7 +2435,6 @@ bool CDecodePs::PhotoshopParseImageData(uint32_t &nPos, uint32_t nIndent, tsImag
       delete[]anRowLen;
       anRowLen = NULL;
     }
-
   }
   else if(nCompressionMethod == 0)
   {
@@ -2434,6 +2448,7 @@ bool CDecodePs::PhotoshopParseImageData(uint32_t &nPos, uint32_t nIndent, tsImag
     {
       return true;
     }
+
     for(uint32_t nChan = 0; nChan < nNumChans; nChan++)
     {
       for(uint32_t nRow = 0; (bDecOk) && (nRow < nHeight); nRow++)
@@ -2441,7 +2456,6 @@ bool CDecodePs::PhotoshopParseImageData(uint32_t &nPos, uint32_t nIndent, tsImag
         bDecOk = PhotoshopDecodeRowUncomp(nPos, nWidth, nHeight, nRow, nChan, pDibBits);
       }                         //nRow
     }                           //nChan
-
   }
   else
   {
@@ -2451,7 +2465,6 @@ bool CDecodePs::PhotoshopParseImageData(uint32_t &nPos, uint32_t nIndent, tsImag
   }
 
   return bDecOk;
-
 }
 
 // Parse the Photoshop IRB Global layer mask info
@@ -2721,7 +2734,10 @@ bool CDecodePs::PhotoshopParseImageResourceBlock(uint32_t &nPos, uint32_t nInden
     QString strDebug;
 
     strDebug =
-      QString("## File=[%1] Block=[%2] Error=[%3]\n").arg(m_pAppConfig->strCurFname, -100).arg("PsDecode", -10).arg(strError);
+      QString("## File=[%1] Block=[%2] Error=[%3]\n")
+        .arg(m_pAppConfig->strCurFname, -100)
+        .arg("PsDecode", -10)
+        .arg(strError);
     qDebug() << (strDebug);
 #else
     Q_ASSERT(false);
@@ -2731,7 +2747,6 @@ bool CDecodePs::PhotoshopParseImageResourceBlock(uint32_t &nPos, uint32_t nInden
   }
 
   uint32_t nBimId = m_pWBuf->BufRdAdv2(nPos, PS_BSWAP);
-
   uint32_t nResNameLen = m_pWBuf->BufRdAdv1(nPos, PS_BSWAP);
 
   QString strResName = m_pWBuf->BufReadStrn(nPos, nResNameLen);
@@ -2743,12 +2758,11 @@ bool CDecodePs::PhotoshopParseImageResourceBlock(uint32_t &nPos, uint32_t nInden
   {
     nPos += 1;
   }
+
   uint32_t nBimLen = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
 
   QString strTmp;
-
   QString strBimName;
-
   QString strByte;
 
   // Lookup 8BIM defined name
@@ -2765,12 +2779,11 @@ bool CDecodePs::PhotoshopParseImageResourceBlock(uint32_t &nPos, uint32_t nInden
     strBimDefName = asBimRecords[nFldInd].strRecordName;
   }
 
-  strTmp =
-    QString("8BIM: [0x%1] Name=\"%2\" Len=[0x%3] DefinedName=\"%4\"").arg(nBimId, 4, 16, QChar('0')).arg(strBimName).arg(nBimLen,
-                                                                                                                         4, 16,
-                                                                                                                         QChar
-                                                                                                                         ('0')).
-    arg(strBimDefName);
+  strTmp = QString("8BIM: [0x%1] Name=\"%2\" Len=[0x%3] DefinedName=\"%4\"")
+      .arg(nBimId, 4, 16, QChar('0'))
+      .arg(strBimName)
+      .arg(nBimLen, 4, 16, QChar('0'))
+      .arg(strBimDefName);
   PhotoshopParseReportNote(nIndent, strTmp);
 
   nIndent++;
@@ -2779,11 +2792,9 @@ bool CDecodePs::PhotoshopParseImageResourceBlock(uint32_t &nPos, uint32_t nInden
   {
     // If length is zero, then skip this block
     PhotoshopParseReportNote(nIndent, "Length is zero. Skipping.");
-
   }
   else if(bBimKnown)
   {
-
     // Save the file pointer
     uint32_t nPosSaved;
 
@@ -2900,21 +2911,23 @@ bool CDecodePs::PhotoshopParseImageResourceBlock(uint32_t &nPos, uint32_t nInden
     if(nPos > nPosEnd + 1)
     {
       // Length mismatch detected: we read too much (versus length)
-      strTmp =
-        QString
-        ("ERROR: Parsing exceeded expected length. Stopping decode. BIM=[%s], CurPos=[0x%08X], ExpPosEnd=[0x%08X], ExpLen=[%u]").
-        arg(strBimDefName).arg(nPos, 8, 16, QChar('0')).arg(nPosEnd + 1, 8, 16, QChar('0')).arg(nBimLen);
+      strTmp = QString("ERROR: Parsing exceeded expected length. Stopping decode. BIM=[%1], CurPos=[0x%2], ExpPosEnd=[0x%3], ExpLen=[%4]")
+          .arg(strBimDefName)
+          .arg(nPos, 8, 16, QChar('0'))
+          .arg(nPosEnd + 1, 8, 16, QChar('0'))
+          .arg(nBimLen);
       m_pLog->AddLineErr(strTmp);
 #ifdef DEBUG_LOG
       QString strDebug;
 
-      strDebug =
-        QString("## File=[%1] Block=[%2] Error=[%3]\n").arg(m_pAppConfig->strCurFname, -100).arg("PsDecode", -10).arg(strTmp);
+      strDebug = QString("## File=[%1] Block=[%2] Error=[%3]\n")
+          .arg(m_pAppConfig->strCurFname, -100)
+          .arg("PsDecode", -10)
+          .arg(strTmp);
       qDebug() << (strDebug);
 #else
       Q_ASSERT(false);
 #endif
-
       // TODO: Add interactive error message here
 
       // Now we should roll-back the file position to the position indicated
@@ -2928,15 +2941,18 @@ bool CDecodePs::PhotoshopParseImageResourceBlock(uint32_t &nPos, uint32_t nInden
       // Length mismatch detected: we read too little (versus length)
       // This is generally an indication that either I haven't accurately captured the
       // specific block parsing format or else the specification is loose.
-      strTmp =
-        QString("WARNING: Parsing offset length mismatch. Current pos=[0x%1], expected end pos=[0x%2], expect length=[%3]").
-        arg(nPos, 8, 16, QChar('0')).arg(nPosEnd + 1, 8, 16, QChar('0')).arg(nBimLen);
+      strTmp = QString("WARNING: Parsing offset length mismatch. Current pos=[0x%1], expected end pos=[0x%2], expect length=[%3]")
+          .arg(nPos, 8, 16, QChar('0'))
+          .arg(nPosEnd + 1, 8, 16, QChar('0'))
+          .arg(nBimLen);
       m_pLog->AddLineWarn(strTmp);
 #ifdef DEBUG_LOG
       QString strDebug;
 
-      strDebug =
-        QString("## File=[%1] Block=[%2] Error=[%3]\n").arg(m_pAppConfig->strCurFname, -100).arg("PsDecode", -10).arg(strTmp);
+      strDebug = QString("## File=[%1] Block=[%2] Error=[%3]\n")
+          .arg(m_pAppConfig->strCurFname, -100)
+          .arg("PsDecode", -10)
+          .arg(strTmp);
       qDebug() << (strDebug);
 #endif
       return false;
@@ -3009,7 +3025,6 @@ void CDecodePs::PhotoshopParseSliceHeader(uint32_t &nPos, uint32_t nIndent, uint
     }
     if(nNumSlices > 0)
       PhotoshopParseReportNote(nIndent, "-----");
-
   }
   else if((nSliceVer == 7) || (nSliceVer == 8))
   {
@@ -3017,7 +3032,6 @@ void CDecodePs::PhotoshopParseSliceHeader(uint32_t &nPos, uint32_t nIndent, uint
     PhotoshopParseReportFldNum(nIndent, "Descriptor version", nVal, "");
     PhotoshopParseDescriptor(nPos, nIndent);
   }
-
 }
 
 // Parse the Photoshop IRB Slice Resource
@@ -3049,11 +3063,13 @@ void CDecodePs::PhotoshopParseSliceResource(uint32_t &nPos, uint32_t nIndent, ui
   uint32_t nOrigin = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
 
   PhotoshopParseReportFldNum(nIndent, "Origin", nOrigin, "");
+
   if(nOrigin == 1)
   {
     nVal = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
     PhotoshopParseReportFldNum(nIndent, "Associated Layer ID", nVal, "");
   }
+
   strVal = PhotoshopParseGetBimLStrUni(nPos, nPosOffset);
   nPos += nPosOffset;
   PhotoshopParseReportFldStr(nIndent, "Name", strVal);
@@ -3106,7 +3122,6 @@ void CDecodePs::PhotoshopParseSliceResource(uint32_t &nPos, uint32_t nIndent, ui
   // after reading the descriptor version?)
   if(nPos <= nPosEnd)
   {
-
     nVal = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
     PhotoshopParseReportFldNum(nIndent, "Descriptor version", nVal, "");
 
@@ -3128,10 +3143,8 @@ void CDecodePs::PhotoshopParseSliceResource(uint32_t &nPos, uint32_t nIndent, ui
 // NOTE:
 // - This IRB is private, so reverse-engineered and may not be per spec
 //
-void CDecodePs::PhotoshopParseJpegQuality(uint32_t &nPos, uint32_t nIndent, uint32_t nPosEnd)
+void CDecodePs::PhotoshopParseJpegQuality(uint32_t &nPos, uint32_t nIndent, uint32_t)
 {
-  nPosEnd;                      // Unreferenced param
-
   uint32_t nVal;
 
   QString strVal;
@@ -3141,6 +3154,7 @@ void CDecodePs::PhotoshopParseJpegQuality(uint32_t &nPos, uint32_t nIndent, uint
   // Save As Quality
   // Index 0: Quality level
   nVal = m_pWBuf->BufRdAdv2(nPos, PS_BSWAP);
+
   switch (nVal)
   {
     case 0xFFFD:
@@ -3183,6 +3197,7 @@ void CDecodePs::PhotoshopParseJpegQuality(uint32_t &nPos, uint32_t nIndent, uint
       m_nQualitySaveAs = 0;
       break;
   }
+
   if(m_nQualitySaveAs != 0)
   {
     PhotoshopParseReportFldNum(nIndent, "Photoshop Save As Quality", m_nQualitySaveAs, "");
@@ -3194,6 +3209,7 @@ void CDecodePs::PhotoshopParseJpegQuality(uint32_t &nPos, uint32_t nIndent, uint
 
   // Index 1: Format
   nSaveFormat = m_pWBuf->BufRdAdv2(nPos, PS_BSWAP);
+
   switch (nSaveFormat)
   {
     case 0x0000:
@@ -3209,11 +3225,13 @@ void CDecodePs::PhotoshopParseJpegQuality(uint32_t &nPos, uint32_t nIndent, uint
       strVal = "???";
       break;
   }
+
   PhotoshopParseReportFldStr(nIndent, "Photoshop Save Format", strVal);
 
   // Index 2: Progressive Scans
   // - Only meaningful if Progressive mode
   nVal = m_pWBuf->BufRdAdv2(nPos, PS_BSWAP);
+
   switch (nVal)
   {
     case 0x0001:
@@ -3229,12 +3247,12 @@ void CDecodePs::PhotoshopParseJpegQuality(uint32_t &nPos, uint32_t nIndent, uint
       strVal = "???";
       break;
   }
+
   PhotoshopParseReportFldStr(nIndent, "Photoshop Save Progressive Scans", strVal);
 
   // Not sure what this byte is for
   nVal = m_pWBuf->BufRdAdv1(nPos, PS_BSWAP);
   PhotoshopParseReportFldNum(nIndent, "???", nVal, "");
-
 }
 
 // Decode the OSType field and invoke the appropriate IRB parsing handler
@@ -3305,21 +3323,19 @@ void CDecodePs::PhotoshopParseHandleOsType(QString strOsType, uint32_t &nPos, ui
   }
   else
   {
-
 #ifdef DEBUG_LOG
     QString strError;
-
     QString strDebug;
 
     strError = QString("ERROR: Unsupported OSType [%1]").arg(strOsType);
-    strDebug =
-      QString("## File=[%-100s] Block=[%-10s] Error=[%s]\n").arg(m_pAppConfig->strCurFname, -100).arg("PsDecode",
-                                                                                                      -10).arg(strError);
+    strDebug = QString("## File=[%1] Block=[%2] Error=[%3]\n")
+        .arg(m_pAppConfig->strCurFname, -100)
+        .arg("PsDecode", -10)
+        .arg(strError);
     qDebug() << (strDebug);
 #else
     Q_ASSERT(false);
 #endif
-
   }
 }
 
@@ -3352,6 +3368,7 @@ void CDecodePs::PhotoshopParseDescriptor(uint32_t &nPos, uint32_t nIndent)
 
   if(nDescNumItems > 0)
     PhotoshopParseReportNote(nIndent, "-----");
+
   for(uint32_t nDescInd = 0; nDescInd < nDescNumItems; nDescInd++)
   {
     QString strDescInd;
@@ -3364,12 +3381,17 @@ void CDecodePs::PhotoshopParseDescriptor(uint32_t &nPos, uint32_t nIndent)
 
     QString strOsType;
 
-    strOsType = QString("%1%2%3%4").arg(Buf(nPos + 0)).arg(Buf(nPos + 1)).arg(Buf(nPos + 2)).arg(Buf(nPos + 3));
+    strOsType = QString("%1%2%3%4")
+        .arg(Buf(nPos + 0))
+        .arg(Buf(nPos + 1))
+        .arg(Buf(nPos + 2))
+        .arg(Buf(nPos + 3));
     nPos += 4;
     PhotoshopParseReportFldStr(nIndent + 1, "OSType key", strOsType);
 
     PhotoshopParseHandleOsType(strOsType, nPos, nIndent + 1);
   }
+
   if(nDescNumItems > 0)
     PhotoshopParseReportNote(nIndent, "-----");
 }
@@ -3384,7 +3406,6 @@ void CDecodePs::PhotoshopParseDescriptor(uint32_t &nPos, uint32_t nIndent)
 void CDecodePs::PhotoshopParseList(uint32_t &nPos, uint32_t nIndent)
 {
   QString strVal;
-
   QString strLine;
 
   uint32_t nNumItems = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
@@ -3393,6 +3414,7 @@ void CDecodePs::PhotoshopParseList(uint32_t &nPos, uint32_t nIndent)
 
   if(nNumItems > 0)
     PhotoshopParseReportNote(nIndent, "-----");
+
   for(uint32_t nItemInd = 0; nItemInd < nNumItems; nItemInd++)
   {
     QString strItemInd;
@@ -3402,12 +3424,17 @@ void CDecodePs::PhotoshopParseList(uint32_t &nPos, uint32_t nIndent)
 
     QString strOsType;
 
-    strOsType = QString("%1%2%3%4").arg(Buf(nPos + 0)).arg(Buf(nPos + 1)).arg(Buf(nPos + 2)).arg(Buf(nPos + 3));
+    strOsType = QString("%1%2%3%4")
+        .arg(Buf(nPos + 0))
+        .arg(Buf(nPos + 1))
+        .arg(Buf(nPos + 2))
+        .arg(Buf(nPos + 3));
     nPos += 4;
     PhotoshopParseReportFldStr(nIndent + 1, "OSType key", strVal);
 
     PhotoshopParseHandleOsType(strOsType, nPos, nIndent + 1);
   }
+
   if(nNumItems > 0)
     PhotoshopParseReportNote(nIndent, "-----");
 }
@@ -3424,7 +3451,6 @@ void CDecodePs::PhotoshopParseInteger(uint32_t &nPos, uint32_t nIndent)
   uint32_t nVal;
 
   QString strVal;
-
   QString strLine;
 
   nVal = m_pWBuf->BufRdAdv4(nPos, PS_BSWAP);
@@ -3443,7 +3469,6 @@ void CDecodePs::PhotoshopParseBool(uint32_t &nPos, uint32_t nIndent)
   uint32_t nVal;
 
   QString strVal;
-
   QString strLine;
 
   nVal = m_pWBuf->BufRdAdv1(nPos, PS_BSWAP);
@@ -3460,7 +3485,6 @@ void CDecodePs::PhotoshopParseBool(uint32_t &nPos, uint32_t nIndent)
 void CDecodePs::PhotoshopParseEnum(uint32_t &nPos, uint32_t nIndent)
 {
   QString strVal;
-
   QString strLine;
 
   strVal = PhotoshopParseGetLStrAsc(nPos);
@@ -3468,7 +3492,6 @@ void CDecodePs::PhotoshopParseEnum(uint32_t &nPos, uint32_t nIndent)
 
   strVal = PhotoshopParseGetLStrAsc(nPos);
   PhotoshopParseReportFldStr(nIndent, "Enum", strVal);
-
 }
 
 // Parse the Photoshop IRB Unicode String

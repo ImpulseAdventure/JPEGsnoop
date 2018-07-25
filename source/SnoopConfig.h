@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -39,7 +39,7 @@ class CSnoopConfig : public QObject
   Q_OBJECT
 
 public:
-  CSnoopConfig(CjfifDecode *pJfifDec);
+  CSnoopConfig(QObject *_parent = 0);
   ~CSnoopConfig(void);
 
   void UseDefaults();
@@ -51,19 +51,84 @@ public:
 
   void CoachReset();            // Reset all coach messages
 
-  QString GetDefaultDbDir();    // Public use by CSettingsDlg
+//  QString GetDefaultDbDir();    // Public use by CSettingsDlg
 
+  // Getter functions
   QString dbPath() { return strDbDir; }
+
   int32_t autoUpdateDays() { return nUpdateAutoDays; }
   int32_t maxDecodeError() { return nErrMaxDecodeScan; }
-  bool swUpdateEnabled() { return bUpdateAuto; }
+
+  uint32_t startPos() { return nPosStart; }
+
   bool autoReprocess() { return bReprocessAuto; }
+  bool clipStats() { return bStatClipEn; }
+  bool coachIdct() { return bCoachDecodeIdct; }
   bool dbSubmitNet() { return bDbSubmitNet; }
+  bool decodeAc() { return bDecodeScanImgAc; }
+  bool decodeImage() { return bDecodeScanImg; }
+  bool decodeMaker() { return bDecodeMaker; }
+  bool displayRgbHistogram() { return bHistoEn; }
+  bool displayYHistogram() { return bDumpHistoY; }
+  bool expandDht() { return bOutputDHTexpand; }
+  bool hideUnknownExif() { return bExifHideUnknown; }
+  bool interactive() { return bInteractive; }
+  bool relaxedParsing() { return bRelaxedParsing; }
+  bool scanDump() { return bOutputScanDump; }
+  bool searchSig() { return bSigSearch; }
+  bool submitDbNet() { return bDbSubmitNet; }
+  bool swUpdateEnabled() { return bUpdateAuto; }
+
+  // Setter functions
+  void setDbPath(QString path) {strDbDir = path; }
+  void setAutoUpdate(bool b) { bUpdateAuto = b; }
+  void setUpdatePeriod(int32_t days) {nUpdateAutoDays = days; }
+  void setAutoReprocess(bool b) { bReprocessAuto = b; }
+  void setOnlineDb(bool b) { bDbSubmitNet = b; }
+  void setMaxErrors(int32_t errors) { nErrMaxDecodeScan = errors; }
+  void setStartPos(uint32_t start) { nPosStart = start; }
+  void setCoachIdct(bool b) { bCoachDecodeIdct = b; }
 
   // Debug Log
   // - Used if DEBUG_LOG_OUT
   bool DebugLogCreate();
   bool DebugLogAdd(QString strText);
+
+  // Temporary status (not saved)
+  QString strCurFname;          // Current filename (Debug use only)
+
+  // TODO Move tp commandline processing
+  teOffsetMode eCmdLineOffset;  // Offset operating mode
+  unsigned long nCmdLineOffsetPos;      // File offset for DEC_OFFSET_POS mode
+
+signals:
+  void ImgSrcChanged();
+  void scanImageAc(bool);
+  void reprocess();
+
+public slots:
+  void onOptionsDhtexpand();
+  void onOptionsMakernotes();
+  void onScansegmentDecodeImage();
+  void onOptionsHideuknownexiftags();
+  void onOptionsRelaxedparsing();
+  void onOptionsSignaturesearch();
+  void onScansegmentNoidct();
+  void onScansegmentFullidct();
+  void onScansegmentHistogram();
+  void onScansegmentHistogramy();
+  void onScansegmentDump();
+
+private:
+  CSnoopConfig &operator = (const CSnoopConfig&);
+  CSnoopConfig(CSnoopConfig&);
+
+  QString GetExeDir();
+  void CreateDir(QString Path);
+  void docImageDirty();
+  void HandleAutoReprocess();
+
+  CjfifDecode *m_pJfifDec;
 
   // Interactive mode: shows message dialog box alerts
   // In non-interactive mode we suppress most alert dialogs but still
@@ -89,9 +154,6 @@ public:
 
   bool bCmdLineDoneMsg;         // Indicate to user when command-line operations complete?
 
-  teOffsetMode eCmdLineOffset;  // Offset operating mode
-  unsigned long nCmdLineOffsetPos;      // File offset for DEC_OFFSET_POS mode
-
   bool bCmdLineHelp;            // Show command list
 
   unsigned nPosStart;           // Starting decode file offset
@@ -106,7 +168,6 @@ public:
   QString strBatchLastInput;    // Last batch process input directory
   QString strBatchLastOutput;   // Last batch process output directory
   QString strBatchExtensions;   // Extension list for batch processing (eg. ".jpg,.jpeg")
-
 
   int nUpdateAutoDays;          // How many days between checks
   int nErrMaxDecodeScan;        // Max # errs to show in scan decode
@@ -130,42 +191,17 @@ public:
   bool bCoachReprocessAuto;     // Coach msg: Need to reprocess or change to auto
   bool bCoachDecodeIdct;        // Coach msg: Warn about slow AC decode / lowres DC
 
+  // Coach Message
+  QString strReprocess;
+
   // Extra config (not in registry)
   bool bDecodeColorConvert;     // Do we do color convert after scan decode?
-
-  // Temporary status (not saved)
-  QString strCurFname;          // Current filename (Debug use only)
 
   // Debug log
   // - Used if DEBUG_LOG_OUT
   bool bDebugLogEnable;
   QString strDebugLogFname;
   QTextStream *fpDebugLog;
-
-public slots:
-  void onOptionsDhtexpand();
-  void onOptionsMakernotes();
-  void onScansegmentDecodeImage();
-  void onOptionsHideuknownexiftags();
-  void onOptionsRelaxedparsing();
-  void onOptionsSignaturesearch();
-  void onScansegmentNoidct();
-  void onScansegmentFullidct();
-  void onScansegmentHistogram();
-  void onScansegmentHistogramy();
-  void onScansegmentDump();
-
-private:
-  CSnoopConfig &operator = (const CSnoopConfig&);
-  CSnoopConfig(CSnoopConfig&);
-
-  QString GetExeDir();
-  void CreateDir(QString Path);
-  void docImageDirty();
-
-//  QSettings settings;
-
-  CjfifDecode *m_pJfifDec;
 };
 
 #endif

@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -16,14 +16,15 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+#include <math.h>
+
 #include <QtDebug>
 #include <QtWidgets>
 
-#include "ImgDecode.h"
-#include "snoop.h"
-#include <math.h>
+#include "SnoopConfig.h"
 
-#include "JPEGsnoop.h"
+#include "ImgDecode.h"
+
 
 // ------------------------------------------------------
 // Settings
@@ -38,12 +39,87 @@
 // ------------------------------------------------------
 // Main code
 
+// Constructor for the Image Decoder
+// - This constructor is called only once by Document class
+CimgDecode::CimgDecode(CDocLog *pLog, CwindowBuf *pWBuf, CSnoopConfig *pAppConfig, QObject *_parent) : QObject(_parent), m_pLog(pLog), m_pWBuf(pWBuf),
+  m_pAppConfig(pAppConfig)
+{
+  m_bVerbose = false;
+
+  m_pStatBar = 0;
+  m_bDibTempReady = false;
+  m_bPreviewIsJpeg = false;
+  m_bDibHistRgbReady = false;
+  m_bDibHistYReady = false;
+
+  m_bHistEn = false;
+  m_bStatClipEn = false;        // UNUSED
+
+  m_pMcuFileMap = 0;
+  m_pBlkDcValY = 0;
+  m_pBlkDcValCb = 0;
+  m_pBlkDcValCr = 0;
+  m_pPixValY = 0;
+  m_pPixValCb = 0;
+  m_pPixValCr = 0;
+
+  // Reset the image decoding state
+  Reset();
+
+  m_nImgSizeXPartMcu = 0;
+  m_nImgSizeYPartMcu = 0;
+  m_nImgSizeX = 0;
+  m_nImgSizeY = 0;
+
+  // FIXME: Temporary hack to avoid divide-by-0 when displaying PSD (instead of JPEG)
+  m_nMcuWidth = 1;
+  m_nMcuHeight = 1;
+
+  // Detailed VLC Decode mode
+  m_bDetailVlc = false;
+  m_nDetailVlcX = 0;
+  m_nDetailVlcY = 0;
+  m_nDetailVlcLen = 1;
+
+  m_sHisto.nClipYMin = 0;
+
+  connect(this, SIGNAL(updateImage()), _parent, SLOT(updateImage()));
+
+  // Set up the IDCT lookup tables
+  PrecalcIdct();
+
+  GenLookupHuffMask();
+
+  // The following contain information that is set by
+  // the JFIF Decoder. We can only reset them here during
+  // the constructor and later by explicit call by JFIF Decoder.
+  ResetState();
+
+  // We don't call SetPreviewMode() here because it would
+  // automatically try to recalculate the view (but nothing ready yet)
+  m_nPreviewMode = PREVIEW_RGB;
+  SetPreviewZoom(false, false, true, PRV_ZOOM_12);
+
+  m_bDecodeScanAc = true;
+
+  m_bViewOverlaysMcuGrid = false;
+
+  // Start off with no YCC offsets for CalcChannelPreview()
+  SetPreviewYccOffset(0, 0, 0, 0, 0);
+
+  SetPreviewMcuInsert(0, 0, 0);
+
+//  setStyleSheet("background-color: white");
+}
+
 // Reset decoding state for start of new decode
 // Note that we don't touch the DQT or DHT entries as
 // those are set at different times versus reset (sometimes
 // before Reset() ).
 void CimgDecode::Reset()
 {
+  qDebug() << "CimgDecode::Reset() Start";
+
   DecodeRestartScanBuf(0, false);
   DecodeRestartDcState();
 
@@ -75,60 +151,57 @@ void CimgDecode::Reset()
   // If a DIB has been generated, release it!
   if(m_bDibTempReady)
   {
-//@@    m_pDibTemp.Kill();
     m_bDibTempReady = false;
   }
 
   if(m_bDibHistRgbReady)
   {
-//@@    m_pDibHistRgb.Kill();
     m_bDibHistRgbReady = false;
   }
 
   if(m_bDibHistYReady)
   {
-//@@    m_pDibHistY.Kill();
     m_bDibHistYReady = false;
   }
 
   if(m_pMcuFileMap)
   {
     delete[]m_pMcuFileMap;
-    m_pMcuFileMap = NULL;
+    m_pMcuFileMap = 0;
   }
 
   if(m_pBlkDcValY)
   {
     delete[]m_pBlkDcValY;
-    m_pBlkDcValY = NULL;
+    m_pBlkDcValY = 0;
   }
 
   if(m_pBlkDcValCb)
   {
     delete[]m_pBlkDcValCb;
-    m_pBlkDcValCb = NULL;
+    m_pBlkDcValCb = 0;
   }
 
   if(m_pBlkDcValCr)
   {
     delete[]m_pBlkDcValCr;
-    m_pBlkDcValCr = NULL;
+    m_pBlkDcValCr = 0;
   }
 
   if(m_pPixValY)
   {
     delete[]m_pPixValY;
-    m_pPixValY = NULL;
+    m_pPixValY = 0;
   }
   if(m_pPixValCb)
   {
     delete[]m_pPixValCb;
-    m_pPixValCb = NULL;
+    m_pPixValCb = 0;
   }
   if(m_pPixValCr)
   {
     delete[]m_pPixValCr;
-    m_pPixValCr = NULL;
+    m_pPixValCr = 0;
   }
 
   // Haven't warned about anything yet
@@ -145,88 +218,6 @@ void CimgDecode::Reset()
   m_nPreviewSizeY = 0;
 }
 
-// Constructor for the Image Decoder
-// - This constructor is called only once by Document class
-CimgDecode::CimgDecode(CDocLog *pLog, CwindowBuf *pWBuf, QWidget *parent) : QWidget(parent)
-{
-  // Ideally this would be passed by constructor, but simply access directly for now.
-//  CJPEGsnoopApp *pApp;
-
-//@@    pApp = (CJPEGsnoopApp*)AfxGetApp();
-//@@  m_pAppConfig = pApp->m_pAppConfig;
-//@@  Q_ASSERT(m_pAppConfig);
-
-  m_bVerbose = false;
-
-  Q_ASSERT(pLog);
-  Q_ASSERT(pWBuf);
-  m_pLog = pLog;
-  m_pWBuf = pWBuf;
-
-  m_pStatBar = NULL;
-  m_bDibTempReady = false;
-  m_bPreviewIsJpeg = false;
-  m_bDibHistRgbReady = false;
-  m_bDibHistYReady = false;
-
-  m_bHistEn = false;
-  m_bStatClipEn = false;        // UNUSED
-
-  m_pMcuFileMap = NULL;
-  m_pBlkDcValY = NULL;
-  m_pBlkDcValCb = NULL;
-  m_pBlkDcValCr = NULL;
-  m_pPixValY = NULL;
-  m_pPixValCb = NULL;
-  m_pPixValCr = NULL;
-
-  // Reset the image decoding state
-  Reset();
-
-  m_nImgSizeXPartMcu = 0;
-  m_nImgSizeYPartMcu = 0;
-  m_nImgSizeX = 0;
-  m_nImgSizeY = 0;
-
-  // FIXME: Temporary hack to avoid divide-by-0 when displaying PSD (instead of JPEG)
-  m_nMcuWidth = 1;
-  m_nMcuHeight = 1;
-
-  // Detailed VLC Decode mode
-  m_bDetailVlc = false;
-  m_nDetailVlcX = 0;
-  m_nDetailVlcY = 0;
-  m_nDetailVlcLen = 1;
-
-  m_bDecodeScanAc = true;
-
-  m_sHisto.nClipYMin = 0;
-
-  // Set up the IDCT lookup tables
-  PrecalcIdct();
-
-  GenLookupHuffMask();
-
-  // The following contain information that is set by
-  // the JFIF Decoder. We can only reset them here during
-  // the constructor and later by explicit call by JFIF Decoder.
-  ResetState();
-
-  // We don't call SetPreviewMode() here because it would
-  // automatically try to recalculate the view (but nothing ready yet)
-  m_nPreviewMode = PREVIEW_RGB;
-  SetPreviewZoom(false, false, true, PRV_ZOOM_12);
-
-  m_bViewOverlaysMcuGrid = false;
-
-  // Start off with no YCC offsets for CalcChannelPreview()
-  SetPreviewYccOffset(0, 0, 0, 0, 0);
-
-  SetPreviewMcuInsert(0, 0, 0);
-
-  setStyleSheet("background-color: white");
-}
-
 // Destructor for Image Decode class
 // - Deallocate any image-related dynamic storage
 CimgDecode::~CimgDecode()
@@ -234,42 +225,42 @@ CimgDecode::~CimgDecode()
   if(m_pMcuFileMap)
   {
     delete[]m_pMcuFileMap;
-    m_pMcuFileMap = NULL;
+    m_pMcuFileMap = 0;
   }
 
   if(m_pBlkDcValY)
   {
     delete[]m_pBlkDcValY;
-    m_pBlkDcValY = NULL;
+    m_pBlkDcValY = 0;
   }
   if(m_pBlkDcValCb)
   {
     delete[]m_pBlkDcValCb;
-    m_pBlkDcValCb = NULL;
+    m_pBlkDcValCb = 0;
   }
 
   if(m_pBlkDcValCr)
   {
     delete[]m_pBlkDcValCr;
-    m_pBlkDcValCr = NULL;
+    m_pBlkDcValCr = 0;
   }
 
   if(m_pPixValY)
   {
     delete[]m_pPixValY;
-    m_pPixValY = NULL;
+    m_pPixValY = 0;
   }
 
   if(m_pPixValCb)
   {
     delete[]m_pPixValCb;
-    m_pPixValCb = NULL;
+    m_pPixValCb = 0;
   }
 
   if(m_pPixValCr)
   {
     delete[]m_pPixValCr;
-    m_pPixValCr = NULL;
+    m_pPixValCr = 0;
   }
 }
 
@@ -307,156 +298,156 @@ void CimgDecode::ResetState()
   m_nMarkersBlkNum = 0;
 }
 
-void CimgDecode::paintEvent(QPaintEvent *)
-{
-  int32_t top = 0;
+//void CimgDecode::paintEvent(QPaintEvent *)
+//{
+//  int32_t top = 0;
 
-  QRect bRect;
+//  QRect bRect;
 
-  QStyleOption opt;
-  opt.init(this);
-  QPainter p(this);
-  style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
-  p.setFont(QFont("Courier New", 14));
+//  QStyleOption opt;
+//  opt.init(this);
+//  QPainter p(this);
+//  style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+//  p.setFont(QFont("Courier New", 14));
 
-  p.fillRect(0, 0, width(), height(), QColor(Qt::white));
+//  p.fillRect(0, 0, width(), height(), QColor(Qt::white));
 
-  if(m_bDibTempReady)
-  {
-    if(!m_bPreviewIsJpeg)
-    {
-      // For all non-JPEG images, report with simple title
-      m_strTitle = "Image";
-    }
-    else
-    {
-      m_strTitle = "Image (";
+//  if(m_bDibTempReady)
+//  {
+//    if(!m_bPreviewIsJpeg)
+//    {
+//      // For all non-JPEG images, report with simple title
+//      m_strTitle = "Image";
+//    }
+//    else
+//    {
+//      m_strTitle = "Image (";
 
-      switch (m_nPreviewMode)
-      {
-        case PREVIEW_RGB:
-          m_strTitle += "RGB";
-          break;
+//      switch (m_nPreviewMode)
+//      {
+//        case PREVIEW_RGB:
+//          m_strTitle += "RGB";
+//          break;
 
-        case PREVIEW_YCC:
-          m_strTitle += "YCC";
-          break;
+//        case PREVIEW_YCC:
+//          m_strTitle += "YCC";
+//          break;
 
-        case PREVIEW_R:
-          m_strTitle += "R";
-          break;
+//        case PREVIEW_R:
+//          m_strTitle += "R";
+//          break;
 
-        case PREVIEW_G:
-          m_strTitle += "G";
-          break;
+//        case PREVIEW_G:
+//          m_strTitle += "G";
+//          break;
 
-        case PREVIEW_B:
-          m_strTitle += "B";
-          break;
+//        case PREVIEW_B:
+//          m_strTitle += "B";
+//          break;
 
-        case PREVIEW_Y:
-          m_strTitle += "Y";
-          break;
+//        case PREVIEW_Y:
+//          m_strTitle += "Y";
+//          break;
 
-        case PREVIEW_CB:
-          m_strTitle += "Cb";
-          break;
+//        case PREVIEW_CB:
+//          m_strTitle += "Cb";
+//          break;
 
-        case PREVIEW_CR:
-          m_strTitle += "Cr";
-          break;
+//        case PREVIEW_CR:
+//          m_strTitle += "Cr";
+//          break;
 
-        default:
-          m_strTitle += "???";
-          break;
-      }
+//        default:
+//          m_strTitle += "???";
+//          break;
+//      }
 
-      if(m_bDecodeScanAc)
-      {
-        m_strTitle += ", DC+AC)";
-      }
-      else
-      {
-        m_strTitle += ", DC)";
-      }
-    }
+//      if(m_bDecodeScanAc)
+//      {
+//        m_strTitle += ", DC+AC)";
+//      }
+//      else
+//      {
+//        m_strTitle += ", DC)";
+//      }
+//    }
 
-    switch (m_nZoomMode)
-    {
-      case PRV_ZOOM_12:
-        m_strTitle += " @ 12.5% (1/8)";
-        break;
+//    switch (m_nZoomMode)
+//    {
+//      case PRV_ZOOM_12:
+//        m_strTitle += " @ 12.5% (1/8)";
+//        break;
 
-      case PRV_ZOOM_25:
-        m_strTitle += " @ 25% (1/4)";
-        break;
+//      case PRV_ZOOM_25:
+//        m_strTitle += " @ 25% (1/4)";
+//        break;
 
-      case PRV_ZOOM_50:
-        m_strTitle += " @ 50% (1/2)";
-        break;
+//      case PRV_ZOOM_50:
+//        m_strTitle += " @ 50% (1/2)";
+//        break;
 
-      case PRV_ZOOM_100:
-        m_strTitle += " @ 100% (1:1)";
-        break;
+//      case PRV_ZOOM_100:
+//        m_strTitle += " @ 100% (1:1)";
+//        break;
 
-      case PRV_ZOOM_150:
-        m_strTitle += " @ 150% (3:2)";
-        break;
+//      case PRV_ZOOM_150:
+//        m_strTitle += " @ 150% (3:2)";
+//        break;
 
-      case PRV_ZOOM_200:
-        m_strTitle += " @ 200% (2:1)";
-        break;
+//      case PRV_ZOOM_200:
+//        m_strTitle += " @ 200% (2:1)";
+//        break;
 
-      case PRV_ZOOM_300:
-        m_strTitle += " @ 300% (3:1)";
-        break;
+//      case PRV_ZOOM_300:
+//        m_strTitle += " @ 300% (3:1)";
+//        break;
 
-      case PRV_ZOOM_400:
-        m_strTitle += " @ 400% (4:1)";
-        break;
+//      case PRV_ZOOM_400:
+//        m_strTitle += " @ 400% (4:1)";
+//        break;
 
-      case PRV_ZOOM_800:
-        m_strTitle += " @ 800% (8:1)";
-        break;
+//      case PRV_ZOOM_800:
+//        m_strTitle += " @ 800% (8:1)";
+//        break;
 
-      default:
-        m_strTitle += "";
-        break;
-    }
+//      default:
+//        m_strTitle += "";
+//        break;
+//    }
 
-    // Draw image title
-    bRect = p.boundingRect(QRect(nTitleIndent, top, width(), 100), Qt::AlignLeft | Qt::AlignTop, m_strTitle);
-    p.drawText(bRect, Qt::AlignLeft | Qt::AlignCenter, m_strTitle);
+//    // Draw image title
+//    bRect = p.boundingRect(QRect(nTitleIndent, top, width(), 100), Qt::AlignLeft | Qt::AlignTop, m_strTitle);
+//    p.drawText(bRect, Qt::AlignLeft | Qt::AlignCenter, m_strTitle);
 
-    top = bRect.height() + nTitleLowGap;
-//    p.drawImage(nTitleIndent, top, m_pDibTemp->scaled(m_pDibTemp->width() / 4, m_pDibTemp->height() / 4, Qt::KeepAspectRatio));
+//    top = bRect.height() + nTitleLowGap;
+////    p.drawImage(nTitleIndent, top, m_pDibTemp->scaled(m_pDibTemp->width() / 4, m_pDibTemp->height() / 4, Qt::KeepAspectRatio));
 
-//    top += m_pDibTemp->height() + nTitleLowGap;
-    top += nTitleLowGap;
-  }
+////    top += m_pDibTemp->height() + nTitleLowGap;
+//    top += nTitleLowGap;
+//  }
 
-  if(m_bHistEn)
-  {
-    if(m_bDibHistRgbReady)
-    {
-      bRect = p.boundingRect(QRect(nTitleIndent, top, width(), 100), Qt::AlignLeft | Qt::AlignTop, "Histogram (RGB)");
-      p.drawText(bRect, Qt::AlignLeft | Qt::AlignCenter, "Histogram (RGB)");
+//  if(m_bHistEn)
+//  {
+//    if(m_bDibHistRgbReady)
+//    {
+//      bRect = p.boundingRect(QRect(nTitleIndent, top, width(), 100), Qt::AlignLeft | Qt::AlignTop, "Histogram (RGB)");
+//      p.drawText(bRect, Qt::AlignLeft | Qt::AlignCenter, "Histogram (RGB)");
       
-      top += bRect.height() + nTitleLowGap;
-      p.drawImage(nTitleIndent, top, *m_pDibHistRgb);
-      top += m_pDibHistRgb->height() + nTitleLowGap;
-    }
+//      top += bRect.height() + nTitleLowGap;
+//      p.drawImage(nTitleIndent, top, *m_pDibHistRgb);
+//      top += m_pDibHistRgb->height() + nTitleLowGap;
+//    }
 
-    if(m_bDibHistYReady)
-    {
-      bRect = p.boundingRect(QRect(nTitleIndent, top, width(), 100), Qt::AlignLeft | Qt::AlignTop, "Histogram (Y)");
-      p.drawText(bRect, Qt::AlignLeft | Qt::AlignCenter, "Histogram (Y)");
+//    if(m_bDibHistYReady)
+//    {
+//      bRect = p.boundingRect(QRect(nTitleIndent, top, width(), 100), Qt::AlignLeft | Qt::AlignTop, "Histogram (Y)");
+//      p.drawText(bRect, Qt::AlignLeft | Qt::AlignCenter, "Histogram (Y)");
 
-      top += bRect.height() + nTitleLowGap;
-      p.drawImage(nTitleIndent, top, *m_pDibHistY);
-    }
-  }
-}
+//      top += bRect.height() + nTitleLowGap;
+//      p.drawImage(nTitleIndent, top, *m_pDibHistY);
+//    }
+//  }
+//}
 
 // Save a copy of the status bar control
 //
@@ -616,7 +607,7 @@ bool CimgDecode::SetDqtEntry(uint32_t nTblDestId, uint32_t nCoeffInd, uint32_t n
     Q_ASSERT(false);
 #endif
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strTmp);
       msgBox.exec();
@@ -652,7 +643,7 @@ uint32_t CimgDecode::GetDqtEntry(uint32_t nTblDestId, uint32_t nCoeffInd)
     strTmp = QString("ERROR: GetDqtEntry(nTblDestId = %1, nCoeffInd = %2").arg(nTblDestId).arg(nCoeffInd);
     m_pLog->AddLineErr(strTmp);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strTmp);
       msgBox.exec();
@@ -696,7 +687,7 @@ bool CimgDecode::SetDqtTables(uint32_t nCompId, uint32_t nTbl)
         .arg(nTbl);
     m_pLog->AddLineErr(strTmp);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strTmp);
       msgBox.exec();
@@ -741,7 +732,7 @@ bool CimgDecode::SetDhtTables(uint32_t nCompInd, uint32_t nTblDc, uint32_t nTblA
         .arg(nTblAc);
     m_pLog->AddLineErr(strTmp);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strTmp);
       msgBox.exec();
@@ -828,12 +819,12 @@ void CimgDecode::SetSofSampFactors(uint32_t nCompInd, uint32_t nSampFactH, uint3
 // - nMode                              = Mode used in channel display (eg. NONE, RGB, YCC)
 //                        See PREVIEW_* constants
 //
-void CimgDecode::SetPreviewMode(uint32_t nMode)
+void CimgDecode::setPreviewMode(QAction *action)
 {
-  // Need to check to see if mode has changed. If so, we
-  // need to recalculate the temporary preview.
-  m_nPreviewMode = nMode;
+  // Need to check to see if mode has changed. If so, we need to recalculate the temporary preview.
+  m_nPreviewMode = action->data().toInt();
   CalcChannelPreview();
+  emit updateImage();
 }
 
 // Update any level shifts for the preview display
@@ -951,7 +942,7 @@ bool CimgDecode::SetDhtEntry(uint32_t nDestId, uint32_t nClass, uint32_t nInd, u
 
     m_pLog->AddLineErr(strTmp);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strTmp);
       msgBox.exec();
@@ -1048,7 +1039,7 @@ bool CimgDecode::SetDhtSize(uint32_t nDestId, uint32_t nClass, uint32_t nSize)
 
     m_pLog->AddLineErr(strTmp);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strTmp);
       msgBox.exec();
@@ -2823,7 +2814,7 @@ void CimgDecode::DecodeIdctCalcFixedpt()
 // - m_pPixValCb
 // - m_pPixValCr
 //
-void CimgDecode::ClrFullRes(uint32_t nWidth, uint32_t nHeight)
+void CimgDecode::ClrFullRes(int32_t nWidth, int32_t nHeight)
 {
   Q_ASSERT(m_pPixValY);
   
@@ -2834,12 +2825,12 @@ void CimgDecode::ClrFullRes(uint32_t nWidth, uint32_t nHeight)
   }
   
   // FIXME: Add in range checking here
-  memset(m_pPixValY, 0, (nWidth * nHeight * sizeof(short)));
+  memset(m_pPixValY, 0, (nWidth * nHeight * sizeof(int16_t)));
   
   if(m_nNumSosComps == NUM_CHAN_YCC)
   {
-    memset(m_pPixValCb, 0, (nWidth * nHeight * sizeof(short)));
-    memset(m_pPixValCr, 0, (nWidth * nHeight * sizeof(short)));
+    memset(m_pPixValCb, 0, (nWidth * nHeight * sizeof(int16_t)));
+    memset(m_pPixValCr, 0, (nWidth * nHeight * sizeof(int16_t)));
   }
 }
 
@@ -2861,7 +2852,7 @@ void CimgDecode::ClrFullRes(uint32_t nWidth, uint32_t nHeight)
 // PRE:
 // - DecodeIdctCalc() already called on Lum AC, and Lum DC already done
 //
-void CimgDecode::SetFullRes(uint32_t nMcuX, uint32_t nMcuY, uint32_t nComp, uint32_t nCssXInd, uint32_t nCssYInd, int16_t nDcOffset)
+void CimgDecode::SetFullRes(int32_t nMcuX, int32_t nMcuY, int32_t nComp, uint32_t nCssXInd, uint32_t nCssYInd, int16_t nDcOffset)
 {
   uint32_t nYX;
 
@@ -2869,7 +2860,7 @@ void CimgDecode::SetFullRes(uint32_t nMcuX, uint32_t nMcuY, uint32_t nComp, uint
 
   int16_t nVal;
 
-  uint32_t nChan;
+  int32_t nChan;
 
   // Convert from Component index (1-based) to Channel index (0-based)
   // Component index is direct from SOF/SOS
@@ -2881,7 +2872,10 @@ void CimgDecode::SetFullRes(uint32_t nMcuX, uint32_t nMcuY, uint32_t nComp, uint
     QString strDebug;
 
     strTmp = QString("SetFullRes() with nComp <= 0 [%1]").arg(nComp);
-    strDebug = QString("## File=[%1] Block=[%2] Error=[%3]\n").arg(m_pAppConfig->strCurFname, -100).arg("ImgDecode", -10).arg(strTmp);
+    strDebug = QString("## File=[%1] Block=[%2] Error=[%3]\n")
+        .arg(m_pAppConfig->strCurFname, -100)
+        .arg("ImgDecode", -10)
+        .arg(strTmp);
     qDebug() << strDebug;
 #else
     Q_ASSERT(false);
@@ -2891,9 +2885,9 @@ void CimgDecode::SetFullRes(uint32_t nMcuX, uint32_t nMcuY, uint32_t nComp, uint
 
   nChan = nComp - 1;
 
-  uint32_t nPixMapW = m_nBlkXMax * BLK_SZ_X;    // Width of pixel map
-  uint32_t nOffsetBlkCorner;    // Linear offset to top-left corner of block
-  uint32_t nOffsetPixCorner;    // Linear offset to top-left corner of pixel (start point for expansion)
+  int32_t nPixMapW = m_nBlkXMax * BLK_SZ_X;    // Width of pixel map
+  int32_t nOffsetBlkCorner;    // Linear offset to top-left corner of block
+  int32_t nOffsetPixCorner;    // Linear offset to top-left corner of pixel (start point for expansion)
 
   // Calculate the linear pixel offset for the top-left corner of the block in the MCU
   nOffsetBlkCorner = ((nMcuY * m_nMcuHeight) + nCssYInd * BLK_SZ_X) * nPixMapW + ((nMcuX * m_nMcuWidth) + nCssXInd * BLK_SZ_Y);
@@ -2909,8 +2903,7 @@ void CimgDecode::SetFullRes(uint32_t nMcuX, uint32_t nMcuY, uint32_t nComp, uint
     {
       nYX = nY * BLK_SZ_X + nX;
 
-      // Fetch the pixel value from the IDCT 8x8 block
-      // and perform DC level shift
+      // Fetch the pixel value from the IDCT 8x8 block and perform DC level shift
 #ifdef IDCT_FIXEDPT
       nVal = m_anIdctBlock[nYX];
       // TODO: Why do I need AC value x8 multiplier?
@@ -3145,31 +3138,33 @@ void CimgDecode::SetImageDimensions(uint32_t nWidth, uint32_t nHeight)
 //
 void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
 {
+  qDebug() << "CimgDecode::DecodeScanImg Start";
+
   QString strTmp;
 
   bool bDieOnFirstErr = false;  // FIXME: do we want this? It makes it less useful for corrupt jpegs
 
   // Fetch configuration values locally
-  bool bDumpHistoY = m_pAppConfig->bDumpHistoY;
+  bool bDumpHistoY = m_pAppConfig->displayYHistogram();
   bool bDecodeScanAc;
 
-  uint32_t nScanErrMax = m_pAppConfig->nErrMaxDecodeScan;
+  int32_t nScanErrMax = m_pAppConfig->maxDecodeError();
 
   // Add some extra speed-up in hidden mode (we don't need AC)
   if(bDisplay)
   {
-    bDecodeScanAc = m_pAppConfig->bDecodeScanImgAc;
+    bDecodeScanAc = m_pAppConfig->decodeAc();
   }
   else
   {
     bDecodeScanAc = false;
   }
   
-  m_bHistEn = m_pAppConfig->bHistoEn;
-  m_bStatClipEn = m_pAppConfig->bStatClipEn;
+  m_bHistEn = m_pAppConfig->displayRgbHistogram();
+  m_bStatClipEn = m_pAppConfig->clipStats();
 
-  uint32_t nPixMapW = 0;
-  uint32_t nPixMapH = 0;
+  int32_t nPixMapW = 0;
+  int32_t nPixMapH = 0;
 
   // Reset the decoder state variables
   Reset();
@@ -3185,8 +3180,7 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
     return;
   }
 
-  // Even though we support decoding of MAX_SOS_COMP_NS we limit
-  // the component flexibility further
+  // Even though we support decoding of MAX_SOS_COMP_NS we limit the component flexibility further
   if((m_nNumSosComps != NUM_CHAN_GRAYSCALE) && (m_nNumSosComps != NUM_CHAN_YCC))
   {
     strTmp = QString("  NOTE: Number of SOS components not supported [%1]").arg(m_nNumSosComps);
@@ -3285,12 +3279,12 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
   m_nImgSizeXPartMcu = m_nMcuXMax * m_nMcuWidth;
   m_nImgSizeYPartMcu = m_nMcuYMax * m_nMcuHeight;
 
-  // Detect incomplete (partial) MCUs and round-up the MCU
-  // ranges if necessary.
+  // Detect incomplete (partial) MCUs and round-up the MCU ranges if necessary.
   if((m_nDimX % m_nMcuWidth) != 0)
   {
     m_nMcuXMax++;
   }
+
   if((m_nDimY % m_nMcuHeight) != 0)
   {
     m_nMcuYMax++;
@@ -3313,9 +3307,9 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
   m_rectImgBase = QRect(QPoint(0, 0), QSize(m_nImgSizeX, m_nImgSizeY));
 
   // Determine decoding range
-  uint32_t nDecMcuRowStart;
-  uint32_t nDecMcuRowEnd;       // End to AC scan decoding
-  uint32_t nDecMcuRowEndFinal;  // End to general decoding
+  int32_t nDecMcuRowStart;
+  int32_t nDecMcuRowEnd;       // End to AC scan decoding
+  int32_t nDecMcuRowEndFinal;  // End to general decoding
 
   nDecMcuRowStart = 0;
   nDecMcuRowEnd = m_nMcuYMax;
@@ -3326,7 +3320,7 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
   nDecMcuRowEndFinal = qMin(nDecMcuRowEndFinal, m_nMcuYMax);
 
   // Allocate the MCU File Map
-  Q_ASSERT(m_pMcuFileMap == NULL);
+  Q_ASSERT(m_pMcuFileMap == 0);
   m_pMcuFileMap = new uint32_t[m_nMcuYMax * m_nMcuXMax];
 
   if(!m_pMcuFileMap)
@@ -3334,7 +3328,7 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
     strTmp = "ERROR: Not enough memory for Image Decoder MCU File Pos Map";
     m_pLog->AddLineErr(strTmp);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strTmp);
       msgBox.exec();
@@ -3343,17 +3337,17 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
     return;
   }
   
-  memset(m_pMcuFileMap, 0, (m_nMcuYMax * m_nMcuXMax * sizeof(uint32_t)));
+  memset(m_pMcuFileMap, 0, (m_nMcuYMax * m_nMcuXMax * sizeof(int32_t)));
 
   // Allocate the 8x8 Block DC Map
-  m_pBlkDcValY = new short[m_nBlkYMax * m_nBlkXMax];
+  m_pBlkDcValY = new int16_t[m_nBlkYMax * m_nBlkXMax];
 
   if((!m_pBlkDcValY))
   {
     strTmp = "ERROR: Not enough memory for Image Decoder Blk DC Value Map";
     m_pLog->AddLineErr(strTmp);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strTmp);
       msgBox.exec();
@@ -3364,16 +3358,15 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
 
   if(m_nNumSosComps == NUM_CHAN_YCC)
   {
-    m_pBlkDcValCb = new short[m_nBlkYMax * m_nBlkXMax];
-
-    m_pBlkDcValCr = new short[m_nBlkYMax * m_nBlkXMax];
+    m_pBlkDcValCb = new int16_t[m_nBlkYMax * m_nBlkXMax];
+    m_pBlkDcValCr = new int16_t[m_nBlkYMax * m_nBlkXMax];
 
     if((!m_pBlkDcValCb) || (!m_pBlkDcValCr))
     {
       strTmp = "ERROR: Not enough memory for Image Decoder Blk DC Value Map";
       m_pLog->AddLineErr(strTmp);
 
-      if(m_pAppConfig->bInteractive)
+      if(m_pAppConfig->interactive())
       {
         msgBox.setText(strTmp);
         msgBox.exec();
@@ -3396,23 +3389,23 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
   nPixMapW = m_nBlkXMax * BLK_SZ_X;
 
   // Ensure no image allocated yet
-  Q_ASSERT(m_pPixValY == NULL);
+  Q_ASSERT(m_pPixValY == 0);
 
   if(m_nNumSosComps == NUM_CHAN_YCC)
   {
-    Q_ASSERT(m_pPixValCb == NULL);
-    Q_ASSERT(m_pPixValCr == NULL);
+    Q_ASSERT(m_pPixValCb == 0);
+    Q_ASSERT(m_pPixValCr == 0);
   }
 
   // Allocate image (YCC)
-  m_pPixValY = new short[nPixMapW * nPixMapH];
+  m_pPixValY = new int16_t[nPixMapW * nPixMapH];
 
   if((!m_pPixValY))
   {
     strTmp = "ERROR: Not enough memory for Image Decoder Pixel YCC Value Map";
     m_pLog->AddLineErr(strTmp);
 
-    if(m_pAppConfig->bInteractive)
+    if(m_pAppConfig->interactive())
     {
       msgBox.setText(strTmp);
       msgBox.exec();
@@ -3423,16 +3416,15 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
 
   if(m_nNumSosComps == NUM_CHAN_YCC)
   {
-    m_pPixValCb = new short[nPixMapW * nPixMapH];
-
-    m_pPixValCr = new short[nPixMapW * nPixMapH];
+    m_pPixValCb = new int16_t[nPixMapW * nPixMapH];
+    m_pPixValCr = new int16_t[nPixMapW * nPixMapH];
 
     if((!m_pPixValCb) || (!m_pPixValCr))
     {
       strTmp = "ERROR: Not enough memory for Image Decoder Pixel YCC Value Map";
       m_pLog->AddLineErr(strTmp);
 
-      if(m_pAppConfig->bInteractive)
+      if(m_pAppConfig->interactive())
       {
         msgBox.setText(strTmp);
         msgBox.exec();
@@ -3448,38 +3440,9 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
     ClrFullRes(nPixMapW, nPixMapH);
   }
 
-  // -------------------------------------
-  // Allocate the device-independent bitmap (DIB)
-
-  uint8_t *pDibImgTmpBits = NULL;
-  uint32_t nDibImgRowBytes;
-
   // If a previous bitmap was created, deallocate it and start fresh
-//@@  m_pDibTemp.Kill();
   m_bDibTempReady = false;
   m_bPreviewIsJpeg = false;
-
-  // Create the DIB
-  // Although we are creating a 32-bit DIB, it should also
-  // work to run in 16- and 8-bit modes
-
-  bool bDoImage = false;        // Are we safe to set bits?
-
-  if(bDisplay)
-  {
-//@@    m_pDibTemp.CreateDIB(m_nImgSizeX, m_nImgSizeY, 32);
-    nDibImgRowBytes = m_nImgSizeX * sizeof(QRgb);
-//@@    pDibImgTmpBits = (uint8_t *) (m_pDibTemp.GetDIBBitArray());
-
-//     if(pDibImgTmpBits)
-//     {
-//       bDoImage = true;
-//     }
-//     else
-//     {
-//       // TODO: Should we be exiting here instead?
-//     }
-  }
   
   // -------------------------------------
 
@@ -3539,6 +3502,7 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
       bDqtReady = false;
     }
   }
+
   if(!bDqtReady)
   {
     m_pLog->AddLineErr("*** ERROR: Decoding image before DQT Table Selection via JFIF_SOF ***");
@@ -3547,9 +3511,8 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
   }
   else
   {
-    // FIXME: Not sure that we can always depend on the indices to appear
-    // in this order. May need another layer of indirection to get at the
-    // frame image component index.
+    // FIXME: Not sure that we can always depend on the indices to appear in this order.
+    // May need another layer of indirection to get at the frame image component index.
     nDqtTblY = m_anDqtTblSel[DQT_DEST_Y];
     nDqtTblCb = m_anDqtTblSel[DQT_DEST_CB];
     nDqtTblCr = m_anDqtTblSel[DQT_DEST_CR];
@@ -3575,7 +3538,9 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
     for(uint32_t nCompInd = 1; nCompInd <= m_nNumSosComps; nCompInd++)
     {
       if(m_anDhtTblSel[nClass][nCompInd] < 0)
+      {
         bDhtReady = false;
+      }
     }
   }
 
@@ -3586,12 +3551,15 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
   {
     // Check for DC DHT table
     nSel = m_anDhtTblSel[DHT_CLASS_DC][nCompInd];
+
     if(m_anDhtLookupSize[DHT_CLASS_DC][nSel] == 0)
     {
       bDhtReady = false;
     }
+
     // Check for AC DHT table
     nSel = m_anDhtTblSel[DHT_CLASS_AC][nCompInd];
+
     if(m_anDhtLookupSize[DHT_CLASS_AC][nSel] == 0)
     {
       bDhtReady = false;
@@ -3610,8 +3578,7 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
     // image component index and class (AC,DC).
     //
     // No need to check if a table is valid here since we have
-    // previously checked to ensure that all required tables
-    // exist.
+    // previously checked to ensure that all required tables exist.
     // NOTE: If the table has not been defined, then the index
     // will be 0xFFFFFFFF. ReadScanVal() will trap this with Q_ASSERT
     // should it ever be used.
@@ -3639,9 +3606,9 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
     else
     {
       m_pLog->AddLine("  Scan Decode Mode: No IDCT (DC only)");
-      m_pLog->
-        AddLineWarn("    NOTE: Low-resolution DC component shown. Can decode full-res with [Options->Scan Segment->Full IDCT]");
+      m_pLog-> AddLineWarn("    NOTE: Low-resolution DC component shown. Can decode full-res with [Options->Scan Segment->Full IDCT]");
     }
+
     m_pLog->AddLine("");
   }
 
@@ -3681,16 +3648,13 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
     // TODO: Trap escape keypress here (or run as thread)
 
     bool bDscRet;               // Return value for DecodeScanComp()
-
     bool bScanStop = false;
 
     for(uint32_t nMcuX = 0; (nMcuX < m_nMcuXMax) && (!bScanStop); nMcuX++)
     {
-
       // Check to see if we should expect a restart marker!
       // FIXME: Should actually check to ensure that we do in
-      // fact get a restart marker, and that it was the right
-      // one!
+      // fact get a restart marker, and that it was the right one!
       if((m_bRestartEn) && (m_nRestartMcusLeft == 0))
       {
         /*
@@ -3699,6 +3663,7 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
            m_pLog->AddLine(strTmp);
            }
          */
+
         if(m_bRestartRead)
         {
           /*
@@ -3765,8 +3730,7 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
       }
 
       // Luminance
-      // If there is chroma subsampling, then this block will have
-      //    (css_x * css_y) luminance blocks to process
+      // If there is chroma subsampling, then this block will have (css_x * css_y) luminance blocks to process
       // We store them all in an array m_anDcLumCss[]
 
       // Give separator line between MCUs
@@ -3836,7 +3800,9 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
 
 #if 1
           if(bDisplay)
+          {
             SetFullRes(nMcuX, nMcuY, nComp, nCssIndH, nCssIndV, m_nDcLum);
+          }
 #else
           // FIXME
           // Temporarily experiment with trying to handle multiple scans
@@ -3874,7 +3840,6 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
           // TODO: Counting pixels makes assumption that luminance is
           // not subsampled, so we increment by 64.
           m_nNumPixels += BLK_SZ_X * BLK_SZ_Y;
-
         }
       }
 
@@ -3971,12 +3936,11 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
             }
           }
         }
-
       }
+
 #ifdef DEBUG_YCCK
       else if(m_nNumSosComps == NUM_CHAN_YCCK)
       {
-
         // --------------------------------------------------------------
         nComp = SCAN_COMP_CB;
 
@@ -4144,10 +4108,13 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
 #ifdef DEBUG_LOG
             QString strDebug;
 
-            strTmp =
-              QString("DecodeScanImg() with nBlkXY out of range. nBlkXY=[%1] m_nBlkXMax=[%2] m_nBlkYMax=[%3]").arg(nBlkXY).
-              arg(m_nBlkXMax).arg(m_nBlkYMax);
-            strDebug = QString("## File=[%1] Block=[%2] Error=[%3]\n").arg(m_pAppConfig->strCurFname, -100).arg("ImgDecode", -10).arg(strTmp);
+            strTmp = QString("DecodeScanImg() with nBlkXY out of range. nBlkXY=[%1] m_nBlkXMax=[%2] m_nBlkYMax=[%3]")
+                .arg(nBlkXY)
+                .arg(m_nBlkXMax)
+                .arg(m_nBlkYMax);
+            strDebug = QString("## File=[%1] Block=[%2] Error=[%3]\n")
+                .arg(m_pAppConfig->strCurFname, -100)
+                .arg("ImgDecode", -10).arg(strTmp);
             qDebug() << strDebug;
 #else
             Q_ASSERT(false);
@@ -4240,7 +4207,6 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
         bScanStop = true;
       }
     }                           // nMcuX
-
   }                             // nMcuY
 
   if(!bQuiet)
@@ -4264,7 +4230,6 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
   {
     m_bDibTempReady = true;
     m_bPreviewIsJpeg = true;
-    update();
   }
 
   // ------------------------------------
@@ -4281,7 +4246,9 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
       static_cast<double>((m_anScanBuffPtr_pos[0] - m_nScanBuffPtr_first) * 8);
     strTmp = QString("    Compression Ratio: %1:1").arg(nCompressionRatio, 5, 'f', 2);
     m_pLog->AddLine(strTmp);
-    double nBitsPerPixel = static_cast<double>((m_anScanBuffPtr_pos[0] - m_nScanBuffPtr_first) * 8) /
+
+    double nBitsPerPixel =
+        static_cast<double>((m_anScanBuffPtr_pos[0] - m_nScanBuffPtr_first) * 8) /
         static_cast<double>(m_nDimX * m_nDimY);
 
     strTmp = QString("    Bits per pixel:    %1:1").arg(nBitsPerPixel, 5, 'f', 2);
@@ -4336,8 +4303,7 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
   if(bDisplay && m_bAvgYValid)
   {
     m_pLog->AddLine("  Average Pixel Luminance (Y):");
-    strTmp = QString("    Y=[%1] (range: 0..255)").arg(m_nAvgY, 3);
-    m_pLog->AddLine(strTmp);
+    m_pLog->AddLine(QString("    Y=[%1] (range: 0..255)").arg(m_nAvgY, 3));
     m_pLog->AddLine("");
   }
 
@@ -4366,7 +4332,6 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
     m_pLog->AddLine(strTmp);
     strTmp = QString("    Next position in scan buffer: Offset %1").arg(GetScanBufPos());
     m_pLog->AddLine(strTmp);
-
     m_pLog->AddLine("");
   }
 
@@ -4568,92 +4533,84 @@ void CimgDecode::DrawHistogram(bool bQuiet, bool bDumpHistoY)
   int32_t nHistoPeakVal;
   int32_t nHistoX;
   int32_t nHistoCurVal;
-//  int32_t nDibHistoRowBytes;
-//  int8_t *pDibHistoBits;
 
-//@@  m_pDibHistRgb.Kill();
   m_bDibHistRgbReady = false;
 
   m_pDibHistRgb = new QImage(HISTO_BINS * HISTO_BIN_WIDTH, 3 * HISTO_BIN_HEIGHT_MAX, QImage::Format_RGB32);
+  m_pDibHistRgb->fill(Qt::white);
 
-//@@  m_pDibHistRgb.CreateDIB(HISTO_BINS * HISTO_BIN_WIDTH, 3 * HISTO_BIN_HEIGHT_MAX, 32);
-//  nDibHistoRowBytes = (HISTO_BINS * HISTO_BIN_WIDTH) * 4;
-//@@  pDibHistoBits = (uint8_t *) (m_pDibHistRgb.GetDIBBitArray());
+  // Do peak detect first
+  // Don't want to reset peak value to 0 as otherwise we might get
+  // division by zero later when we calculate nHistoBinHeight
+  nHistoPeakVal = 1;
 
-//  m_rectHistBase = QRect(QPoint(0, 0), QSize(HISTO_BINS * HISTO_BIN_WIDTH, 3 * HISTO_BIN_HEIGHT_MAX));
-
-//  if(pDibHistoBits != NULL)
-//  {
-//    memset(pDibHistoBits, 0, 3 * HISTO_BIN_HEIGHT_MAX * nDibHistoRowBytes);
-
-    // Do peak detect first
-    // Don't want to reset peak value to 0 as otherwise we might get
-    // division by zero later when we calculate nHistoBinHeight
-    nHistoPeakVal = 1;
-
-    // Peak value is across all three channels!
-    for(int32_t nHistChan = 0; nHistChan < 3; nHistChan++)
+  // Peak value is across all three channels!
+  for(int32_t nHistChan = 0; nHistChan < 3; nHistChan++)
+  {
+    for(int32_t i = 0; i < HISTO_BINS; i++)
     {
-      for(int32_t i = 0; i < HISTO_BINS; i++)
+      if(nHistChan == 0)
       {
-        if(nHistChan == 0)
-        {
-          nHistoCurVal = m_anCcHisto_r[i];
-        }
-        else if(nHistChan == 1)
-        {
-          nHistoCurVal = m_anCcHisto_g[i];
-        }
-        else
-        {
-          nHistoCurVal = m_anCcHisto_b[i];
-        }
-
-        nHistoPeakVal = (nHistoCurVal > nHistoPeakVal) ? nHistoCurVal : nHistoPeakVal;
+        nHistoCurVal = m_anCcHisto_r[i];
       }
+      else if(nHistChan == 1)
+      {
+        nHistoCurVal = m_anCcHisto_g[i];
+      }
+      else
+      {
+        nHistoCurVal = m_anCcHisto_b[i];
+      }
+
+      nHistoPeakVal = (nHistoCurVal > nHistoPeakVal) ? nHistoCurVal : nHistoPeakVal;
+    }
+  }
+
+  for(int32_t nHistChan = 0; nHistChan < 3; nHistChan++)
+  {
+    if(nHistChan == CHAN_R)
+    {
+      rgbHistOffset = HISTO_BIN_HEIGHT_MAX - 1;
+    }
+    else if(nHistChan == CHAN_G)
+    {
+      rgbHistOffset = HISTO_BIN_HEIGHT_MAX * 2 - 1;
+    }
+    else
+    {
+      rgbHistOffset = HISTO_BIN_HEIGHT_MAX * 3 - 1;
     }
 
-    for(int32_t nHistChan = 0; nHistChan < 3; nHistChan++)
+    for(int32_t i = 0; i < HISTO_BINS; i++)
     {
-      for(int32_t i = 0; i < HISTO_BINS; i++)
+      // Calculate bin's height (max HISTO_BIN_HEIGHT_MAX)
+      if(nHistChan == CHAN_R)
       {
-        // Calculate bin's height (max HISTO_BIN_HEIGHT_MAX)
-        if(nHistChan == CHAN_R)
-        {
-          nHistoCurVal = m_anCcHisto_r[i];
-	  rgbHistOffset = HISTO_BIN_HEIGHT_MAX - 1;
-        }
-        else if(nHistChan == CHAN_G)
-        {
-          nHistoCurVal = m_anCcHisto_g[i];
-	  rgbHistOffset = HISTO_BIN_HEIGHT_MAX * 2 - 1;
-        }
-        else
-        {
-          nHistoCurVal = m_anCcHisto_b[i];
-	  rgbHistOffset = HISTO_BIN_HEIGHT_MAX * 3 - 1;
-        }
+        nHistoCurVal = m_anCcHisto_r[i];
+      }
+      else if(nHistChan == CHAN_G)
+      {
+        nHistoCurVal = m_anCcHisto_g[i];
+      }
+      else
+      {
+        nHistoCurVal = m_anCcHisto_b[i];
+      }
 
-        nHistoBinHeight = HISTO_BIN_HEIGHT_MAX * nHistoCurVal / nHistoPeakVal;
+      nHistoBinHeight = HISTO_BIN_HEIGHT_MAX * nHistoCurVal / nHistoPeakVal;
 
-        for(int32_t y = 0; y < nHistoBinHeight; y++)
+      for(int32_t y = 0; y < nHistoBinHeight; y++)
+      {
+        // Store the RGB triplet
+        for(int32_t bin_width = 0; bin_width < HISTO_BIN_WIDTH; bin_width++)
         {
-          // Store the RGB triplet
-          for(int32_t bin_width = 0; bin_width < HISTO_BIN_WIDTH; bin_width++)
-          {
-            nHistoX = (i * HISTO_BIN_WIDTH) + bin_width;
-//            nCoordY = ((2 - nHistChan) * HISTO_BIN_HEIGHT_MAX) + y;
-	    nCoordY = (rgbHistOffset - y) -1;
-            m_pDibHistRgb->setPixelColor(nHistoX, nCoordY, QColor((nHistChan == CHAN_R) ? 255 : 0, (nHistChan == CHAN_G) ? 255 : 0, (nHistChan == CHAN_B) ? 255 : 0));
-
-//            pDibHistoBits[(nHistoX * 4) + 3 + (nCoordY * nDibHistoRowBytes)] = 0;
-//            pDibHistoBits[(nHistoX * 4) + 2 + (nCoordY * nDibHistoRowBytes)] = (nHistChan == 0) ? 255 : 0;
-//            pDibHistoBits[(nHistoX * 4) + 1 + (nCoordY * nDibHistoRowBytes)] = (nHistChan == 1) ? 255 : 0;
-//            pDibHistoBits[(nHistoX * 4) + 0 + (nCoordY * nDibHistoRowBytes)] = (nHistChan == 2) ? 255 : 0;
-          }
+          nHistoX = (i * HISTO_BIN_WIDTH) + bin_width;
+          //            nCoordY = ((2 - nHistChan) * HISTO_BIN_HEIGHT_MAX) + y;
+          nCoordY = (rgbHistOffset - y) -1;
+          m_pDibHistRgb->setPixelColor(nHistoX, nCoordY, QColor((nHistChan == CHAN_R) ? 255 : 0, (nHistChan == CHAN_G) ? 255 : 0, (nHistChan == CHAN_B) ? 255 : 0));
         }
-      }  // i: 0..HISTO_BINS-1
-//    }  // nHistChan
+      }
+    }  // i: 0..HISTO_BINS-1
 
     m_bDibHistRgbReady = true;
   }
@@ -4663,65 +4620,49 @@ void CimgDecode::DrawHistogram(bool bQuiet, bool bDumpHistoY)
 
   if(bDumpHistoY)
   {
-//@@    m_pDibHistY.Kill();
-
-//@@    m_pDibHistY.CreateDIB(SUBSET_HISTO_BINS * HISTO_BIN_WIDTH, SUBSET_HISTO_BINS * HISTO_BIN_WIDTH, 32);
-//    nDibHistoRowBytes = (SUBSET_HISTO_BINS * HISTO_BIN_WIDTH) * 4;
-//@@    pDibHistoBits = (uint8_t *) (m_pDibHistY.GetDIBBitArray());
-
     m_pDibHistY = new QImage(SUBSET_HISTO_BINS * HISTO_BIN_WIDTH, HISTO_BIN_HEIGHT_MAX, QImage::Format_RGB32);
-//    m_rectHistYBase = QRect(QPoint(0, 0), QSize(SUBSET_HISTO_BINS * HISTO_BIN_WIDTH, HISTO_BIN_HEIGHT_MAX));
+    m_pDibHistY->fill(Qt::white);
 
-//    if(pDibHistoBits != NULL)
-//    {
-//      memset(pDibHistoBits, 0, HISTO_BIN_HEIGHT_MAX * nDibHistoRowBytes);
+    // Do peak detect first
+    // Don't want to reset peak value to 0 as otherwise we might get
+    // division by zero later when we calculate nHistoBinHeight
+    nHistoPeakVal = 1;
 
-      // Do peak detect first
-      // Don't want to reset peak value to 0 as otherwise we might get
-      // division by zero later when we calculate nHistoBinHeight
-      nHistoPeakVal = 1;
+    // TODO: Temporarily made quarter width - need to resample instead
 
-      // TODO: Temporarily made quarter width - need to resample instead
-
-      // Peak value
-      for(uint32_t i = 0; i < SUBSET_HISTO_BINS; i++)
-      {
-        nHistoCurVal = m_anHistoYFull[i * 4 + 0];
-        nHistoCurVal += m_anHistoYFull[i * 4 + 1];
-        nHistoCurVal += m_anHistoYFull[i * 4 + 2];
-        nHistoCurVal += m_anHistoYFull[i * 4 + 3];
-        nHistoPeakVal = (nHistoCurVal > nHistoPeakVal) ? nHistoCurVal : nHistoPeakVal;
-      }
-
-      for(int32_t i = 0; i < SUBSET_HISTO_BINS; i++)
-      {
-        // Calculate bin's height (max HISTO_BIN_HEIGHT_MAX)
-        nHistoCurVal = m_anHistoYFull[i * 4 + 0];
-        nHistoCurVal += m_anHistoYFull[i * 4 + 1];
-        nHistoCurVal += m_anHistoYFull[i * 4 + 2];
-        nHistoCurVal += m_anHistoYFull[i * 4 + 3];
-        nHistoBinHeight = HISTO_BIN_HEIGHT_MAX * nHistoCurVal / nHistoPeakVal;
-
-        for(int32_t y = 0; y < nHistoBinHeight; y++)
-        {
-          // Store the RGB triplet
-          for(int32_t bin_width = 0; bin_width < HISTO_BIN_WIDTH; bin_width++)
-          {
-            nHistoX = (i * HISTO_BIN_WIDTH) + bin_width;
-            nCoordY = (HISTO_BIN_HEIGHT_MAX - y) - 1;
-            m_pDibHistY->setPixelColor(nHistoX, nCoordY, QColor(0, 255, 255));
-//            pDibHistoBits[(nHistoX * 4) + 3 + (nCoordY * nDibHistoRowBytes)] = 0;
-//            pDibHistoBits[(nHistoX * 4) + 2 + (nCoordY * nDibHistoRowBytes)] = 255;
-//            pDibHistoBits[(nHistoX * 4) + 1 + (nCoordY * nDibHistoRowBytes)] = 255;
-//            pDibHistoBits[(nHistoX * 4) + 0 + (nCoordY * nDibHistoRowBytes)] = 0;
-          }
-        }
-      }  // i: 0..HISTO_BINS-1
-
-      m_bDibHistYReady = true;
+    // Peak value
+    for(uint32_t i = 0; i < SUBSET_HISTO_BINS; i++)
+    {
+      nHistoCurVal = m_anHistoYFull[i * 4 + 0];
+      nHistoCurVal += m_anHistoYFull[i * 4 + 1];
+      nHistoCurVal += m_anHistoYFull[i * 4 + 2];
+      nHistoCurVal += m_anHistoYFull[i * 4 + 3];
+      nHistoPeakVal = (nHistoCurVal > nHistoPeakVal) ? nHistoCurVal : nHistoPeakVal;
     }
-//  }  // bDumpHistoY
 
+    for(int32_t i = 0; i < SUBSET_HISTO_BINS; i++)
+    {
+      // Calculate bin's height (max HISTO_BIN_HEIGHT_MAX)
+      nHistoCurVal = m_anHistoYFull[i * 4 + 0];
+      nHistoCurVal += m_anHistoYFull[i * 4 + 1];
+      nHistoCurVal += m_anHistoYFull[i * 4 + 2];
+      nHistoCurVal += m_anHistoYFull[i * 4 + 3];
+      nHistoBinHeight = HISTO_BIN_HEIGHT_MAX * nHistoCurVal / nHistoPeakVal;
+
+      for(int32_t y = 0; y < nHistoBinHeight; y++)
+      {
+        // Store the RGB triplet
+        for(int32_t bin_width = 0; bin_width < HISTO_BIN_WIDTH; bin_width++)
+        {
+          nHistoX = (i * HISTO_BIN_WIDTH) + bin_width;
+          nCoordY = (HISTO_BIN_HEIGHT_MAX - y) - 1;
+          m_pDibHistY->setPixelColor(nHistoX, nCoordY, Qt::gray);
+        }
+      }
+    }  // i: 0..HISTO_BINS-1
+
+    m_bDibHistYReady = true;
+  }
 }
 
 // Reset the decoder Scan Buff (at start of scan and
@@ -4763,6 +4704,7 @@ void CimgDecode::DecodeRestartScanBuf(uint32_t nFilePos, bool bRestart)
     // ratio calculations.
     m_nScanBuffPtr_first = nFilePos;
   }
+
   m_nScanBuffPtr_start = nFilePos;
   m_nScanBuffPtr_align = 0;     // Start with byte alignment (0)
   m_anScanBuffPtr_pos[0] = 0;
@@ -4824,9 +4766,7 @@ void CimgDecode::ConvertYCCtoRGBFastFloat(PixelCc & sPix)
   // Since the following seems to preserve the multiplies and subtractions
   // we could expand this out manually
   double fConstRed = 0.299f;
-
   double fConstGreen = 0.587f;
-
   double fConstBlue = 0.114f;
 
   // r = cr * 1.402 + y;
@@ -4846,9 +4786,9 @@ void CimgDecode::ConvertYCCtoRGBFastFloat(PixelCc & sPix)
   // Limit
   //   r/g/nPreclipB -> r/g/b
   //CapRgbRange(nMcuX,nMcuY,sPix);
-  sPix.nFinalR = (nValR < 0) ? 0 : (nValR > 255) ? 255 : (uint8_t) nValR;
-  sPix.nFinalG = (nValG < 0) ? 0 : (nValG > 255) ? 255 : (uint8_t) nValG;
-  sPix.nFinalB = (nValB < 0) ? 0 : (nValB > 255) ? 255 : (uint8_t) nValB;
+  sPix.nFinalR = (nValR < 0) ? 0 : (nValR > 255) ? 255 : static_cast<uint8_t>(nValR);
+  sPix.nFinalG = (nValG < 0) ? 0 : (nValG > 255) ? 255 : static_cast<uint8_t>(nValG);
+  sPix.nFinalB = (nValB < 0) ? 0 : (nValB > 255) ? 255 : static_cast<uint8_t>(nValB);
 }
 
 // Color conversion from YCC to RGB
@@ -5428,9 +5368,9 @@ void CimgDecode::CapRgbRange(uint32_t nMcuX, uint32_t nMcuY, PixelCc & sPix)
   }
 
   // Now convert to byteui
-  sPix.nFinalR = (uint8_t) nLimitR;
-  sPix.nFinalG = (uint8_t) nLimitG;
-  sPix.nFinalB = (uint8_t) nLimitB;
+  sPix.nFinalR = static_cast<uint8_t>(nLimitR);
+  sPix.nFinalG = static_cast<uint8_t>(nLimitG);
+  sPix.nFinalB = static_cast<uint8_t>(nLimitB);
 }
 
 // Recalcs the full image based on the original YCC pixmap
@@ -5507,8 +5447,6 @@ void CimgDecode::CalcChannelPreviewFull(QRect *, uint8_t *pTmp)
 
   uint32_t nMcuShiftInd = m_nPreviewShiftMcuY * (m_nImgSizeX / m_nMcuWidth) + m_nPreviewShiftMcuX;
 
-  m_pDibTemp = new QImage(m_nImgSizeX, m_nImgSizeY, QImage::Format_RGB32);
-
   SetStatusText("Color conversion...");
 
   if(m_bDetailVlc)
@@ -5522,6 +5460,8 @@ void CimgDecode::CalcChannelPreviewFull(QRect *, uint8_t *pTmp)
 
   // Determine pixel count
   nNumPixels = (nRngY2 - nRngY1 + 1) * (nRngX2 - nRngX1 + 1);
+
+  m_pDibTemp = new QImage(m_nImgSizeX, m_nImgSizeY, QImage::Format_RGB32);
 
   // Step through the image
   for(int32_t nPixY = nRngY1; nPixY < nRngY2; nPixY++)
@@ -5635,12 +5575,8 @@ void CimgDecode::CalcChannelPreviewFull(QRect *, uint8_t *pTmp)
       // Perform any channel filtering if enabled
       ChannelExtract(m_nPreviewMode, sPixSrc, sPixDst);
 
-      m_pDibTemp->setPixelColor(nPixX, nPixY, QColor(sPixDst.nFinalR, sPixDst.nFinalG, sPixDst.nFinalB));
       // Assign the RGB pixel map
-//      pTmp[nPixByte + 3] = 0;
-//      pTmp[nPixByte + 2] = sPixDst.nFinalR;
-//      pTmp[nPixByte + 1] = sPixDst.nFinalG;
-//      pTmp[nPixByte + 0] = sPixDst.nFinalB;
+      m_pDibTemp->setPixelColor(nPixX, nPixY, QColor(sPixDst.nFinalR, sPixDst.nFinalG, sPixDst.nFinalB));
     }                           // x
   }                             // y
 
@@ -5782,7 +5718,7 @@ void CimgDecode::SetDetailVlc(bool bDetail, uint32_t nX, uint32_t nY, uint32_t n
 // - pMapCb                             = Pointer to pixel map for Cb component
 // - pMapCr                             = Pointer to pixel map for Cr component
 //
-void CimgDecode::GetPixMapPtrs(short *&pMapY, short *&pMapCb, short *&pMapCr)
+void CimgDecode::GetPixMapPtrs(int16_t *&pMapY, int16_t *&pMapCb, int16_t *&pMapCr)
 {
   Q_ASSERT(m_pPixValY);
   Q_ASSERT(m_pPixValCb);
@@ -5811,14 +5747,14 @@ void CimgDecode::GetImageSize(uint32_t &nX, uint32_t &nY)
 //
 void CimgDecode::GetBitmapPtr(uint8_t *&pBitmap)
 {
-  uint8_t *pDibImgTmpBits = NULL;
+  uint8_t *pDibImgTmpBits = 0;
 
 //@@  pDibImgTmpBits = (uint8_t *) (m_pDibTemp.GetDIBBitArray());
 
   // Ensure that the pointers are available!
   if(!pDibImgTmpBits)
   {
-    pBitmap = NULL;
+    pBitmap = 0;
   }
   else
   {
@@ -5839,7 +5775,7 @@ void CimgDecode::GetBitmapPtr(uint8_t *&pBitmap)
 //
 void CimgDecode::CalcChannelPreview()
 {
-  uint8_t *pDibImgTmpBits = NULL;
+  uint8_t *pDibImgTmpBits = 0;
 
 //@@  pDibImgTmpBits = (uint8_t *) (m_pDibTemp.GetDIBBitArray());
 
@@ -5850,14 +5786,14 @@ void CimgDecode::CalcChannelPreview()
 //  }
 
   // If we need to do a YCC shift, then do full recalc into tmp array
-  CalcChannelPreviewFull(NULL, pDibImgTmpBits);
+  CalcChannelPreviewFull(0, pDibImgTmpBits);
 
   // Since this was a complex mod, we don't mark this channel as
   // being "done", so we will need to recalculate any time we change
   // the channel display.
 
   // Force an update of the view to be sure
-  //m_pDoc->UpdateAllViews(NULL);
+  //m_pDoc->UpdateAllViews(0);
 
   return;
 }
@@ -5871,14 +5807,13 @@ void CimgDecode::CalcChannelPreview()
 // - nByte                                      = File offset (byte)
 // - nBit                                       = File offset (bit)
 //
-void CimgDecode::LookupFilePosPix(uint32_t nPixX, uint32_t nPixY, uint32_t &nByte, uint32_t &nBit)
+void CimgDecode::LookupFilePosPix(QPoint p, uint32_t &nByte, uint32_t &nBit)
 {
   uint32_t nMcuX, nMcuY;
-
   uint32_t nPacked;
 
-  nMcuX = nPixX / m_nMcuWidth;
-  nMcuY = nPixY / m_nMcuHeight;
+  nMcuX = p.x() / m_nMcuWidth;
+  nMcuY = p.y() / m_nMcuHeight;
   nPacked = m_pMcuFileMap[nMcuX + nMcuY * m_nMcuXMax];
   UnpackFileOffset(nPacked, nByte, nBit);
 }
@@ -5892,11 +5827,11 @@ void CimgDecode::LookupFilePosPix(uint32_t nPixX, uint32_t nPixY, uint32_t &nByt
 // - nByte                                    = File offset (byte)
 // - nBit                                       = File offset (bit)
 //
-void CimgDecode::LookupFilePosMcu(uint32_t nMcuX, uint32_t nMcuY, uint32_t &nByte, uint32_t &nBit)
+void CimgDecode::LookupFilePosMcu(QPoint p, uint32_t &nByte, uint32_t &nBit)
 {
   uint32_t nPacked;
 
-  nPacked = m_pMcuFileMap[nMcuX + nMcuY * m_nMcuXMax];
+  nPacked = m_pMcuFileMap[p.x() + p.y() * m_nMcuXMax];
   UnpackFileOffset(nPacked, nByte, nBit);
 }
 
@@ -5910,13 +5845,14 @@ void CimgDecode::LookupFilePosMcu(uint32_t nMcuX, uint32_t nMcuY, uint32_t &nByt
 // - nCb                                        = Cb channel value
 // - nCr                                        = Cr channel value
 //
-void CimgDecode::LookupBlkYCC(uint32_t nBlkX, uint32_t nBlkY, int32_t &nY, int32_t &nCb, int32_t &nCr)
+void CimgDecode::LookupBlkYCC(QPoint p, int32_t &nY, int32_t &nCb, int32_t &nCr)
 {
-  nY = m_pBlkDcValY[nBlkX + nBlkY * m_nBlkXMax];
+  nY = m_pBlkDcValY[p.x() + p.y() * m_nBlkXMax];
+
   if(m_nNumSosComps == NUM_CHAN_YCC)
   {
-    nCb = m_pBlkDcValCb[nBlkX + nBlkY * m_nBlkXMax];
-    nCr = m_pBlkDcValCr[nBlkX + nBlkY * m_nBlkXMax];
+    nCb = m_pBlkDcValCb[p.x() + p.y() * m_nBlkXMax];
+    nCr = m_pBlkDcValCr[p.x() + p.y() * m_nBlkXMax];
   }
   else
   {
@@ -6051,7 +5987,7 @@ QPoint CimgDecode::GetMarkerBlk(uint32_t nInd)
 // - m_nMarkersBlkNum
 // - m_aptMarkersBlk[]
 //
-void CimgDecode::SetMarkerBlk(uint32_t nBlkX, uint32_t nBlkY)
+void CimgDecode::SetMarkerBlk(QPoint p)
 {
   if(m_nMarkersBlkNum == MAX_BLOCK_MARKERS)
   {
@@ -6060,6 +5996,7 @@ void CimgDecode::SetMarkerBlk(uint32_t nBlkX, uint32_t nBlkY)
     {
       m_aptMarkersBlk[ind - 1] = m_aptMarkersBlk[ind];
     }
+
     // Reflect new reduced count
     m_nMarkersBlkNum--;
   }
@@ -6067,39 +6004,31 @@ void CimgDecode::SetMarkerBlk(uint32_t nBlkX, uint32_t nBlkY)
   QString strTmp;
 
   int32_t nY, nCb, nCr;
-
-  uint32_t nMcuX, nMcuY;
-
-  uint32_t nCssX, nCssY;
+  int32_t nMcuX, nMcuY;
+  int32_t nCssX, nCssY;
 
   // Determine the YCC of the block
   // Then calculate the MCU coordinate and the block coordinate within the MCU
-  LookupBlkYCC(nBlkX, nBlkY, nY, nCb, nCr);
-  nMcuX = nBlkX / (m_nMcuWidth / BLK_SZ_X);
-  nMcuY = nBlkY / (m_nMcuHeight / BLK_SZ_Y);
-  nCssX = nBlkX % (m_nMcuWidth / BLK_SZ_X);
-  nCssY = nBlkY % (m_nMcuHeight / BLK_SZ_X);
+  LookupBlkYCC(p, nY, nCb, nCr);
+  nMcuX = p.x() / (m_nMcuWidth / BLK_SZ_X);
+  nMcuY = p.y() / (m_nMcuHeight / BLK_SZ_Y);
+  nCssX = p.x() % (m_nMcuWidth / BLK_SZ_X);
+  nCssY = p.y() % (m_nMcuHeight / BLK_SZ_X);
 
-  // Force text out to log
-//  bool bQuickModeSaved = m_pLog->GetQuickMode();
-
-//  m_pLog->SetQuickMode(false);
   strTmp = QString("Position Marked @ MCU=[%1,%2](%3,%4) Block=[%5,%6] YCC=[%7,%8,%9]")
       .arg(nMcuX, 4)
       .arg(nMcuY, 4)
       .arg(nCssX)
       .arg(nCssY)
-      .arg(nBlkX)
-      .arg(nBlkY)
+      .arg(p.x(), 4)
+      .arg(p.y(), 4)
       .arg(nY, 5)
       .arg(nCb, 5)
       .arg(nCr, 5);
   m_pLog->AddLine(strTmp);
   m_pLog->AddLine("");
-//  m_pLog->SetQuickMode(bQuickModeSaved);
 
-  m_aptMarkersBlk[m_nMarkersBlkNum].setX(nBlkX);
-  m_aptMarkersBlk[m_nMarkersBlkNum].setY(nBlkY);
+  m_aptMarkersBlk[m_nMarkersBlkNum] = p;
   m_nMarkersBlkNum++;
 }
 
@@ -6225,387 +6154,388 @@ void CimgDecode::SetPreviewZoom(bool bInc, bool bDec, bool bSet, uint32_t nVal)
 // OUTPUT:
 // - szNewScrollSize            = New dimension used for SetScrollSizes()
 //
-void CimgDecode::ViewOnDraw(QPainter * pDC, QRect rectClient, QPoint ptScrolledPos, QFont * pFont, QSize & szNewScrollSize)
+void CimgDecode::ViewOnDraw(QPainter *, QRect, QPoint, QFont *, QSize &)
+//void CimgDecode::ViewOnDraw(QPainter * pDC, QRect rectClient, QPoint ptScrolledPos, QFont * pFont, QSize & szNewScrollSize)
 {
-  m_nPageWidth = 600;
-  m_nPageHeight = 10;           // Start with some margin
+//  m_nPageWidth = 600;
+//  m_nPageHeight = 10;           // Start with some margin
 
-  QString strTmp;
-  QString strRender;
+//  QString strTmp;
+//  QString strRender;
 
-  int32_t nHeight;
+//  int32_t nHeight;
 
-  uint32_t nYPosImgTitle = 0;
-  uint32_t nYPosImg = 0;
-  uint32_t nYPosHistTitle = 0;
-  uint32_t nYPosHist = 0;
-  uint32_t nYPosHistYTitle = 0;
-  uint32_t nYPosHistY = 0;      // Y position of Img & Histogram
+//  uint32_t nYPosImgTitle = 0;
+//  uint32_t nYPosImg = 0;
+//  uint32_t nYPosHistTitle = 0;
+//  uint32_t nYPosHist = 0;
+//  uint32_t nYPosHistYTitle = 0;
+//  uint32_t nYPosHistY = 0;      // Y position of Img & Histogram
 
-  QRect rectTmp;
+//  QRect rectTmp;
 
-  qDebug() << "CimgDecode::ViewOnDraw Start";
+//  qDebug() << "CimgDecode::ViewOnDraw Start";
 
-  // If we have displayed an image, make sure to allow for
-  // the additional space!
+//  // If we have displayed an image, make sure to allow for
+//  // the additional space!
 
-  bool bImgDrawn = false;
+//  bool bImgDrawn = false;
 
-//  QBrush brGray(QColor(128, 128, 128));
-//  QBrush brGrayLt1(QColor(210, 210, 210));
-//  QBrush brGrayLt2(QColor(240, 240, 240));
-//  QBrush brBlueLt(QColor(240, 240, 255));
+////  QBrush brGray(QColor(128, 128, 128));
+////  QBrush brGrayLt1(QColor(210, 210, 210));
+////  QBrush brGrayLt2(QColor(240, 240, 240));
+////  QBrush brBlueLt(QColor(240, 240, 255));
 
-  QColor brGray = QColor(128, 128, 128);
-  QColor brGrayLt1 = QColor(210, 210, 210);
-  QColor brGrayLt2 = QColor(240, 240, 240);
-  QColor brBlueLt = QColor(240, 240, 255);
+//  QColor brGray = QColor(128, 128, 128);
+//  QColor brGrayLt1 = QColor(210, 210, 210);
+//  QColor brGrayLt2 = QColor(240, 240, 240);
+//  QColor brBlueLt = QColor(240, 240, 255);
 
-  QPen penRed(Qt::red, 1, Qt::DotLine);
+//  QPen penRed(Qt::red, 1, Qt::DotLine);
 
-  if(m_bDibTempReady)
-  {
-    qDebug() << "CimgDecode::ViewOnDraw CP1";
+//  if(m_bDibTempReady)
+//  {
+//    qDebug() << "CimgDecode::ViewOnDraw CP1";
 
-    nYPosImgTitle = m_nPageHeight;
-    m_nPageHeight += nTitleHeight;      // Margin at top for title
+//    nYPosImgTitle = m_nPageHeight;
+//    m_nPageHeight += nTitleHeight;      // Margin at top for title
 
-    m_rectImgReal = QRect(0, 0, static_cast<int32_t>(m_rectImgBase.right() * m_nZoom), static_cast<int32_t>(m_rectImgBase.bottom() * m_nZoom));
+//    m_rectImgReal = QRect(0, 0, static_cast<int32_t>(m_rectImgBase.right() * m_nZoom), static_cast<int32_t>(m_rectImgBase.bottom() * m_nZoom));
 
-    nYPosImg = m_nPageHeight;
-    m_nPageHeight += m_rectImgReal.height();
-    m_nPageHeight += nBorderBottom;     // Margin at bottom
-    bImgDrawn = true;
+//    nYPosImg = m_nPageHeight;
+//    m_nPageHeight += m_rectImgReal.height();
+//    m_nPageHeight += nBorderBottom;     // Margin at bottom
+//    bImgDrawn = true;
 
-    m_rectImgReal.adjust(nBorderLeft, nYPosImg, 0, 0);
+//    m_rectImgReal.adjust(nBorderLeft, nYPosImg, 0, 0);
 
-    // Now create the shadow of the main image
-//!!    rectTmp = m_rectImgReal;
-//!!    rectTmp.adjust(4, 4, 0, 0);
-//!!    pDC->fillRect(rectTmp, QBrush(brGrayLt1));
-//!!    rectTmp.adjust(-1, -1, 1, 1);
-//!!    pDC->FrameRect(rectTmp, &brGrayLt2);
-  }
+//    // Now create the shadow of the main image
+////!!    rectTmp = m_rectImgReal;
+////!!    rectTmp.adjust(4, 4, 0, 0);
+////!!    pDC->fillRect(rectTmp, QBrush(brGrayLt1));
+////!!    rectTmp.adjust(-1, -1, 1, 1);
+////!!    pDC->FrameRect(rectTmp, &brGrayLt2);
+//  }
 
-  if(m_bHistEn)
-  {
-    if(m_bDibHistRgbReady)
-    {
-      nYPosHistTitle = m_nPageHeight;
-      m_nPageHeight += nTitleHeight;    // Margin at top for title
+//  if(m_bHistEn)
+//  {
+//    if(m_bDibHistRgbReady)
+//    {
+//      nYPosHistTitle = m_nPageHeight;
+//      m_nPageHeight += nTitleHeight;    // Margin at top for title
 
-      m_rectHistReal = m_rectHistBase;
+//      m_rectHistReal = m_rectHistBase;
 
-      nYPosHist = m_nPageHeight;
-      m_nPageHeight += m_rectHistReal.height();
-      m_nPageHeight += nBorderBottom;   // Margin at bottom
-      bImgDrawn = true;
-
-      m_rectHistReal.adjust(nBorderLeft, nYPosHist, 0, 0);
+//      nYPosHist = m_nPageHeight;
+//      m_nPageHeight += m_rectHistReal.height();
+//      m_nPageHeight += nBorderBottom;   // Margin at bottom
+//      bImgDrawn = true;
+
+//      m_rectHistReal.adjust(nBorderLeft, nYPosHist, 0, 0);
 
-      // Create the border
-      rectTmp = m_rectHistReal;
-      rectTmp.adjust(-1, -1, 1, 1);
-      pDC->setPen(QPen(brGray));
-      pDC->drawRect(rectTmp);
-    }
-
-    if(m_bDibHistYReady)
-    {
-      nYPosHistYTitle = m_nPageHeight;
-      m_nPageHeight += nTitleHeight;    // Margin at top for title
-
-      m_rectHistYReal = m_rectHistYBase;
-
-      nYPosHistY = m_nPageHeight;
-      m_nPageHeight += m_rectHistYReal.height();
-      m_nPageHeight += nBorderBottom;   // Margin at bottom
-      bImgDrawn = true;
-
-      m_rectHistYReal.adjust(nBorderLeft, nYPosHistY, 0, 0);
-
-      // Create the border
-      rectTmp = m_rectHistYReal;
-      rectTmp.adjust(-1, -1, 1, 1);
-      pDC->setPen(QPen(brGray));
-      pDC->drawRect(rectTmp);
-    }
-  }
-
-  // Find a starting line based on scrolling
-  // and current client size
-
-  QRect rectClientScrolled = rectClient;
-
-  rectClientScrolled.adjust(ptScrolledPos.x(), ptScrolledPos.y(), 0, 0);
-
-  // Change the font
-  QFont pOldFont;
-
-  pOldFont = pDC->font();
-
-  qDebug() << "Title 1";
-
-  // Draw the bitmap if ready
-  if(m_bDibTempReady)
-  {
-    // Print label
-    qDebug() << "Title 2 m_bDibTempReady";
-
-    if(!m_bPreviewIsJpeg)
-    {
-      // For all non-JPEG images, report with simple title
-      m_strTitle = "Image";
-    }
-    else
-    {
-      qDebug() << "Title 3 m_bPreviewIsJpeg";
-      m_strTitle = "Image (";
-
-      switch (m_nPreviewMode)
-      {
-        case PREVIEW_RGB:
-          m_strTitle += "RGB";
-          break;
-
-        case PREVIEW_YCC:
-          m_strTitle += "YCC";
-          break;
-
-        case PREVIEW_R:
-          m_strTitle += "R";
-          break;
-
-        case PREVIEW_G:
-          m_strTitle += "G";
-          break;
-
-        case PREVIEW_B:
-          m_strTitle += "B";
-          break;
-
-        case PREVIEW_Y:
-          m_strTitle += "Y";
-          break;
-
-        case PREVIEW_CB:
-          m_strTitle += "Cb";
-          break;
-
-        case PREVIEW_CR:
-          m_strTitle += "Cr";
-          break;
-
-        default:
-          m_strTitle += "???";
-          break;
-      }
-
-      if(m_bDecodeScanAc)
-      {
-        m_strTitle += ", DC+AC)";
-      }
-      else
-      {
-        m_strTitle += ", DC)";
-      }
-    }
-
-    switch (m_nZoomMode)
-    {
-      case PRV_ZOOM_12:
-        m_strTitle += " @ 12.5% (1/8)";
-        break;
-
-      case PRV_ZOOM_25:
-        m_strTitle += " @ 25% (1/4)";
-        break;
-
-      case PRV_ZOOM_50:
-        m_strTitle += " @ 50% (1/2)";
-        break;
-
-      case PRV_ZOOM_100:
-        m_strTitle += " @ 100% (1:1)";
-        break;
-
-      case PRV_ZOOM_150:
-        m_strTitle += " @ 150% (3:2)";
-        break;
-
-      case PRV_ZOOM_200:
-        m_strTitle += " @ 200% (2:1)";
-        break;
-
-      case PRV_ZOOM_300:
-        m_strTitle += " @ 300% (3:1)";
-        break;
-
-      case PRV_ZOOM_400:
-        m_strTitle += " @ 400% (4:1)";
-        break;
-
-      case PRV_ZOOM_800:
-        m_strTitle += " @ 800% (8:1)";
-        break;
-
-      default:
-        m_strTitle += "";
-        break;
-    }
-
-    // Calculate the title width
-    QRect rectCalc = QRect(0, 0, 0, 0);
-
-//@@            nHeight = pDC->DrawText(m_strTitle,-1,&rectCalc,DT_CALQRect | DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
-    int32_t nWidth = rectCalc.width() + 2 * nTitleIndent;
-
-    // Determine the title area (could be larger than the image
-    // if the image zoom is < 100% or sized small)
-
-    // Draw title background
-    rectTmp = QRect(m_rectImgReal.left(), nYPosImgTitle,
-                    qMax(m_rectImgReal.right(), m_rectImgReal.left() + nWidth), m_rectImgReal.top() - nTitleLowGap);
-    pDC->fillRect(rectTmp, brBlueLt);
-
-    // Draw the title
-    Qt::BGMode nBkMode = pDC->backgroundMode();
-
-    pDC->setBackgroundMode(Qt::TransparentMode);
-    rectTmp.adjust(nTitleIndent, 0, 0, 0);
-//@@            nHeight = pDC->DrawText(m_strTitle,-1,&rectTmp,DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
-    pDC->setBackgroundMode(nBkMode);
-
-    // Draw image
-
-    // Assume that the temp image has already been generated!
-    // For speed purposes, we use m_pDibTemp only when we are
-    // in a mode other than RGB or YCC. In the RGB/YCC modes,
-    // we skip the CalcChannelPreview() step.
-
-    // TODO: Improve redraw time by only redrawing the currently visible
-    // region. Requires a different CopyDIB routine with a subset region.
-    // Needs to take into account zoom setting (eg. intersection between
-    // rectClient and m_rectImgReal).
-
-    // Use a common DIB instead of creating/swapping tmp / ycc and rgb.
-    // This way we can also have more flexibility in modifying RGB & YCC displays.
-    // Time calling CalcChannelPreview() seems small, so no real impact.
-
-    // Image member usage:
-    // m_pDibTemp:
-
-//@@            m_pDibTemp.CopyDIB(pDC,m_rectImgReal.left,m_rectImgReal.top,m_nZoom);
-
-    // Now create overlays
-
-    // Only draw overlay (eg. actual image boundary overlay) if the values
-    // have been set properly. Note that PSD decode currently sets these
-    // values to zero.
-    if((m_nDimX != 0) && (m_nDimY != 0))
-    {
-      pDC->setPen(penRed);
-
-      // Draw boundary for end of valid data (inside partial MCU)
-      int32_t nXZoomed = static_cast<int32_t>(m_nDimX * m_nZoom);
-
-      int32_t nYZoomed = static_cast<int32_t>(m_nDimY * m_nZoom);
-
-      pDC->drawLine(m_rectImgReal.left() + nXZoomed, m_rectImgReal.top(), m_rectImgReal.left() + nXZoomed, m_rectImgReal.top() + nYZoomed);
-      pDC->drawLine(m_rectImgReal.left(), m_rectImgReal.top() + nYZoomed, m_rectImgReal.left() + nXZoomed, m_rectImgReal.top() + nYZoomed);
-//!!      pDC->setPen(pPen);
-    }
-
-    // Before we frame the region, let's draw any remaining overlays
-
-    // Only draw the MCU overlay if zoom is > 100%, otherwise we will have
-    // replaced entire image with the boundary lines!
-    if(m_bViewOverlaysMcuGrid && (m_nZoomMode >= PRV_ZOOM_25))
-    {
-      ViewMcuOverlay(pDC);
-    }
-
-    // Always draw the markers
-    ViewMcuMarkedOverlay(pDC);
-
-    // Final frame border
-    rectTmp = m_rectImgReal;
-    rectTmp.adjust(-1, -1, 1, 1);
-//@@    pDC->setPen(brGray);
-    pDC->drawRect(rectTmp);
-
-    // Preserve the image placement (for other functions, such as click detect)
-    m_nPreviewPosX = m_rectImgReal.left();
-    m_nPreviewPosY = m_rectImgReal.top();
-    m_nPreviewSizeX = m_rectImgReal.width();
-    m_nPreviewSizeY = m_rectImgReal.height();
-
-    // m_nPageWidth is already hardcoded above
-    Q_ASSERT(m_nPageWidth >= 0);
-    m_nPageWidth = qMax(static_cast<uint32_t>(m_nPageWidth), m_nPreviewPosX + m_nPreviewSizeX);
-
-    update();
-  }
-
-  if(m_bHistEn)
-  {
-    if(m_bDibHistRgbReady)
-    {
-      // Draw title background
-      rectTmp = QRect(m_rectHistReal.left(), nYPosHistTitle, m_rectHistReal.right(), m_rectHistReal.top() - nTitleLowGap);
-      pDC->fillRect(rectTmp, brBlueLt);
-
-      // Draw the title
-      QRect boundingRect;
-      Qt::BGMode nBkMode = pDC->backgroundMode();
-      pDC->setBackgroundMode(Qt::TransparentMode);
-      rectTmp.adjust(nTitleIndent, 0, 0, 0);
-      pDC->drawText(rectTmp, Qt::AlignLeft | Qt::AlignTop, "Histogram (RGB)", &boundingRect);
-      pDC->setBackgroundMode(nBkMode);
-
-      // Draw image
-//@@                    m_pDibHistRgb.CopyDIB(pDC,m_rectHistReal.left,m_rectHistReal.top);
-    }
-
-    if(m_bDibHistYReady)
-    {
-      // Draw title background
-      rectTmp = QRect(m_rectHistYReal.left(), nYPosHistYTitle, m_rectHistYReal.right(), m_rectHistYReal.top() - nTitleLowGap);
-      pDC->fillRect(rectTmp, brBlueLt);
-
-      // Draw the title
-      Qt::BGMode nBkMode = pDC->backgroundMode();
-      pDC->setBackgroundMode(Qt::TransparentMode);
-      rectTmp.adjust(nTitleIndent, 0, 0, 0);
-//@@                    nHeight = pDC->DrawText("Histogram (Y)",-1,&rectTmp,DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
-      pDC->setBackgroundMode(nBkMode);
-
-      // Draw image
-//@@                    m_pDibHistY.CopyDIB(pDC,m_rectHistYReal.left,m_rectHistYReal.top);
-      //m_pDibHistY.CopyDIB(pDC,nBorderLeft,nYPosHistY);
-    }
-
-    update();
-  }
-
-  // If no image has been drawn, indicate to user why!
-  if(!bImgDrawn)
-  {
-    //ScrollRect.top = m_nPageHeight;       // FIXME:?
-
-    // Print label
-    //nHeight = pDC->DrawText("Image Decode disabled. Enable with [Options->Decode Scan Image]", -1,&ScrollRect,
-    //      DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
-
-  }
-
-  // Restore the original font
-  pDC->setFont(pOldFont);
-
-  // Set scroll bars accordingly. We use the page dimensions here.
-  QSize sizeTotal(m_nPageWidth + nBorderLeft, m_nPageHeight);
-
-  szNewScrollSize = sizeTotal;
+//      // Create the border
+//      rectTmp = m_rectHistReal;
+//      rectTmp.adjust(-1, -1, 1, 1);
+//      pDC->setPen(QPen(brGray));
+//      pDC->drawRect(rectTmp);
+//    }
+
+//    if(m_bDibHistYReady)
+//    {
+//      nYPosHistYTitle = m_nPageHeight;
+//      m_nPageHeight += nTitleHeight;    // Margin at top for title
+
+//      m_rectHistYReal = m_rectHistYBase;
+
+//      nYPosHistY = m_nPageHeight;
+//      m_nPageHeight += m_rectHistYReal.height();
+//      m_nPageHeight += nBorderBottom;   // Margin at bottom
+//      bImgDrawn = true;
+
+//      m_rectHistYReal.adjust(nBorderLeft, nYPosHistY, 0, 0);
+
+//      // Create the border
+//      rectTmp = m_rectHistYReal;
+//      rectTmp.adjust(-1, -1, 1, 1);
+//      pDC->setPen(QPen(brGray));
+//      pDC->drawRect(rectTmp);
+//    }
+//  }
+
+//  // Find a starting line based on scrolling
+//  // and current client size
+
+//  QRect rectClientScrolled = rectClient;
+
+//  rectClientScrolled.adjust(ptScrolledPos.x(), ptScrolledPos.y(), 0, 0);
+
+//  // Change the font
+//  QFont pOldFont;
+
+//  pOldFont = pDC->font();
+
+//  qDebug() << "Title 1";
+
+//  // Draw the bitmap if ready
+//  if(m_bDibTempReady)
+//  {
+//    // Print label
+//    qDebug() << "Title 2 m_bDibTempReady";
+
+//    if(!m_bPreviewIsJpeg)
+//    {
+//      // For all non-JPEG images, report with simple title
+//      m_strTitle = "Image";
+//    }
+//    else
+//    {
+//      qDebug() << "Title 3 m_bPreviewIsJpeg";
+//      m_strTitle = "Image (";
+
+//      switch (m_nPreviewMode)
+//      {
+//        case PREVIEW_RGB:
+//          m_strTitle += "RGB";
+//          break;
+
+//        case PREVIEW_YCC:
+//          m_strTitle += "YCC";
+//          break;
+
+//        case PREVIEW_R:
+//          m_strTitle += "R";
+//          break;
+
+//        case PREVIEW_G:
+//          m_strTitle += "G";
+//          break;
+
+//        case PREVIEW_B:
+//          m_strTitle += "B";
+//          break;
+
+//        case PREVIEW_Y:
+//          m_strTitle += "Y";
+//          break;
+
+//        case PREVIEW_CB:
+//          m_strTitle += "Cb";
+//          break;
+
+//        case PREVIEW_CR:
+//          m_strTitle += "Cr";
+//          break;
+
+//        default:
+//          m_strTitle += "???";
+//          break;
+//      }
+
+//      if(m_bDecodeScanAc)
+//      {
+//        m_strTitle += ", DC+AC)";
+//      }
+//      else
+//      {
+//        m_strTitle += ", DC)";
+//      }
+//    }
+
+//    switch (m_nZoomMode)
+//    {
+//      case PRV_ZOOM_12:
+//        m_strTitle += " @ 12.5% (1/8)";
+//        break;
+
+//      case PRV_ZOOM_25:
+//        m_strTitle += " @ 25% (1/4)";
+//        break;
+
+//      case PRV_ZOOM_50:
+//        m_strTitle += " @ 50% (1/2)";
+//        break;
+
+//      case PRV_ZOOM_100:
+//        m_strTitle += " @ 100% (1:1)";
+//        break;
+
+//      case PRV_ZOOM_150:
+//        m_strTitle += " @ 150% (3:2)";
+//        break;
+
+//      case PRV_ZOOM_200:
+//        m_strTitle += " @ 200% (2:1)";
+//        break;
+
+//      case PRV_ZOOM_300:
+//        m_strTitle += " @ 300% (3:1)";
+//        break;
+
+//      case PRV_ZOOM_400:
+//        m_strTitle += " @ 400% (4:1)";
+//        break;
+
+//      case PRV_ZOOM_800:
+//        m_strTitle += " @ 800% (8:1)";
+//        break;
+
+//      default:
+//        m_strTitle += "";
+//        break;
+//    }
+
+//    // Calculate the title width
+//    QRect rectCalc = QRect(0, 0, 0, 0);
+
+////@@            nHeight = pDC->DrawText(m_strTitle,-1,&rectCalc,DT_CALQRect | DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
+//    int32_t nWidth = rectCalc.width() + 2 * nTitleIndent;
+
+//    // Determine the title area (could be larger than the image
+//    // if the image zoom is < 100% or sized small)
+
+//    // Draw title background
+//    rectTmp = QRect(m_rectImgReal.left(), nYPosImgTitle,
+//                    qMax(m_rectImgReal.right(), m_rectImgReal.left() + nWidth), m_rectImgReal.top() - nTitleLowGap);
+//    pDC->fillRect(rectTmp, brBlueLt);
+
+//    // Draw the title
+//    Qt::BGMode nBkMode = pDC->backgroundMode();
+
+//    pDC->setBackgroundMode(Qt::TransparentMode);
+//    rectTmp.adjust(nTitleIndent, 0, 0, 0);
+////@@            nHeight = pDC->DrawText(m_strTitle,-1,&rectTmp,DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
+//    pDC->setBackgroundMode(nBkMode);
+
+//    // Draw image
+
+//    // Assume that the temp image has already been generated!
+//    // For speed purposes, we use m_pDibTemp only when we are
+//    // in a mode other than RGB or YCC. In the RGB/YCC modes,
+//    // we skip the CalcChannelPreview() step.
+
+//    // TODO: Improve redraw time by only redrawing the currently visible
+//    // region. Requires a different CopyDIB routine with a subset region.
+//    // Needs to take into account zoom setting (eg. intersection between
+//    // rectClient and m_rectImgReal).
+
+//    // Use a common DIB instead of creating/swapping tmp / ycc and rgb.
+//    // This way we can also have more flexibility in modifying RGB & YCC displays.
+//    // Time calling CalcChannelPreview() seems small, so no real impact.
+
+//    // Image member usage:
+//    // m_pDibTemp:
+
+////@@            m_pDibTemp.CopyDIB(pDC,m_rectImgReal.left,m_rectImgReal.top,m_nZoom);
+
+//    // Now create overlays
+
+//    // Only draw overlay (eg. actual image boundary overlay) if the values
+//    // have been set properly. Note that PSD decode currently sets these
+//    // values to zero.
+//    if((m_nDimX != 0) && (m_nDimY != 0))
+//    {
+//      pDC->setPen(penRed);
+
+//      // Draw boundary for end of valid data (inside partial MCU)
+//      int32_t nXZoomed = static_cast<int32_t>(m_nDimX * m_nZoom);
+
+//      int32_t nYZoomed = static_cast<int32_t>(m_nDimY * m_nZoom);
+
+//      pDC->drawLine(m_rectImgReal.left() + nXZoomed, m_rectImgReal.top(), m_rectImgReal.left() + nXZoomed, m_rectImgReal.top() + nYZoomed);
+//      pDC->drawLine(m_rectImgReal.left(), m_rectImgReal.top() + nYZoomed, m_rectImgReal.left() + nXZoomed, m_rectImgReal.top() + nYZoomed);
+////!!      pDC->setPen(pPen);
+//    }
+
+//    // Before we frame the region, let's draw any remaining overlays
+
+//    // Only draw the MCU overlay if zoom is > 100%, otherwise we will have
+//    // replaced entire image with the boundary lines!
+//    if(m_bViewOverlaysMcuGrid && (m_nZoomMode >= PRV_ZOOM_25))
+//    {
+//      ViewMcuOverlay(pDC);
+//    }
+
+//    // Always draw the markers
+//    ViewMcuMarkedOverlay(pDC);
+
+//    // Final frame border
+//    rectTmp = m_rectImgReal;
+//    rectTmp.adjust(-1, -1, 1, 1);
+////@@    pDC->setPen(brGray);
+//    pDC->drawRect(rectTmp);
+
+//    // Preserve the image placement (for other functions, such as click detect)
+//    m_nPreviewPosX = m_rectImgReal.left();
+//    m_nPreviewPosY = m_rectImgReal.top();
+//    m_nPreviewSizeX = m_rectImgReal.width();
+//    m_nPreviewSizeY = m_rectImgReal.height();
+
+//    // m_nPageWidth is already hardcoded above
+//    Q_ASSERT(m_nPageWidth >= 0);
+//    m_nPageWidth = qMax(static_cast<uint32_t>(m_nPageWidth), m_nPreviewPosX + m_nPreviewSizeX);
+
+//    update();
+//  }
+
+//  if(m_bHistEn)
+//  {
+//    if(m_bDibHistRgbReady)
+//    {
+//      // Draw title background
+//      rectTmp = QRect(m_rectHistReal.left(), nYPosHistTitle, m_rectHistReal.right(), m_rectHistReal.top() - nTitleLowGap);
+//      pDC->fillRect(rectTmp, brBlueLt);
+
+//      // Draw the title
+//      QRect boundingRect;
+//      Qt::BGMode nBkMode = pDC->backgroundMode();
+//      pDC->setBackgroundMode(Qt::TransparentMode);
+//      rectTmp.adjust(nTitleIndent, 0, 0, 0);
+//      pDC->drawText(rectTmp, Qt::AlignLeft | Qt::AlignTop, "Histogram (RGB)", &boundingRect);
+//      pDC->setBackgroundMode(nBkMode);
+
+//      // Draw image
+////@@                    m_pDibHistRgb.CopyDIB(pDC,m_rectHistReal.left,m_rectHistReal.top);
+//    }
+
+//    if(m_bDibHistYReady)
+//    {
+//      // Draw title background
+//      rectTmp = QRect(m_rectHistYReal.left(), nYPosHistYTitle, m_rectHistYReal.right(), m_rectHistYReal.top() - nTitleLowGap);
+//      pDC->fillRect(rectTmp, brBlueLt);
+
+//      // Draw the title
+//      Qt::BGMode nBkMode = pDC->backgroundMode();
+//      pDC->setBackgroundMode(Qt::TransparentMode);
+//      rectTmp.adjust(nTitleIndent, 0, 0, 0);
+////@@                    nHeight = pDC->DrawText("Histogram (Y)",-1,&rectTmp,DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
+//      pDC->setBackgroundMode(nBkMode);
+
+//      // Draw image
+////@@                    m_pDibHistY.CopyDIB(pDC,m_rectHistYReal.left,m_rectHistYReal.top);
+//      //m_pDibHistY.CopyDIB(pDC,nBorderLeft,nYPosHistY);
+//    }
+
+//    update();
+//  }
+
+//  // If no image has been drawn, indicate to user why!
+//  if(!bImgDrawn)
+//  {
+//    //ScrollRect.top = m_nPageHeight;       // FIXME:?
+
+//    // Print label
+//    //nHeight = pDC->DrawText("Image Decode disabled. Enable with [Options->Decode Scan Image]", -1,&ScrollRect,
+//    //      DT_TOP | DT_NOPREFIX | DT_SINGLELINE);
+
+//  }
+
+//  // Restore the original font
+//  pDC->setFont(pOldFont);
+
+//  // Set scroll bars accordingly. We use the page dimensions here.
+//  QSize sizeTotal(m_nPageWidth + nBorderLeft, m_nPageHeight);
+
+//  szNewScrollSize = sizeTotal;
 }
 
 // Draw an overlay that shows the MCU grid

@@ -77,13 +77,13 @@
 //
 class CFolderDialog : public CWnd {
 public:
-	static BOOL bTRACE;		// controls tracing
+        static bool bTRACE;		// controls tracing
 
 	CFolderDialog(CWnd* pWnd);
 	~CFolderDialog();
 
 	LPCITEMIDLIST BrowseForFolder(LPCTSTR title, UINT flags,
-		LPCITEMIDLIST pidRoot=NULL, BOOL bFilter=FALSE);
+                LPCITEMIDLIST pidRoot=NULL, bool bFilter=FALSE);
 
 	CString GetDisplayName() { return m_sDisplayName; }
 
@@ -99,7 +99,7 @@ private:
 protected:
 	BROWSEINFO m_brinfo;						 // internal structure for SHBrowseForFolder
 	CString m_sDisplayName;					 // display name of folder chosen
-	BOOL m_bFilter;							 // do custom filtering?
+        bool m_bFilter;							 // do custom filtering?
 	CComQIPtr<IShellFolder> m_shfRoot;	 // handy to have root folder
 
 	static int CALLBACK CallbackProc(HWND hwnd, UINT msg, LPARAM lp, LPARAM lpData);
@@ -110,13 +110,13 @@ protected:
 	virtual void OnInitialized();
 	virtual void OnIUnknown(IUnknown* punk);
 	virtual void OnSelChanged(LPCITEMIDLIST pidl);
-	virtual BOOL OnValidateFailed(LPCTSTR lpsz);
+        virtual bool OnValidateFailed(LPCTSTR lpsz);
 
 	// Wrapper functions for folder dialog messages--call these only from
 	// virtual handler functions above!
 
 	// Enable or disable the OK button
-	void EnableOK(BOOL bEnable) {
+        void EnableOK(bool bEnable) {
 		SendMessage(BFFM_ENABLEOK,0,bEnable);
 	}
 

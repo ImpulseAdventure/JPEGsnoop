@@ -1,11 +1,12 @@
-#include "JPEGsnoop.h"
+#include <QFileDialog>
+#include <QStandardPaths>
+
+#include "SnoopConfig.h"
 
 #include "snoopconfigdialog.h"
 #include "ui_snoopconfigdialog.h"
 
-SnoopConfigDialog::SnoopConfigDialog(QWidget *parent) :
-  QDialog(parent),
-  ui(new Ui::SnoopConfigDialog)
+SnoopConfigDialog::SnoopConfigDialog(CSnoopConfig *pAppConfig, QWidget *parent) : QDialog(parent), ui(new Ui::SnoopConfigDialog), m_pAppConfig(pAppConfig)
 {
   ui->setupUi(this);
   connect(ui->buttonBox, SIGNAL(accepted()), this, SLOT(onSave()));
@@ -15,8 +16,7 @@ SnoopConfigDialog::SnoopConfigDialog(QWidget *parent) :
   connect(ui->btnDefault, SIGNAL(released()), this, SLOT(onDefault()));
   connect(ui->btnDefault, SIGNAL(released()), this, SLOT(onReset()));
 
-  dbPath = m_pAppConfig->dbPath();
-  ui->leDbPath->setText(dbPath);
+  ui->leDbPath->setText(m_pAppConfig->dbPath());
 
   bAutoUpdate = m_pAppConfig->swUpdateEnabled();
   ui->cbAutoUpdate->setChecked(bAutoUpdate);
@@ -38,12 +38,21 @@ SnoopConfigDialog::~SnoopConfigDialog()
 
 void SnoopConfigDialog::onBrowse()
 {
+  QFileDialog dialog(this);
 
+  dialog.setDirectory(QStandardPaths::writableLocation(QStandardPaths::HomeLocation));
+  dialog.setOption(QFileDialog::ShowDirsOnly);
+
+  if(dialog.exec())
+  {
+    dbPath = dialog.selectedFiles().at(0);
+    ui->leDbPath->setText(dbPath);
+  }
 }
 
 void SnoopConfigDialog::onDefault()
 {
-
+  ui->leDbPath->setText(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
 }
 
 void SnoopConfigDialog::onReset()

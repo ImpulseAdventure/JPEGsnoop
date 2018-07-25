@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2018 - Calvin Hass
+// Copyright (C) 2017 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -37,18 +37,17 @@
 #include <QString>
 #include <QStatusBar>
 
-#include "SnoopConfig.h"
 
 #include "snoop.h"
 
 #include "DocLog.h"
 #include "WindowBuf.h"
-//#include "afxwin.h"
-//#include "Dib.h"
 
 #include <map>
 
 #include "General.h"
+
+class CSnoopConfig;
 
 // Color conversion clipping (YCC) reporting
 #define YCC_CLIP_REPORT_ERR true        // Are YCC clips an error?
@@ -160,9 +159,9 @@ static const uint32_t JFIF_EOI = 0xD9;
 #define CC_CLIP_YCC_MAX		255
 
 // Image histogram definitions
-static const int32_t HISTO_BINS = 128;
+static const int32_t HISTO_BINS = 255; // 128;
 static const int32_t HISTO_BIN_WIDTH	= 1;
-static const int32_t HISTO_BIN_HEIGHT_MAX = 30;
+static const int32_t HISTO_BIN_HEIGHT_MAX = 60;
 
 // Histogram of Y component (-1024..+1023) = 2048 bins
 static const int32_t FULL_HISTO_BINS	= 2048;
@@ -296,12 +295,12 @@ typedef struct
   uint32_t nCount;
 } PixelCcHisto;
 
-class CimgDecode : public QWidget
+class CimgDecode : public QObject
 {
   Q_OBJECT
 
 public:
-  CimgDecode(CDocLog * pLog, CwindowBuf * pWBuf, QWidget *parent);
+  CimgDecode(CDocLog * pLog, CwindowBuf * pWBuf, CSnoopConfig *pAppConfig, QObject *_parent);
   ~CimgDecode();
 
   void Reset();                 // Called during start of SOS decode
@@ -314,6 +313,8 @@ public:
   void ReportHistogramY();
   void ReportColorStats();
 
+  bool isYHistogramReady() {return m_bDibHistYReady; }
+  bool isRgbHistogramReady() {return m_bDibHistRgbReady; }
   bool IsPreviewReady();
 
   // Config
@@ -333,7 +334,7 @@ public:
   void SetPrecision(uint32_t nPrecision);
 
   // Modes -- accessed from Doc
-  void SetPreviewMode(uint32_t nMode);
+//  void SetPreviewMode(uint32_t nMode);
   uint32_t GetPreviewMode();
   void SetPreviewYccOffset(uint32_t nMcuX, uint32_t nMcuY, int32_t nY, int32_t nCb, int32_t nCr);
   void GetPreviewYccOffset(uint32_t & nMcuX, uint32_t & nMcuY, int32_t &nY, int32_t &nCb, int32_t &nCr);
@@ -346,11 +347,11 @@ public:
   void SetPreviewOverlayMcuGridToggle();
 
   // Utilities
-  void LookupFilePosPix(uint32_t nPixX, uint32_t nPixY, uint32_t & nByte, uint32_t & nBit);
-  void LookupFilePosMcu(uint32_t nMcuX, uint32_t nMcuY, uint32_t & nByte, uint32_t & nBit);
-  void LookupBlkYCC(uint32_t nBlkX, uint32_t nBlkY, int32_t &nY, int32_t &nCb, int32_t &nCr);
+  void LookupFilePosPix(QPoint p, uint32_t &nByte, uint32_t &nBit);
+  void LookupFilePosMcu(QPoint p, uint32_t &nByte, uint32_t &nBit);
+  void LookupBlkYCC(QPoint p, int32_t &nY, int32_t &nCb, int32_t &nCr);
 
-  void SetMarkerBlk(uint32_t nBlkX, uint32_t nBlkY);
+  void SetMarkerBlk(QPoint p);
   uint32_t GetMarkerCount();
   QPoint GetMarkerBlk(uint32_t nInd);
 
@@ -389,6 +390,9 @@ public:
   void SetStatusFilePosText(QString strText);
   QString GetStatusFilePosText();
 
+  QImage *yHistogram() { return m_pDibHistY; }
+  QImage *rgbHistogram() { return m_pDibHistRgb; }
+
   void ReportDctMatrix();
   void ReportDctYccMatrix();
   void ReportVlc(uint32_t nVlcPos, uint32_t nVlcAlign,
@@ -406,11 +410,12 @@ public:
   uint16_t m_anDqtCoeffZz[MAX_DQT_DEST_ID][MAX_DQT_COEFF];        // Original zigzag ordering
   int32_t m_anDqtTblSel[MAX_DQT_COMP];      // DQT table selector for image component in frame
 
-protected:
-  void paintEvent(QPaintEvent *event) override;
+public slots:
+  void setPreviewMode(QAction *action);
 
 signals:
   void updateStatus(QString statusMsg, int);
+  void updateImage();
 
 private:
   CimgDecode &operator = (const CimgDecode&);
@@ -453,8 +458,8 @@ private:
   void DecodeIdctSet(uint32_t nTbl, uint32_t num_coeffs, uint32_t zrl, int16_t val);
   void DecodeIdctCalcFloat(uint32_t nCoefMax);
   void DecodeIdctCalcFixedpt();
-  void ClrFullRes(uint32_t nWidth, uint32_t nHeight);
-  void SetFullRes(uint32_t nMcuX, uint32_t nMcuY, uint32_t nComp, uint32_t nCssXInd, uint32_t nCssYInd, int16_t nDcOffset);
+  void ClrFullRes(int32_t nWidth, int32_t nHeight);
+  void SetFullRes(int32_t nMcuX, int32_t nMcuY, int32_t nComp, uint32_t nCssXInd, uint32_t nCssYInd, int16_t nDcOffset);
 
   void ChannelExtract(uint32_t nMode, PixelCc & sSrc, PixelCc & sDst);
   void CalcChannelPreviewFull(QRect * pRectView, uint8_t * pTmp);
@@ -464,17 +469,19 @@ private:
   // Member variables
   // -------------------------------------------------------------
 
-//    CSnoopConfig * m_pAppConfig;        // Pointer to application config
+  CDocLog *m_pLog;
+  CwindowBuf *m_pWBuf;
+  CSnoopConfig *m_pAppConfig;        // Pointer to application config
 
   QMessageBox msgBox;
 
   uint32_t *m_pMcuFileMap;
-  uint32_t m_nMcuWidth;         // Width (pix) of MCU (e.g. 8,16)
-  uint32_t m_nMcuHeight;        // Height (pix) of MCU (e.g. 8,16)
-  uint32_t m_nMcuXMax;          // Number of MCUs across
-  uint32_t m_nMcuYMax;          // Number of MCUs vertically
-  uint32_t m_nBlkXMax;          // Number of 8x8 blocks across
-  uint32_t m_nBlkYMax;          // Number of 8x8 blocks vertically
+  int32_t m_nMcuWidth;         // Width (pix) of MCU (e.g. 8,16)
+  int32_t m_nMcuHeight;        // Height (pix) of MCU (e.g. 8,16)
+  int32_t m_nMcuXMax;          // Number of MCUs across
+  int32_t m_nMcuYMax;          // Number of MCUs vertically
+  int32_t m_nBlkXMax;          // Number of 8x8 blocks across
+  int32_t m_nBlkYMax;          // Number of 8x8 blocks vertically
 
   // Fill these with the cumulative values so that we can do
   // a YCC to RGB conversion (for level shift previews, etc.)
@@ -505,10 +512,10 @@ private:
   QString m_strTitle;           // Image title
 
 
-  uint32_t m_nImgSizeXPartMcu;  // Image size with possible partial MCU
-  uint32_t m_nImgSizeYPartMcu;
-  uint32_t m_nImgSizeX;         // Image size rounding up to full MCU
-  uint32_t m_nImgSizeY;
+  int32_t m_nImgSizeXPartMcu;  // Image size with possible partial MCU
+  int32_t m_nImgSizeYPartMcu;
+  int32_t m_nImgSizeX;         // Image size rounding up to full MCU
+  int32_t m_nImgSizeY;
 
   // Image rects
   QRect m_rectImgBase;          // Image with no offset, no scaling
@@ -544,39 +551,35 @@ private:
   uint32_t m_nZoomMode;
   double m_nZoom;
 
-  // Logger connection
-  CDocLog *m_pLog;
-  CwindowBuf *m_pWBuf;
-
   // Image details (from JFIF decode) set by SetImageDetails()
   bool m_bImgDetailsSet;        // Have image details been set yet (from SOS)
-  uint32_t m_nDimX;             // Image Dimension in X
-  uint32_t m_nDimY;             // Image Dimension in Y
-  uint32_t m_nNumSosComps;      // Number of Image Components (DHT?)
-  uint32_t m_nNumSofComps;      // Number of Image Components (DQT?)
-  uint32_t m_nPrecision;        // 8-bit or 12-bit (defined in JFIF_SOF1)
-  uint32_t m_anSofSampFactH[MAX_SOF_COMP_NF];   // Sampling factor per component ID in frame from SOF
-  uint32_t m_anSofSampFactV[MAX_SOF_COMP_NF];   // Sampling factor per component ID in frame from SOF
-  uint32_t m_nSosSampFactHMax;  // Maximum sampling factor for scan
-  uint32_t m_nSosSampFactVMax;  // Maximum sampling factor for scan
-  uint32_t m_nSosSampFactHMin;  // Minimum sampling factor for scan
-  uint32_t m_nSosSampFactVMin;  // Minimum sampling factor for scan
-  uint32_t m_anSampPerMcuH[MAX_SOF_COMP_NF];    // Number of samples of component ID per MCU
-  uint32_t m_anSampPerMcuV[MAX_SOF_COMP_NF];    // Number of samples of component ID per MCU
-  uint32_t m_anExpandBitsMcuH[MAX_SOF_COMP_NF]; // Number of bits to replicate in SetFullRes() due to sampling factor
-  uint32_t m_anExpandBitsMcuV[MAX_SOF_COMP_NF]; // Number of bits to replicate in SetFullRes() due to sampling factor
+  int32_t m_nDimX;             // Image Dimension in X
+  int32_t m_nDimY;             // Image Dimension in Y
+  int32_t m_nNumSosComps;      // Number of Image Components (DHT?)
+  int32_t m_nNumSofComps;      // Number of Image Components (DQT?)
+  int32_t m_nPrecision;        // 8-bit or 12-bit (defined in JFIF_SOF1)
+  int32_t m_anSofSampFactH[MAX_SOF_COMP_NF];   // Sampling factor per component ID in frame from SOF
+  int32_t m_anSofSampFactV[MAX_SOF_COMP_NF];   // Sampling factor per component ID in frame from SOF
+  int32_t m_nSosSampFactHMax;  // Maximum sampling factor for scan
+  int32_t m_nSosSampFactVMax;  // Maximum sampling factor for scan
+  int32_t m_nSosSampFactHMin;  // Minimum sampling factor for scan
+  int32_t m_nSosSampFactVMin;  // Minimum sampling factor for scan
+  int32_t m_anSampPerMcuH[MAX_SOF_COMP_NF];    // Number of samples of component ID per MCU
+  int32_t m_anSampPerMcuV[MAX_SOF_COMP_NF];    // Number of samples of component ID per MCU
+  int32_t m_anExpandBitsMcuH[MAX_SOF_COMP_NF]; // Number of bits to replicate in SetFullRes() due to sampling factor
+  int32_t m_anExpandBitsMcuV[MAX_SOF_COMP_NF]; // Number of bits to replicate in SetFullRes() due to sampling factor
 
   bool m_bRestartEn;            // Did decoder see DRI?
-  uint32_t m_nRestartInterval;  // ... if so, what is the MCU interval
-  uint32_t m_nRestartRead;      // Number RST read during m_nScanBuff
-  uint32_t m_nPreviewMode;      // Preview mode
+  int32_t m_nRestartInterval;  // ... if so, what is the MCU interval
+  int32_t m_nRestartRead;      // Number RST read during m_nScanBuff
+  int32_t m_nPreviewMode;       // Preview mode
 
   // Test shifting of YCC for ChannelPreview()
   int32_t m_nPreviewShiftY;
   int32_t m_nPreviewShiftCb;
   int32_t m_nPreviewShiftCr;
-  uint32_t m_nPreviewShiftMcuX; // Start co-ords of shift
-  uint32_t m_nPreviewShiftMcuY;
+  int32_t m_nPreviewShiftMcuX; // Start co-ords of shift
+  int32_t m_nPreviewShiftMcuY;
 
   uint32_t m_nPreviewInsMcuX;   // Test blank MCU insert
   uint32_t m_nPreviewInsMcuY;

@@ -7,12 +7,14 @@ namespace Ui {
 class SnoopConfigDialog;
 }
 
+class CSnoopConfig;
+
 class SnoopConfigDialog : public QDialog
 {
   Q_OBJECT
 
 public:
-  explicit SnoopConfigDialog(QWidget *parent = 0);
+  explicit SnoopConfigDialog(CSnoopConfig *pAppConfig, QWidget *parent = 0);
   ~SnoopConfigDialog();
 
 private slots:
@@ -27,6 +29,8 @@ private:
   SnoopConfigDialog(SnoopConfigDialog&);
   
   Ui::SnoopConfigDialog *ui;
+
+  CSnoopConfig *m_pAppConfig;
 
   QString dbPath;
   bool bAutoUpdate;

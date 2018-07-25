@@ -1,27 +1,48 @@
 #include <QtWidgets>
+#include <QtPrintSupport/qtprintsupportglobal.h>
+#include <QPrintDialog>
+#include <QPrinter>
+#include <QPrintPreviewDialog>
 
-#include "SnoopConfig.h"
-#include "snoopconfigdialog.h"
-#include "JPEGsnoop.h"
-//#include "Viewer.h"
-#include "JfifDecode.h"
+#include "DbSigs.h"
 #include "ImgDecode.h"
+#include "JfifDecode.h"
+#include "SnoopConfig.h"
+#include "Viewer.h"
 #include "WindowBuf.h"
+#include "note.h"
+#include "snoop.h"
+#include "snoopconfigdialog.h"
 
 #include "mainwindow.h"
 
-MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent)
+#ifdef Q_OS_MAC
+const QString rsrcPath = ":/images/mac";
+#else
+const QString rsrcPath = ":/images/win";
+#endif
+
+//-----------------------------------------------------------------------------
+
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), textEdit(new QPlainTextEdit)
 {
   if(DEBUG_EN)
-    m_pAppConfig->DebugLogAdd("MainWindow::MainWindow() Begin");
+    qDebug() << "MainWindow::MainWindow() Begin";
 
   QWidget *widget = new QWidget;
   setCentralWidget(widget);
   setGeometry(100, 100, 800, 700);
 
+  m_pDocLog = new CDocLog();
+  m_pDocLog->Enable();
+
+  m_pAppConfig = new CSnoopConfig(this);
+  m_pAppConfig->RegistryLoad();
+
+  m_pDbSigs = new CDbSigs(m_pDocLog, m_pAppConfig);
+
   // Allocate the file window buffer
-  m_pWBuf = new CwindowBuf();
+  m_pWBuf = new CwindowBuf(m_pDocLog);
 
   if(!m_pWBuf)
   {
@@ -30,48 +51,60 @@ MainWindow::MainWindow(QWidget *parent) :
   }
 
   // Allocate the JPEG decoder
-  m_pImgDec = new CimgDecode(glb_pDocLog, m_pWBuf, this);
+  m_pImgDec = new CimgDecode(m_pDocLog, m_pWBuf, m_pAppConfig, this);
 
-  if(!m_pWBuf)
+  if(!m_pImgDec)
   {
     msgBox.setText("ERROR: Not enough memory for Image Decoder");
     exit(1);
   }
 
-  m_pJfifDec = new CjfifDecode(glb_pDocLog, m_pWBuf, m_pImgDec);
+  m_pJfifDec = new CjfifDecode(m_pDocLog, m_pDbSigs, m_pWBuf, m_pImgDec, m_pAppConfig, this);
 
-  if(!m_pWBuf)
+  if(!m_pJfifDec)
   {
     msgBox.setText("ERROR: Not enough memory for JFIF Decoder");
     exit(1);
   }
 
-  m_pAppConfig = new CSnoopConfig(m_pJfifDec);
-  m_pAppConfig->RegistryLoad();
+  imgWindow = new Q_Viewer(m_pAppConfig, m_pImgDec, this, Qt::Window);
 
+#ifdef Q_OS_LINUX
   menuBar()->setNativeMenuBar(false);
-  
+#endif
+
+  fileToolBar = addToolBar(tr("File"));
+
   createActions();
   createMenus();
 
-//  QScrollArea *scrollArea = new QScrollArea(this);
-//  scrollArea->setWidget(m_pImgDec);
-//  scrollArea->setBackgroundRole(QPalette::Dark);
-//  scrollArea->setVisible(false);
+  QHBoxLayout *hLayout = new QHBoxLayout;
+  QVBoxLayout *vLayout = new QVBoxLayout;
 
-  QSplitter *splitter = new QSplitter(Qt::Vertical);
-  doc = new QPlainTextEdit;
-  doc->setMaximumBlockCount(0);
+  rgbHisto = new QLabel;
+  rgbHisto->setAlignment(Qt::AlignBottom | Qt::AlignLeft);
+  rgbHisto->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+  rgbHisto->setMinimumSize(width() / 2, 180);
+  rgbHisto->setStyleSheet("background-color: white");
+  hLayout->addWidget(rgbHisto);
+
+  yHisto = new QLabel;
+  yHisto->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+  yHisto->setMinimumSize(width() / 2, 180);
+  yHisto->setStyleSheet("background-color: white");
+  hLayout->addWidget(yHisto);
+
+  vLayout->addWidget(textEdit);
+  vLayout->addLayout(hLayout);
+
+  QWidget *w = new QWidget;
+  w->setLayout(vLayout);
+  setCentralWidget(w);
+
   QFont f;
   f.setFamily("Courier");
-  doc->setFont(f);
-  doc->appendPlainText("");
-
-//  v = new Q_Viewer(this);
-  splitter->addWidget(doc);
-  splitter->addWidget(m_pImgDec);
-//  splitter->addWidget(scrollArea);
-  setCentralWidget(splitter);
+  textEdit->setFont(f);
+  textEdit->appendPlainText("");
 
   m_StatusBar = statusBar();
   QLabel *st1 = new QLabel("     ");
@@ -81,54 +114,75 @@ MainWindow::MainWindow(QWidget *parent) :
   m_StatusBar->addPermanentWidget(st1);
   st1->setText("1234");
   m_pJfifDec->SetStatusBar(m_StatusBar);
+
   connect(m_pJfifDec, SIGNAL(updateStatus(QString, int)), m_StatusBar, SLOT(showMessage(QString,int)));
   connect(m_pImgDec, SIGNAL(updateStatus(QString, int)), m_StatusBar, SLOT(showMessage(QString,int)));
+  connect(m_pAppConfig, SIGNAL(reprocess()), this, SLOT(reprocess()));
 
-  glb_pDocLog->setDoc(doc);
+  m_pDocLog->setDoc(textEdit);
+
+  // Coach Messages
+  strLoRes = "Currently only decoding low-res view (DC-only). Full-resolution image decode can be enabled in [Options->Scan Segment->Full IDCT], but it is slower.";
+  strHiRes = "Currently decoding high-res view (AC+DC), which can be slow. For faster operation, low-resolution image decode can be enabled in [Options->Scan Segment->No IDCT].";
+
 }
+
+//-----------------------------------------------------------------------------
 
 MainWindow::~MainWindow()
 {
 }
+
+//-----------------------------------------------------------------------------
 
 void MainWindow::createActions(void)
 {
   if(DEBUG_EN)
     m_pAppConfig->DebugLogAdd("MainWindow::createActions() Begin");
 
-//  newAct = new QAction(tr("&New"), this);
-//  newAct->setShortcuts(QKeySequence::New);
-//   newAct->setStatusTip(tr("Create a new file"));
-//   connect(newAct, &QAction::triggered, this, &MainWindow::newFile);
+  const QIcon newIcon = QIcon::fromTheme("document-new", QIcon(rsrcPath + "/filenew.png"));
+  newAct = new QAction(newIcon, tr("&New"), this);
+  newAct->setShortcuts(QKeySequence::New);
+  newAct->setStatusTip(tr("New"));
+//  connect(newAct, &QAction::triggered, this, &MainWindow::newFile);
+  fileToolBar->addAction(newAct);
 
-  openAct = new QAction(tr("&Open Image..."), this);
+  const QIcon openIcon = QIcon::fromTheme("document-open", QIcon(rsrcPath + "/fileopen.png"));
+  openAct = new QAction(openIcon, tr("&Open Image..."), this);
   openAct->setShortcuts(QKeySequence::Open);
-//   openAct->setStatusTip(tr("Open an existing file"));
+  openAct->setStatusTip(tr("Open"));
+  fileToolBar->addAction(openAct);
   connect(openAct, &QAction::triggered, this, &MainWindow::open);
 
-  saveLogAct = new QAction(tr("&Save Log..."), this);
+  const QIcon saveIcon = QIcon::fromTheme("document-save", QIcon(rsrcPath + "/filesave.png"));
+  saveLogAct = new QAction(saveIcon, tr("&Save Log..."), this);
   saveLogAct->setShortcuts(QKeySequence::Save);
   saveLogAct->setEnabled(false);
-//   saveAct->setStatusTip(tr("Save the document to disk"));
+  saveLogAct->setStatusTip(tr("Save Log"));
+  fileToolBar->addAction(saveLogAct);
   connect(saveLogAct, &QAction::triggered, this, &MainWindow::saveLog);
 
   reprocessAct = new QAction(tr("Reprocess File"), this);
   reprocessAct->setShortcut(tr("Ctrl+R"));
   reprocessAct->setEnabled(false);
 //   saveAct->setStatusTip(tr("Save the document to disk"));
-//   connect(saveAct, &QAction::triggered, this, &MainWindow::save);
+   connect(reprocessAct, &QAction::triggered, this, &MainWindow::reprocess);
 
   batchProcessAct = new QAction(tr("Batch Process..."), this);
   OffsetAct = new QAction(tr("Offset"), this);
 
-  printAct = new QAction(tr("&Print..."), this);
+  const QIcon printIcon = QIcon::fromTheme("document-print", QIcon(rsrcPath + "/fileprint.png"));
+  printAct = new QAction(printIcon, tr("&Print..."), this);
   printAct->setShortcuts(QKeySequence::Print);
-//   printAct->setStatusTip(tr("Print the document"));
-//   connect(printAct, &QAction::triggered, this, &MainWindow::print);
+  printAct->setStatusTip(tr("Print the document"));
+  fileToolBar->addAction(printAct);
+  connect(printAct, &QAction::triggered, this, &MainWindow::filePrint);
+
+  fileToolBar->addSeparator();
 
   printPreviewAct = new QAction(tr("Print Preview"), this);
-//   printAct->setStatusTip(tr("Print the document"));
-//   connect(printAct, &QAction::triggered, this, &MainWindow::print);
+//   printPreviewAct->setStatusTip(tr("Print the document"));
+  connect(printPreviewAct, &QAction::triggered, this, &MainWindow::filePrintPreview);
 
   printSetupAct = new QAction(tr("Print Setup..."), this);
 //   printAct->setStatusTip(tr("Print the document"));
@@ -140,7 +194,7 @@ void MainWindow::createActions(void)
   exitAct = new QAction(tr("E&xit"), this);
   exitAct->setShortcuts(QKeySequence::Quit);
 //   exitAct->setStatusTip(tr("Exit the application"));
-  connect(exitAct, &QAction::triggered, this, &MainWindow::Quit);
+  connect(exitAct, &QAction::triggered, this, &MainWindow::close);
 
   undoAct = new QAction(tr("Undo"), this);
   undoAct->setShortcuts(QKeySequence::Undo);
@@ -168,35 +222,43 @@ void MainWindow::createActions(void)
   // Image Channel
   rgbAct = new QAction(tr("RGB"), this);
   rgbAct->setShortcut(tr("Alt+1"));
+  rgbAct->setData(PREVIEW_RGB);
   rgbAct->setCheckable(true);
   rgbAct->setChecked(true);
 
   yccAct = new QAction(tr("YCC"), this);
   yccAct->setShortcut(tr("Alt+2"));
+  yccAct->setData(PREVIEW_YCC);
   yccAct->setCheckable(true);
 
   rAct = new QAction(tr("R"), this);
   rAct->setShortcut(tr("Alt+3"));
+  rAct->setData(PREVIEW_R);
   rAct->setCheckable(true);
 
   gAct = new QAction(tr("G"), this);
   gAct->setShortcut(tr("Alt+4"));
+  gAct->setData(PREVIEW_G);
   gAct->setCheckable(true);
 
   bAct = new QAction(tr("B"), this);
   bAct->setShortcut(tr("Alt+5"));
+  bAct->setData(PREVIEW_B);
   bAct->setCheckable(true);
 
   yAct = new QAction(tr("Y (Greyscale)"), this);
   yAct->setShortcut(tr("Alt+6"));
+  yAct->setData(PREVIEW_Y);
   yAct->setCheckable(true);
 
   cbAct = new QAction(tr("Cb"), this);
   cbAct->setShortcut(tr("Alt+7"));
+  cbAct->setData(PREVIEW_CB);
   cbAct->setCheckable(true);
 
   crAct = new QAction(tr("Cr"), this);
   crAct->setShortcut(tr("Alt+8"));
+  crAct->setData(PREVIEW_CR);
   crAct->setCheckable(true);
 
   channelGroup = new QActionGroup(this);
@@ -208,40 +270,62 @@ void MainWindow::createActions(void)
   channelGroup->addAction(yAct);
   channelGroup->addAction(cbAct);
   channelGroup->addAction(crAct);
+  connect(channelGroup, SIGNAL(triggered(QAction*)), imgWindow, SLOT(setPreviewTitle(QAction*)));
+  connect(channelGroup, SIGNAL(triggered(QAction*)), m_pImgDec, SLOT(setPreviewMode(QAction*)));
 
   // Image Zoom
-  zoomInAct = new QAction(tr("Zoom In"));
+  const QIcon zoomInIcon = QIcon::fromTheme("document-print", QIcon(rsrcPath + "/zoomin.png"));
+  zoomInAct = new QAction(zoomInIcon, tr("Zoom In"));
+  zoomInAct->setData(PRV_ZOOM_IN);
   zoomInAct->setShortcuts(QKeySequence::ZoomIn);
+  fileToolBar->addAction(zoomInAct);
 
-  zoomOutAct = new QAction(tr("Zoom Out"));
+  const QIcon zoomOutIcon = QIcon::fromTheme("document-print", QIcon(rsrcPath + "/zoomout.png"));
+  zoomOutAct = new QAction(zoomOutIcon, tr("Zoom Out"));
+  zoomOutAct->setData(PRV_ZOOM_OUT);
   zoomOutAct->setShortcuts(QKeySequence::ZoomOut);
+  fileToolBar->addAction(zoomOutAct);
+
+  zoomInOutGroup = new QActionGroup(this);
+  zoomInOutGroup->addAction(zoomInAct);
+  zoomInOutGroup->addAction(zoomOutAct);
+  connect(zoomInOutGroup, SIGNAL(triggered(QAction*)), imgWindow, SLOT(zoom(QAction*)));
 
   zoom12_5Act = new QAction(tr("12.5%"), this);
+  zoom12_5Act->setData(PRV_ZOOM_12);
   zoom12_5Act->setCheckable(true);
   zoom12_5Act->setChecked(true);
 
   zoom25Act = new QAction(tr("25%"), this);
+  zoom25Act->setData(PRV_ZOOM_25);
   zoom25Act->setCheckable(true);
 
   zoom50Act = new QAction(tr("50%"), this);
+  zoom50Act->setData(PRV_ZOOM_50);
   zoom50Act->setCheckable(true);
 
   zoom100Act = new QAction(tr("100%"), this);
+  zoom100Act->setData(PRV_ZOOM_100);
   zoom100Act->setCheckable(true);
 
   zoom150Act = new QAction(tr("150%"), this);
+  zoom150Act->setData(PRV_ZOOM_150);
   zoom150Act->setCheckable(true);
 
   zoom200Act = new QAction(tr("200%"), this);
+  zoom200Act->setData(PRV_ZOOM_200);
   zoom200Act->setCheckable(true);
 
   zoom300Act = new QAction(tr("300%"), this);
+  zoom300Act->setData(PRV_ZOOM_300);
   zoom300Act->setCheckable(true);
 
   zoom400Act = new QAction(tr("400%"), this);
+  zoom400Act->setData(PRV_ZOOM_400);
   zoom400Act->setCheckable(true);
 
-  zoom500Act = new QAction(tr("500%"), this);
+  zoom500Act = new QAction(tr("800%"), this);
+  zoom500Act->setData(PRV_ZOOM_800);
   zoom500Act->setCheckable(true);
 
   zoomGroup = new QActionGroup(this);
@@ -254,6 +338,7 @@ void MainWindow::createActions(void)
   zoomGroup->addAction(zoom300Act);
   zoomGroup->addAction(zoom400Act);
   zoomGroup->addAction(zoom500Act);
+  connect(zoomGroup, SIGNAL(triggered(QAction*)), imgWindow, SLOT(zoom(QAction*)));
 
   mcuGridAct = new QAction(tr("MCU Grid"), this);
   mcuGridAct->setShortcut(tr("Ctrl+G"));
@@ -298,27 +383,27 @@ void MainWindow::createActions(void)
   // Options
   dhtExpandAct = new QAction(tr("DHT Expand"), this);
   dhtExpandAct->setCheckable(true);
-  dhtExpandAct->setChecked(m_pAppConfig->bOutputDHTexpand);
+  dhtExpandAct->setChecked(m_pAppConfig->expandDht());
   connect(dhtExpandAct, SIGNAL(triggered()), m_pAppConfig, SLOT(onOptionsDhtexpand()));
 
   hideUnknownTagsAct = new QAction(tr("Hide Unknown EXIF Tags"), this);
   hideUnknownTagsAct->setCheckable(true);
-  hideUnknownTagsAct->setChecked(m_pAppConfig->bExifHideUnknown);
+  hideUnknownTagsAct->setChecked(m_pAppConfig->hideUnknownExif());
   connect(hideUnknownTagsAct, SIGNAL(triggered()), m_pAppConfig, SLOT(onOptionsHideuknownexiftags()));
 
   makerNotesAct = new QAction(tr("Maker Notes"), this);
   makerNotesAct->setCheckable(true);
-  hideUnknownTagsAct->setChecked(m_pAppConfig->bDecodeMaker);
+  hideUnknownTagsAct->setChecked(m_pAppConfig->decodeMaker());
   connect(makerNotesAct, SIGNAL(triggered()), m_pAppConfig, SLOT(onOptionsMakernotes()));
 
   sigSearchAct = new QAction(tr("Signature Search"), this);
   sigSearchAct->setCheckable(true);
-  sigSearchAct->setChecked(m_pAppConfig->bSigSearch);
+  sigSearchAct->setChecked(m_pAppConfig->searchSig());
   connect(sigSearchAct, SIGNAL(triggered()), m_pAppConfig, SLOT(onOptionsSignaturesearch()));
 
   relaxedParseAct = new QAction(tr("Relaxed Parsing"), this);
   relaxedParseAct->setCheckable(true);
-  relaxedParseAct->setChecked(m_pAppConfig->bRelaxedParsing);
+  relaxedParseAct->setChecked(m_pAppConfig->relaxedParsing());
   connect(relaxedParseAct, SIGNAL(triggered()), m_pAppConfig, SLOT(onOptionsRelaxedparsing()));
 
   configAct = new QAction(tr("Configuration..."), this);
@@ -329,7 +414,7 @@ void MainWindow::createActions(void)
   // Scan Segment menu
   decodeImageAct = new QAction(tr("Decode Image"), this);
   decodeImageAct->setCheckable(true);
-  decodeImageAct->setChecked(m_pAppConfig->bDecodeScanImg);
+  decodeImageAct->setChecked(m_pAppConfig->decodeImage());
   connect(decodeImageAct, SIGNAL(triggered()), m_pAppConfig, SLOT(onScansegmentDecodeImage()));
 
   fullIdtcAct = new QAction(tr("Full IDCT (AC+DC - slow)"), this);;
@@ -340,9 +425,7 @@ void MainWindow::createActions(void)
   noIdtcAct->setCheckable(true);
   connect(noIdtcAct, SIGNAL(triggered()), m_pAppConfig, SLOT(onScansegmentNoidct()));
 
-  qDebug() << "Action" << m_pAppConfig->bDecodeScanImgAc;
-
-  if(m_pAppConfig->bDecodeScanImgAc)
+  if(m_pAppConfig->decodeAc())
   {
     fullIdtcAct->setChecked(true);
   }
@@ -357,17 +440,17 @@ void MainWindow::createActions(void)
 
   histogramRgbAct = new QAction(tr("Histogram RGB"), this);;
   histogramRgbAct->setCheckable(true);
-  histogramRgbAct->setChecked(m_pAppConfig->bHistoEn);
+  histogramRgbAct->setChecked(m_pAppConfig->displayRgbHistogram());
   connect(histogramRgbAct, SIGNAL(triggered()), m_pAppConfig, SLOT(onScansegmentHistogram()));
 
   histogramYAct = new QAction(tr("Histogram Y"), this);;
   histogramYAct->setCheckable(true);
-  histogramYAct->setChecked(m_pAppConfig->bDumpHistoY);
+  histogramYAct->setChecked(m_pAppConfig->displayYHistogram());
   connect(histogramYAct, SIGNAL(triggered()), m_pAppConfig, SLOT(onScansegmentHistogramy()));
 
   dumpAct = new QAction(tr("Dump"), this);;
   dumpAct->setCheckable(true);
-  dumpAct->setChecked(m_pAppConfig->bOutputScanDump);
+  dumpAct->setChecked(m_pAppConfig->scanDump());
   connect(dumpAct, SIGNAL(triggered()), m_pAppConfig, SLOT(onScansegmentDump()));
 
   detailedDecodeAct = new QAction(tr("Detailed Decode..."), this);
@@ -378,6 +461,8 @@ void MainWindow::createActions(void)
   if(DEBUG_EN)
     m_pAppConfig->DebugLogAdd("MainWindow::createActions() End");
 }
+
+//-----------------------------------------------------------------------------
 
 void MainWindow::createMenus(void)
 {
@@ -485,6 +570,8 @@ void MainWindow::createMenus(void)
   helpMenu->addAction(aboutAct);
 }
 
+//-----------------------------------------------------------------------------
+
 void MainWindow::open()
 {
   QFileDialog dialog(this);
@@ -505,54 +592,61 @@ void MainWindow::open()
 
   if(dialog.exec())
   {
-    QStringList files = dialog.selectedFiles();
+    m_currentFile = dialog.selectedFiles().at(0);
 
-    m_currentFile = files.at(0);
+    AnalyzeFile();
+  }
+}
 
-    m_pFile = new QFile(m_currentFile);
+//-----------------------------------------------------------------------------
 
-    if(m_pFile->open(QIODevice::ReadOnly) == false)
+void MainWindow::AnalyzeFile()
+{
+  m_pFile = new QFile(m_currentFile);
+
+  if(m_pFile->open(QIODevice::ReadOnly) == false)
+  {
+    QString strError;
+
+    // Note: msg includes m_strPathName
+    strError = QString("ERROR: Couldn't open file: [%1]").arg(m_currentFile);
+    m_pDocLog->AddLineErr(strError);
+
+    if(m_pAppConfig->interactive())
     {
-      QString strError;
+      msgBox.setText(strError);
+      msgBox.exec();
+    }
 
-      // Note: msg includes m_strPathName
-      strError = QString("ERROR: Couldn't open file: [%1]").arg(m_currentFile);
-      glb_pDocLog->AddLineErr(strError);
+    m_pFile = NULL;
+  }
+  else
+  {
+    // Set the file size variable
+    m_lFileSize = m_pFile->size();
 
-      if(m_pAppConfig->bInteractive)
-      {
-        msgBox.setText(strError);
-        msgBox.exec();
-      }
+    // Don't attempt to load buffer with zero length file!
+    if(m_lFileSize > 0)
+    {
+      // Open up the buffer
+      m_pWBuf->BufFileSet(m_pFile);
+      m_pWBuf->BufLoadWindow(0);
 
-      m_pFile = NULL;
+      // Mark file as opened
+      m_bFileOpened = true;
+
+      enableMenus();
+      AnalyzeFileDo();
+      AnalyzeClose();
     }
     else
     {
-      // Set the file size variable
-      m_lFileSize = m_pFile->size();
-
-      // Don't attempt to load buffer with zero length file!
-      if(m_lFileSize > 0)
-      {
-        // Open up the buffer
-        m_pWBuf->BufFileSet(m_pFile);
-        m_pWBuf->BufLoadWindow(0);
-
-        // Mark file as opened
-        m_bFileOpened = true;
-
-        enableMenus();
-        AnalyzeFileDo();
-        AnalyzeClose();
-      }
-      else
-      {
-        m_pFile->close();
-      }
+      m_pFile->close();
     }
   }
 }
+
+//-----------------------------------------------------------------------------
 
 void MainWindow::AnalyzeFileDo()
 {
@@ -567,25 +661,25 @@ void MainWindow::AnalyzeFileDo()
   m_bFileAnalyzed = false;
 
   // Clear the document log
-  glb_pDocLog->Clear();
+  m_pDocLog->Clear();
 
-  glb_pDocLog->AddLine("");
-  glb_pDocLog->AddLine(QString("JPEGsnoop %1 by Calvin Hass").arg(QString(VERSION_STR)));
-  glb_pDocLog->AddLine("  http://www.impulseadventure.com/photo/");
-  glb_pDocLog->AddLine("  -------------------------------------");
-  glb_pDocLog->AddLine("");
-  glb_pDocLog->AddLine(QString("  Filename: [%1]").arg(m_currentFile));
-  glb_pDocLog->AddLine(QString("  Filesize: [%1] bytes").arg(m_lFileSize));
-  glb_pDocLog->AddLine("");
+  m_pDocLog->AddLine("");
+  m_pDocLog->AddLine(QString("JPEGsnoop %1 by Calvin Hass").arg(QString(VERSION_STR)));
+  m_pDocLog->AddLine("  http://www.impulseadventure.com/photo/");
+  m_pDocLog->AddLine("  -------------------------------------");
+  m_pDocLog->AddLine("");
+  m_pDocLog->AddLine(QString("  Filename: [%1]").arg(m_currentFile));
+  m_pDocLog->AddLine(QString("  Filesize: [%1] bytes").arg(m_lFileSize));
+  m_pDocLog->AddLine("");
 
   // Perform the actual decoding
   if(m_lFileSize > 0xFFFFFFFF)
   {
-    glb_pDocLog->AddLineErr(QString("ERROR: File too large for this version of JPEGsnoop. [Size=0x%1]").arg(m_lFileSize));
+    m_pDocLog->AddLineErr(QString("ERROR: File too large for this version of JPEGsnoop. [Size=0x%1]").arg(m_lFileSize));
   }
   else if(m_lFileSize == 0)
   {
-    glb_pDocLog->AddLineErr("ERROR: File length is zero, no decoding done.");
+    m_pDocLog->AddLineErr("ERROR: File length is zero, no decoding done.");
   }
   else
   {
@@ -594,12 +688,38 @@ void MainWindow::AnalyzeFileDo()
 
     m_pJfifDec->ProcessFile(m_pFile);
 
+    int32_t h;
+
+    if(m_pAppConfig->displayRgbHistogram() && m_pImgDec->isRgbHistogramReady())
+    {
+      h = m_pImgDec->rgbHistogram()->height();
+      rgbHisto->setPixmap(QPixmap::fromImage((*m_pImgDec->rgbHistogram()).scaled(rgbHisto->width(), h)));
+    }
+
+    if(m_pAppConfig->displayYHistogram() && m_pImgDec->isRgbHistogramReady())
+    {
+      h = m_pImgDec->yHistogram()->height();
+      yHisto->setPixmap(QPixmap::fromImage((*m_pImgDec->yHistogram()).scaled(yHisto->width(), h)));
+    }
+
+    if(m_pImgDec->m_bDibTempReady & m_pImgDec->m_bPreviewIsJpeg)
+    {
+      imgWindow->drawImage();
+    }
+
     // Now indicate that the file has been processed
     m_bFileAnalyzed = true;
   }
 }
 
+//-----------------------------------------------------------------------------
 
+void MainWindow::updateImage()
+{
+  imgWindow->drawImage();
+}
+
+//-----------------------------------------------------------------------------
 // Close the current file
 // - Invalidate the buffer
 //
@@ -650,10 +770,12 @@ void MainWindow::saveLog()
      }
 
      QTextStream out(&file);
-     out << doc->toPlainText();
+     out << textEdit->toPlainText();
 
   file.close();
 }
+
+//-----------------------------------------------------------------------------
 
 void MainWindow::enableMenus()
 {
@@ -672,14 +794,88 @@ void MainWindow::enableMenus()
   manageLocalDbAct->setEnabled(true);
 }
 
+//-----------------------------------------------------------------------------
+
 void MainWindow::onConfig()
 {
-  configDialog = new SnoopConfigDialog();
+  configDialog = new SnoopConfigDialog(m_pAppConfig);
   configDialog->show();
 }
 
-void MainWindow::Quit()
+//-----------------------------------------------------------------------------
+
+void MainWindow::filePrint()
+{
+  QPrinter printer(QPrinter::HighResolution);
+  QPrintDialog *dlg = new QPrintDialog(&printer, this);
+
+  if (textEdit->textCursor().hasSelection())
+  {
+    dlg->addEnabledOption(QAbstractPrintDialog::PrintSelection);
+  }
+
+  dlg->setWindowTitle(tr("Print Document"));
+
+  if (dlg->exec() == QDialog::Accepted)
+  {
+    textEdit->print(&printer);
+  }
+
+  delete dlg;
+}
+
+//-----------------------------------------------------------------------------
+
+void MainWindow::reprocess()
+{
+  // Show coach message once
+  if(m_pAppConfig->decodeImage() &&	m_pAppConfig->coachIdct())
+  {
+    // Show the coaching dialog
+    QString msg;
+
+    if(m_pAppConfig->decodeAc())
+    {
+      msg = strHiRes;
+    }
+    else
+    {
+      msg = strLoRes;
+    }
+
+    Q_Note *note = new Q_Note(msg);
+    note->exec();
+    m_pAppConfig->setCoachIdct(!note->hideStatus());
+  }
+
+  emit ImgSrcChanged();
+
+  textEdit->clear();
+  AnalyzeFile();
+
+  // TODO: Handle AVI
+}
+
+//-----------------------------------------------------------------------------
+
+void MainWindow::filePrintPreview()
+{
+  QPrinter printer(QPrinter::HighResolution);
+  QPrintPreviewDialog preview(&printer, this);
+  connect(&preview, &QPrintPreviewDialog::paintRequested, this, &MainWindow::printPreview);
+  preview.exec();
+}
+
+//-----------------------------------------------------------------------------
+
+void MainWindow::printPreview(QPrinter *printer)
+{
+  textEdit->print(printer);
+}
+
+//-----------------------------------------------------------------------------
+
+void MainWindow::closeEvent(QCloseEvent *)
 {
   m_pAppConfig->RegistryStore();
-  QApplication::quit();
 }
