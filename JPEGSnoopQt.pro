@@ -11,7 +11,9 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = JPEGSnoopQt
 TEMPLATE = app
 
+gcc{
 QMAKE_CXXFLAGS += -std=c++11
+}
 
 macx{
 QMAKE_CXXFLAGS += -isystem /Users/bob/Qt/5.11.0/clang_64/lib/QtCore.framework/Versions/5/Headers
@@ -25,11 +27,18 @@ QMAKE_CXXFLAGS += -isystem /usr/include/qt5/QtGui
 QMAKE_CXXFLAGS += -isystem /usr/include/qt5/QtWidgets
 }
 
+gcc{
 QMAKE_CXXFLAGS += -fstrict-aliasing -Wextra -pedantic -Weffc++ -Wfloat-equal -Wswitch-default -Wcast-align -Wcast-qual -Wchar-subscripts -Wcomment
 QMAKE_CXXFLAGS += -Wdisabled-optimization -Wformat-nonliteral -Wformat-security -Wconversion -Wformat-nonliteral -Wformat-y2k -Wformat=2 -Wimport
 QMAKE_CXXFLAGS += -Winit-self -Winline -Winvalid-pch -Wmissing-format-attribute -Wmissing-include-dirs -Wmissing-noreturn -Wold-style-cast
 QMAKE_CXXFLAGS += -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-enum -Wunreachable-code
 QMAKE_CXXFLAGS += -Wunused -Wvariadic-macros -Wwrite-strings
+}
+
+# Address C1228 for DbSigs
+msvc{
+QMAKE_CXXFLAGS += -bigobj
+}
 
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings

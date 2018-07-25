@@ -268,7 +268,9 @@ bool CDbSigs::BufWriteStr(unsigned char *pBuf,QString strIn,uint32_t nMaxBytes,b
   Q_ASSERT(pBuf);
 
 	bool		bRet = false;
-	char		chAsc;
+
+    /* // FIXME Commented out the following until unicode equivalent available
+    char		chAsc;
 	wchar_t		chUni;
   uint32_t	nCharSz = ((bUni)?sizeof(wchar_t):sizeof(char));
   unsigned char *pBufBase;
@@ -279,7 +281,6 @@ bool CDbSigs::BufWriteStr(unsigned char *pBuf,QString strIn,uint32_t nMaxBytes,b
   pBufUni = (wchar_t *)pBufBase;
   pBufAsc = pBufBase;
 
-  /* //CAL! Commented out the following until unicode equivalent available
 
 #ifdef UNICODE
 	// Create non-Unicode version of string

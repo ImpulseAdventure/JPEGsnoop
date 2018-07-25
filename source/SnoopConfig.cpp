@@ -421,6 +421,7 @@ QString CSnoopConfig::GetExeDir()
 	ASSERT(_tcslen(szPath) < sizeof(szPath));
 
   return szPath; */
+    return QString(); // FIXME temporary fix for C4716
 }
 
 // Recursively create directories as needed to create full path
