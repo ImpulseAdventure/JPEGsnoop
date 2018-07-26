@@ -40,6 +40,14 @@ msvc{
 QMAKE_CXXFLAGS += -bigobj
 }
 
+win32{
+    RC_FILE += win_res.rc
+}
+
+OTHER_FILES += \
+    images\jpegsnoop.ico \
+    win_res.rc
+
 # The following define makes your compiler emit warnings if you use
 # any feature of Qt which has been marked as deprecated (the exact warnings
 # depend on your compiler). Please consult the documentation of the
@@ -95,3 +103,6 @@ FORMS += \
     source/eula.ui
 
 RESOURCES = JPEGSnoop.qrc
+
+DISTFILES += \
+    win_res.rc
