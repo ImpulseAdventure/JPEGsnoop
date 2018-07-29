@@ -25,7 +25,7 @@ void Q_Eula::okClicked()
 {
   if(!ui->cbAgreed->isChecked())
   {
-    QMessageBox::warning(this, "JPEGSnoop", "You need to agree to the terms or else click Cancel", QMessageBox::Ok);
+    QMessageBox::warning(this, "JPEGsnoop", "You need to agree to the terms or else click Cancel", QMessageBox::Ok);
   }
   else
   {

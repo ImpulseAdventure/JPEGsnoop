@@ -8,7 +8,7 @@ QT += core gui printsupport
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-TARGET = JPEGSnoopQt
+TARGET = JPEGsnoopQt
 TEMPLATE = app
 
 gcc{
@@ -102,7 +102,7 @@ FORMS += \
     source/note.ui \
     source/eula.ui
 
-RESOURCES = JPEGSnoop.qrc
+RESOURCES = JPEGsnoop.qrc
 
 DISTFILES += \
     win_res.rc
