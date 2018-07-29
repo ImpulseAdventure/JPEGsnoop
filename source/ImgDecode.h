@@ -313,6 +313,7 @@ public:
   void ReportHistogramY();
   void ReportColorStats();
 
+  bool IsImgDecoded() {return m_bImgDecoded; }
   bool isYHistogramReady() {return m_bDibHistYReady; }
   bool isRgbHistogramReady() {return m_bDibHistRgbReady; }
   bool IsPreviewReady();
@@ -400,6 +401,7 @@ public:
   void PrintDcCumVal(uint32_t nMcuX, uint32_t nMcuY, int32_t nVal);
   void ReportDcRun(uint32_t nMcuX, uint32_t nMcuY, uint32_t nMcuLen);
 
+  bool  m_bImgDecoded;
   bool m_bDibTempReady;
 
   QImage *m_pDibTemp;              // Temporary version for display

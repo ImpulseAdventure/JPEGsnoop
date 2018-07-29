@@ -702,8 +702,11 @@ void MainWindow::AnalyzeFileDo()
       yHisto->setPixmap(QPixmap::fromImage((*m_pImgDec->yHistogram()).scaled(yHisto->width(), h)));
     }
 
+    qDebug() << QString("MainWindow::AnalyzeFileDo() DibTempReady=%1 PreviewIsJpeg=%2")
+                .arg(m_pImgDec->m_bDibTempReady)
+                .arg(m_pImgDec->m_bPreviewIsJpeg);
     if(m_pImgDec->m_bDibTempReady & m_pImgDec->m_bPreviewIsJpeg)
-    {
+    {    
       imgWindow->drawImage();
     }
 

@@ -47,6 +47,7 @@ CimgDecode::CimgDecode(CDocLog *pLog, CwindowBuf *pWBuf, CSnoopConfig *pAppConfi
   m_bVerbose = false;
 
   m_pStatBar = 0;
+  m_bImgDecoded = false;        // Image has not been decoded yet
   m_bDibTempReady = false;
   m_bPreviewIsJpeg = false;
   m_bDibHistRgbReady = false;
@@ -147,6 +148,9 @@ void CimgDecode::Reset()
 
   m_bAvgYValid = false;
   m_nAvgY = 0;
+
+  // Image has not been decoded yet
+  m_bImgDecoded = false;
 
   // If a DIB has been generated, release it!
   if(m_bDibTempReady)
@@ -823,6 +827,7 @@ void CimgDecode::setPreviewMode(QAction *action)
 {
   // Need to check to see if mode has changed. If so, we need to recalculate the temporary preview.
   m_nPreviewMode = action->data().toInt();
+  qDebug() << QString("CimgDecode::setPreviewMode(%1)").arg(m_nPreviewMode);
   CalcChannelPreview();
   emit updateImage();
 }
@@ -3303,7 +3308,7 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
   // Set the decoded size and before scaling
   m_nImgSizeX = m_nMcuXMax * m_nMcuWidth;
   m_nImgSizeY = m_nMcuYMax * m_nMcuHeight;
-
+  qDebug() << QString("CimgDecode::DecodeScanImg ImgSizeX=%1 ImgSizeY=%2").arg(m_nImgSizeX).arg(m_nImgSizeY);
   m_rectImgBase = QRect(QPoint(0, 0), QSize(m_nImgSizeX, m_nImgSizeY));
 
   // Determine decoding range
@@ -4213,6 +4218,9 @@ void CimgDecode::DecodeScanImg(uint32_t nStart, bool bDisplay, bool bQuiet)
   {
     m_pLog->AddLine("");
   }
+
+  // Set an indicator that we have completed an image decode
+  m_bImgDecoded = true;
 
   // ---------------------------------------------------------
 
@@ -5390,6 +5398,12 @@ void CimgDecode::CapRgbRange(uint32_t nMcuX, uint32_t nMcuY, PixelCc & sPix)
 //
 void CimgDecode::CalcChannelPreviewFull(QRect *, uint8_t *pTmp)
 {
+  qDebug() << QString("CimgDecode::CalcChannelPreviewFull");
+
+  if (!m_bImgDecoded) {
+      qDebug() << QString("CimgDecode::CalcChannelPreviewFull exit as image not decoded");
+      return;
+  }
   PixelCc sPixSrc, sPixDst;
 
   QString strTmp;
@@ -5461,6 +5475,7 @@ void CimgDecode::CalcChannelPreviewFull(QRect *, uint8_t *pTmp)
   // Determine pixel count
   nNumPixels = (nRngY2 - nRngY1 + 1) * (nRngX2 - nRngX1 + 1);
 
+  qDebug() << QString("CimgDecode::CalcChannelPreviewFull() new QImage X=%1 Y=%2").arg(m_nImgSizeX).arg(m_nImgSizeY);
   m_pDibTemp = new QImage(m_nImgSizeX, m_nImgSizeY, QImage::Format_RGB32);
 
   // Step through the image
@@ -5775,6 +5790,7 @@ void CimgDecode::GetBitmapPtr(uint8_t *&pBitmap)
 //
 void CimgDecode::CalcChannelPreview()
 {
+  qDebug() << QString("CimgDecode::CalcChannelPreview");
   uint8_t *pDibImgTmpBits = 0;
 
 //@@  pDibImgTmpBits = (uint8_t *) (m_pDibTemp.GetDIBBitArray());
@@ -5784,6 +5800,8 @@ void CimgDecode::CalcChannelPreview()
 //  {
 //    return;
 //  }
+
+  qDebug() << QString("CimgDecode::CalcChannelPreview DibTempReady=%1").arg(m_bDibTempReady);
 
   // If we need to do a YCC shift, then do full recalc into tmp array
   CalcChannelPreviewFull(0, pDibImgTmpBits);

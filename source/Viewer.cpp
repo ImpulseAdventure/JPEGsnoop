@@ -49,7 +49,7 @@ Q_Viewer::Q_Viewer(CSnoopConfig *pAppConfig, CimgDecode *pImgDecoder, QWidget *_
   loGrid->setContentsMargins(0, 0, 0, 0);
   setLayout(loGrid);
 
-  m_strPreview = "RGB";
+  m_strPreview = "Image (RGB)";
   setWindowTitle(m_strPreview + " " + m_strZoom);
   m_strZoom = QString("@ %1%").arg(scaleFactor * 100.0);
 
@@ -79,9 +79,9 @@ void Q_Viewer::mouseMoved(QMouseEvent *e)
   mcuLabel->setText(QString("MCU [%1,%2]")
                     .arg(p.x(), 4, 10, QChar('0'))
                     .arg(p.y(), 4, 10, QChar('0')));
-  m_pImgDecoder->LookupFilePosMcu(e->pos(), nByte, nBit);
+  m_pImgDecoder->LookupFilePosMcu(p, nByte, nBit);
   p = m_pImgDecoder->PixelToBlk(e->pos());
-  m_pImgDecoder->LookupBlkYCC(e->pos(), nY, nCb, nCr);
+  m_pImgDecoder->LookupBlkYCC(p, nY, nCb, nCr);
   fileLabel->setText(QString("File 0x%1:%2").arg(nByte, 8, 16, QChar('0')).arg(nBit));
   yccLabel->setText(QString("YCC DC=[%1,%2,%3]")
                     .arg(nY, 5, 10, QChar('0'))
@@ -92,6 +92,13 @@ void Q_Viewer::mouseMoved(QMouseEvent *e)
 void Q_Viewer::drawImage()
 {
   qDebug() << "Q_Viewer::drawImage";
+
+  // Ensure that image has been decoded already
+  if (!m_pImgDecoder->IsImgDecoded()) {
+      qDebug() << "Q_Viewer::drawImage exit as image not decoded";
+      return;
+  }
+
   setWindowTitle(m_strPreview + " " + m_strIdct + " " + m_strZoom);
   imageLabel->setPixmap(QPixmap::fromImage((*m_pImgDecoder->m_pDibTemp).scaledToWidth(static_cast<int32_t>(m_pImgDecoder->m_pDibTemp->width() * scaleFactor))));
   scrollArea->setVisible(true);
@@ -163,12 +170,16 @@ void Q_Viewer::zoom(QAction* action)
       break;
   }
 
-  drawImage();
   m_strZoom = QString("@ %1%").arg(scaleFactor * 100.0);
+  drawImage();
 }
 
 void Q_Viewer::setPreviewTitle(QAction *action)
 {
+    // TODO: Alter title depending on whether non-JPEG image displayed (eg. PSD)
+    //       and indicate whether DC-only or DC+AC. See original CimgDecode::ViewOnDraw().
+
+    m_strPreview = "Image (";
   switch(action->data().toInt())
   {
     case PREVIEW_RGB:
@@ -207,6 +218,7 @@ void Q_Viewer::setPreviewTitle(QAction *action)
       m_strPreview += "???";
       break;
   }
+  m_strPreview += ")";
 }
 
 void Q_Viewer::scanImageAc(bool b)
