@@ -12,32 +12,42 @@ TARGET = JPEGsnoopQt
 TEMPLATE = app
 
 gcc{
-QMAKE_CXXFLAGS += -std=c++11
+    QMAKE_CXXFLAGS += -std=c++11
 }
 
+###
+# Disable warnings in Qt system files
+# TODO: Use include path variables instead of hardcoding
 macx{
-QMAKE_CXXFLAGS += -isystem /Users/bob/Qt/5.11.0/clang_64/lib/QtCore.framework/Versions/5/Headers
-QMAKE_CXXFLAGS += -isystem /Users/bob/Qt/5.11.0/clang_64/lib/QtGui.framework/Versions/5/Headers
-QMAKE_CXXFLAGS += -isystem /Users/bob/Qt/5.11.0/clang_64/lib/QtWidgets.framework/Versions/5/Headers
+    QMAKE_CXXFLAGS += -isystem /Users/bob/Qt/5.11.0/clang_64/lib/QtCore.framework/Versions/5/Headers
+    QMAKE_CXXFLAGS += -isystem /Users/bob/Qt/5.11.0/clang_64/lib/QtGui.framework/Versions/5/Headers
+    QMAKE_CXXFLAGS += -isystem /Users/bob/Qt/5.11.0/clang_64/lib/QtWidgets.framework/Versions/5/Headers
 }
 
 linux:!macx{
-QMAKE_CXXFLAGS += -isystem /usr/include/qt5/QtCore
-QMAKE_CXXFLAGS += -isystem /usr/include/qt5/QtGui
-QMAKE_CXXFLAGS += -isystem /usr/include/qt5/QtWidgets
+    QMAKE_CXXFLAGS += -isystem /usr/include/qt5/QtCore
+    QMAKE_CXXFLAGS += -isystem /usr/include/qt5/QtGui
+    QMAKE_CXXFLAGS += -isystem /usr/include/qt5/QtWidgets
 }
 
+win32{
+    QMAKE_CXXFLAGS += -isystem C:/Qt/5.11.1/mingw53_32/include/QtCore
+    QMAKE_CXXFLAGS += -isystem C:/Qt/5.11.1/mingw53_32/include/QtGui
+    QMAKE_CXXFLAGS += -isystem C:/Qt/5.11.1/mingw53_32/include/QtWidgets
+}
+###
+
 gcc{
-QMAKE_CXXFLAGS += -fstrict-aliasing -Wextra -pedantic -Weffc++ -Wfloat-equal -Wswitch-default -Wcast-align -Wcast-qual -Wchar-subscripts -Wcomment
-QMAKE_CXXFLAGS += -Wdisabled-optimization -Wformat-nonliteral -Wformat-security -Wconversion -Wformat-nonliteral -Wformat-y2k -Wformat=2 -Wimport
-QMAKE_CXXFLAGS += -Winit-self -Winline -Winvalid-pch -Wmissing-format-attribute -Wmissing-include-dirs -Wmissing-noreturn -Wold-style-cast
-QMAKE_CXXFLAGS += -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-enum -Wunreachable-code
-QMAKE_CXXFLAGS += -Wunused -Wvariadic-macros -Wwrite-strings
+    QMAKE_CXXFLAGS += -fstrict-aliasing -Wextra -pedantic -Weffc++ -Wfloat-equal -Wswitch-default -Wcast-align -Wcast-qual -Wchar-subscripts -Wcomment
+    QMAKE_CXXFLAGS += -Wdisabled-optimization -Wformat-nonliteral -Wformat-security -Wconversion -Wformat-nonliteral -Wformat-y2k -Wformat=2 -Wimport
+    QMAKE_CXXFLAGS += -Winit-self -Winline -Winvalid-pch -Wmissing-format-attribute -Wmissing-include-dirs -Wmissing-noreturn -Wold-style-cast
+    QMAKE_CXXFLAGS += -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing=2 -Wswitch-enum -Wunreachable-code
+    QMAKE_CXXFLAGS += -Wunused -Wvariadic-macros -Wwrite-strings
 }
 
 # Address C1228 for DbSigs
 msvc{
-QMAKE_CXXFLAGS += -bigobj
+    QMAKE_CXXFLAGS += -bigobj
 }
 
 win32{
