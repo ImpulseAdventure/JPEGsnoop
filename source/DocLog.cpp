@@ -24,12 +24,12 @@
 //
 CDocLog::CDocLog(void)
 {
-  m_pDoc = NULL;
+  m_pDoc = nullptr;
 }
 
 CDocLog::CDocLog(QPlainTextEdit *pDoc)
 {
-  m_pDoc = NULL;
+  m_pDoc = nullptr;
   m_pDoc = pDoc;
 }
 

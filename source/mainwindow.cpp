@@ -618,7 +618,7 @@ void MainWindow::AnalyzeFile()
       msgBox.exec();
     }
 
-    m_pFile = NULL;
+    m_pFile = nullptr;
   }
   else
   {

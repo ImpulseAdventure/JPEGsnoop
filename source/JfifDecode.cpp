@@ -41,6 +41,8 @@
 // Maximum number of component values to extract into array for display
 static const uint32_t MAX_anValues = 64;
 
+// Macro to avoid multi-character constant definitions
+#define FOURC_INT(a,b,c,d)    (((a)<<24) | ((b)<<16) | ((c)<<8) | (d))
 
 //-----------------------------------------------------------------------------
 // Initialize the JFIF decoder. Several class pointers are provided
@@ -119,7 +121,7 @@ CjfifDecode::~CjfifDecode()
   {
     delete m_pPsDec;
 
-    m_pPsDec = NULL;
+    m_pPsDec = nullptr;
   }
 
 #ifdef SUPPORT_DICOM
@@ -128,7 +130,7 @@ CjfifDecode::~CjfifDecode()
   {
     delete m_pDecDicom;
 
-    m_pDecDicom = NULL;
+    m_pDecDicom = nullptr;
   }
 #endif
 
@@ -4374,6 +4376,7 @@ uint32_t CjfifDecode::DecodeApp13Ps()
   return 0;
 }
 
+
 //-----------------------------------------------------------------------------
 // Start decoding a single ICC header segment @ nPos
 uint32_t CjfifDecode::DecodeIccHeader(uint32_t nPos)
@@ -4485,25 +4488,26 @@ uint32_t CjfifDecode::DecodeIccHeader(uint32_t nPos)
 
   switch (nProfDevClass)
   {
-    case 'scnr':
+    //CAL! case 'scnr':
+    case FOURC_INT('s','c','n','r'):
       strTmp1 = "Input Device profile";
       break;
-    case 'mntr':
+    case FOURC_INT('m','n','t','r'):
       strTmp1 = "Display Device profile";
       break;
-    case 'prtr':
+    case FOURC_INT('p','r','t','r'):
       strTmp1 = "Output Device profile";
       break;
-    case 'link':
+    case FOURC_INT('l','i','n','k'):
       strTmp1 = "DeviceLink Device profile";
       break;
-    case 'spac':
+    case FOURC_INT('s','p','a','c'):
       strTmp1 = "ColorSpace Conversion profile";
       break;
-    case 'abst':
+    case FOURC_INT('a','b','s','t'):
       strTmp1 = "Abstract profile";
       break;
-    case 'nmcl':
+    case FOURC_INT('n','m','c','l'):
       strTmp1 = "Named colour profile";
       break;
     default:
@@ -4515,79 +4519,79 @@ uint32_t CjfifDecode::DecodeIccHeader(uint32_t nPos)
 
   switch (nDataColorSpace)
   {
-    case 'XYZ ':
+    case FOURC_INT('X','Y','Z',' '):
       strTmp1 = "XYZData";
       break;
-    case 'Lab ':
+    case FOURC_INT('L','a','b',' '):
       strTmp1 = "labData";
       break;
-    case 'Luv ':
+    case FOURC_INT('L','u','v',' '):
       strTmp1 = "lubData";
       break;
-    case 'YCbr':
+    case FOURC_INT('Y','C','b','r'):
       strTmp1 = "YCbCrData";
       break;
-    case 'Yxy ':
+    case FOURC_INT('Y','x','y',' '):
       strTmp1 = "YxyData";
       break;
-    case 'RGB ':
+    case FOURC_INT('R','G','B',' '):
       strTmp1 = "rgbData";
       break;
-    case 'GRAY':
+    case FOURC_INT('G','R','A','Y'):
       strTmp1 = "grayData";
       break;
-    case 'HSV ':
+    case FOURC_INT('H','S','V',' '):
       strTmp1 = "hsvData";
       break;
-    case 'HLS ':
+    case FOURC_INT('H','L','S',' '):
       strTmp1 = "hlsData";
       break;
-    case 'CMYK':
+    case FOURC_INT('C','M','Y','K'):
       strTmp1 = "cmykData";
       break;
-    case 'CMY ':
+    case FOURC_INT('C','M','Y',' '):
       strTmp1 = "cmyData";
       break;
-    case '2CLR':
+    case FOURC_INT('2','C','L','R'):
       strTmp1 = "2colourData";
       break;
-    case '3CLR':
+    case FOURC_INT('3','C','L','R'):
       strTmp1 = "3colourData";
       break;
-    case '4CLR':
+    case FOURC_INT('4','C','L','R'):
       strTmp1 = "4colourData";
       break;
-    case '5CLR':
+    case FOURC_INT('5','C','L','R'):
       strTmp1 = "5colourData";
       break;
-    case '6CLR':
+    case FOURC_INT('6','C','L','R'):
       strTmp1 = "6colourData";
       break;
-    case '7CLR':
+    case FOURC_INT('7','C','L','R'):
       strTmp1 = "7colourData";
       break;
-    case '8CLR':
+    case FOURC_INT('8','C','L','R'):
       strTmp1 = "8colourData";
       break;
-    case '9CLR':
+    case FOURC_INT('9','C','L','R'):
       strTmp1 = "9colourData";
       break;
-    case 'ACLR':
+    case FOURC_INT('A','C','L','R'):
       strTmp1 = "10colourData";
       break;
-    case 'BCLR':
+    case FOURC_INT('B','C','L','R'):
       strTmp1 = "11colourData";
       break;
-    case 'CCLR':
+    case FOURC_INT('C','C','L','R'):
       strTmp1 = "12colourData";
       break;
-    case 'DCLR':
+    case FOURC_INT('D','C','L','R'):
       strTmp1 = "13colourData";
       break;
-    case 'ECLR':
+    case FOURC_INT('E','C','L','R'):
       strTmp1 = "14colourData";
       break;
-    case 'FCLR':
+    case FOURC_INT('F','C','L','R'):
       strTmp1 = "15colourData";
       break;
     default:
@@ -4608,16 +4612,16 @@ uint32_t CjfifDecode::DecodeIccHeader(uint32_t nPos)
 
   switch (nPrimPlatSig)
   {
-    case 'APPL':
+    case FOURC_INT('A','P','P','L'):
       strTmp1 = "Apple Computer, Inc.";
       break;
-    case 'MSFT':
+    case FOURC_INT('M','S','F','T'):
       strTmp1 = "Microsoft Corporation";
       break;
-    case 'SGI ':
+    case FOURC_INT('S','G','I',' '):
       strTmp1 = "Silicon Graphics, Inc.";
       break;
-    case 'SUNW':
+    case FOURC_INT('S','U','N','W'):
       strTmp1 = "Sun Microsystems, Inc.";
       break;
     default:
@@ -8883,8 +8887,8 @@ void CjfifDecode::SendSubmit(QString strExifMake, QString strExifModel, QString 
     //static LPSTR astrAcceptTypes[2]={"*/*", NULL};
 
 /*		HINTERNET hINet = NULL;
-		HINTERNET hConnection = NULL;
-		HINTERNET hData = NULL;
+        HINTERNET hConnection = NULL;
+        HINTERNET hData = NULL;
 
 		hINet = InternetOpen("JPEGsnoop/1.0"), INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0 ;
 		if ( !hINet )
@@ -8956,14 +8960,14 @@ void CjfifDecode::SendSubmit(QString strExifMake, QString strExifModel, QString 
         pFile->Close();
         delete pFile;
 
-        pFile = NULL;
+        pFile = nullptr;
       }
       if(pConnection)
       {
         pConnection->Close();
         delete pConnection;
 
-        pConnection = NULL;
+        pConnection = nullptr;
       }
       sSession.Close();
 
@@ -9873,7 +9877,7 @@ void CjfifDecode::ProcessFile(QFile *inFile)
   }
 #else
   // Don't attempt to display Photoshop image data
-  if(m_pPsDec->DecodePsd(nStartPos, NULL, nWidth, nHeight))
+  if(m_pPsDec->DecodePsd(nStartPos, nullptr, nWidth, nHeight))
   {
     return;
   }
@@ -10225,7 +10229,7 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
       msgBox.exec();
     }
 
-    pFileOutput = NULL;
+    pFileOutput = nullptr;
 
     return false;
   }
@@ -10243,7 +10247,7 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
     {
       delete pFileOutput;
 
-      pFileOutput = NULL;
+      pFileOutput = nullptr;
     }
 
     return false;
@@ -10267,7 +10271,7 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
     if(pFileOutput)
     {
       delete pFileOutput;
-      pFileOutput = NULL;
+      pFileOutput = nullptr;
     }
 
     return false;
@@ -10358,13 +10362,13 @@ bool CjfifDecode::ExportJpegDo(QString strFileIn, QString strFileOut,
   if(pBuf)
   {
     delete[]pBuf;
-    pBuf = NULL;
+    pBuf = nullptr;
   }
 
   if(pFileOutput)
   {
     delete pFileOutput;
-    pFileOutput = NULL;
+    pFileOutput = nullptr;
   }
 
   SetStatusText("");
@@ -10422,7 +10426,7 @@ bool CjfifDecode::ExportJpegDoRange(QString strFileIn, QString strFileOut, uint3
       msgBox.exec();
     }
 
-    pFileOutput = NULL;
+    pFileOutput = nullptr;
 
     return false;
   }
@@ -10441,7 +10445,7 @@ bool CjfifDecode::ExportJpegDoRange(QString strFileIn, QString strFileOut, uint3
     if(pFileOutput)
     {
       delete pFileOutput;
-      pFileOutput = NULL;
+      pFileOutput = nullptr;
     }
 
     return false;
@@ -10478,13 +10482,13 @@ bool CjfifDecode::ExportJpegDoRange(QString strFileIn, QString strFileOut, uint3
   if(pBuf)
   {
     delete[]pBuf;
-    pBuf = NULL;
+    pBuf = nullptr;
   }
 
   if(pFileOutput)
   {
     delete pFileOutput;
-    pFileOutput = NULL;
+    pFileOutput = nullptr;
   }
 
   SetStatusText("");

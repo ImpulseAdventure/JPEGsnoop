@@ -356,7 +356,7 @@ bool CDbSigs::BufWriteStr(unsigned char *pBuf,QString strIn,uint32_t nMaxBytes,b
 
 void CDbSigs::DatabaseExtraLoad()
 {
-  uint8_t *	pBuf = NULL;
+  uint8_t *	pBuf = nullptr;
   uint32_t	nBufLenBytes = 0;
   uint32_t	nBufOffset = 0;
   QString		strError;
@@ -620,7 +620,7 @@ void CDbSigs::DatabaseExtraLoad()
   if (pBuf)
   {
 		delete [] pBuf;
-		pBuf = NULL;
+        pBuf = nullptr;
 	}
 
 	// If we did make changes to the database (trim), then rewrite it!
@@ -667,7 +667,7 @@ CompSig CDbSigs::DatabaseExtraGet(uint32_t nInd)
 
 void CDbSigs::DatabaseExtraStore()
 {
-  uint8_t *	pBuf = NULL;
+  uint8_t *	pBuf = nullptr;
   //uint32_t	nBufLenBytes = 0;
   uint32_t	nBufOffset = 0;
 
@@ -757,7 +757,7 @@ void CDbSigs::DatabaseExtraStore()
 
 	if (pBuf) {
 		delete [] pBuf;
-		pBuf = NULL;
+        pBuf = nullptr;
 	}
 	
 }

@@ -37,7 +37,7 @@ CwindowBuf::CwindowBuf(CDocLog *pDocLog) : m_pDocLog(pDocLog)
     exit(1);
   }
 
-  m_pStatBar = NULL;
+  m_pStatBar = nullptr;
 
   Reset();
 
@@ -48,18 +48,18 @@ CwindowBuf::CwindowBuf(CDocLog *pDocLog) : m_pDocLog(pDocLog)
 
   for(uint32_t nInd = 0; nInd < NUM_OVERLAYS; nInd++)
   {
-    m_psOverlay[nInd] = NULL;
+    m_psOverlay[nInd] = nullptr;
   }
 }
 
 // Destructor deallocates buffers and overlays
 CwindowBuf::~CwindowBuf()
 {
-  if(m_pBuffer != NULL)
+  if(m_pBuffer != nullptr)
   {
     delete m_pBuffer;
 
-    m_pBuffer = NULL;
+    m_pBuffer = nullptr;
     m_bBufOK = false;
   }
 
@@ -70,7 +70,7 @@ CwindowBuf::~CwindowBuf()
     {
       delete m_psOverlay[nInd];
 
-      m_psOverlay[nInd] = NULL;
+      m_psOverlay[nInd] = nullptr;
     }
   }
 }
@@ -81,7 +81,7 @@ void CwindowBuf::Reset()
 {
   // File handling
   m_bBufOK = false;             // Initialize the buffer to not loaded yet
-  m_pBufFile = NULL;            // No file open yet
+  m_pBufFile = nullptr;            // No file open yet
 }
 
 // Accessor for m_bBufOk
@@ -119,7 +119,7 @@ void CwindowBuf::BufFileSet(QFile * inFile)
 
   if(m_nPosEof == 0)
   {
-    m_pBufFile = NULL;
+    m_pBufFile = nullptr;
     msgBox.setText("ERROR: BufFileSet() File length zero");
     msgBox.exec();
   }
@@ -137,7 +137,7 @@ void CwindowBuf::BufFileUnset()
 {
   if(m_pBufFile)
   {
-    m_pBufFile = NULL;
+    m_pBufFile = nullptr;
   }
 }
 
@@ -677,7 +677,7 @@ void CwindowBuf::OverlayRemove()
     // Don't need to delete the overlay struct as we might as well reuse it
     m_psOverlay[m_nOverlayNum]->bEn = false;
     //delete m_psOverlay[m_nOverlayNum];
-    //m_psOverlay[m_nOverlayNum] = NULL;
+    //m_psOverlay[m_nOverlayNum] = nullptr;
   }
 }
 

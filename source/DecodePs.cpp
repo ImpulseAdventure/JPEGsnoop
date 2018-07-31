@@ -357,7 +357,7 @@ bool CDecodePs::DecodePsd(uint32_t nPos, QImage * pDibTemp, int32_t &nWidth, int
 
   if(bDecOk)
   {
-    unsigned char *pDibBits = NULL;
+    unsigned char *pDibBits = nullptr;
 
 #ifdef PS_IMG_DEC_EN
     if((pDibTemp) && (m_bDisplayImage))
@@ -1760,7 +1760,7 @@ bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, QImage
   for(uint32_t nLayerInd = 0; (bDecOk) && (nLayerInd < nLayerCount); nLayerInd++)
   {
     // Clear the channel array
-    sLayerAllInfo.psLayers[nLayerInd].pnChanLen = NULL;
+    sLayerAllInfo.psLayers[nLayerInd].pnChanLen = nullptr;
     QString strTmp;
 
     strTmp = QString("Layer #%1").arg(nLayerInd);
@@ -1785,7 +1785,7 @@ bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, QImage
     nWidth = sLayerAllInfo.psLayers[nLayerInd].nWidth;
     nHeight = sLayerAllInfo.psLayers[nLayerInd].nHeight;
 
-    unsigned char *pDibBits = NULL;
+    unsigned char *pDibBits = nullptr;
 
 #ifdef PS_IMG_DEC_EN
     if((pDibTemp) && (m_bDisplayLayer) && (nLayerInd == m_nDisplayLayerInd))
@@ -1866,14 +1866,14 @@ bool CDecodePs::PhotoshopParseLayerInfo(uint32_t &nPos, uint32_t nIndent, QImage
       for(uint32_t nChanInd = 0; (bDecOk) && (nChanInd < nNumChans); nChanInd++)
       {
         delete[]sLayerAllInfo.psLayers[nLayerInd].pnChanLen;
-        sLayerAllInfo.psLayers[nLayerInd].pnChanLen = NULL;
+        sLayerAllInfo.psLayers[nLayerInd].pnChanLen = nullptr;
         delete[]sLayerAllInfo.psLayers[nLayerInd].pnChanID;
-        sLayerAllInfo.psLayers[nLayerInd].pnChanID = NULL;
+        sLayerAllInfo.psLayers[nLayerInd].pnChanID = nullptr;
       }
     }
 
     delete[]sLayerAllInfo.psLayers;
-    sLayerAllInfo.psLayers = NULL;
+    sLayerAllInfo.psLayers = nullptr;
   }
 
   return bDecOk;
@@ -1919,7 +1919,7 @@ bool CDecodePs::PhotoshopParseLayerRecord(uint32_t &nPos, uint32_t nIndent, tsLa
   //nChans = nNumChans;
   pLayerInfo->nNumChans = nNumChans;
 
-  Q_ASSERT(pLayerInfo->pnChanLen == NULL);
+  Q_ASSERT(pLayerInfo->pnChanLen == nullptr);
   pLayerInfo->pnChanLen = new uint32_t[nNumChans];
 
   Q_ASSERT(pLayerInfo->pnChanLen);
@@ -2163,7 +2163,7 @@ bool CDecodePs::PhotoshopParseChannelImageData(uint32_t &nPos, uint32_t nIndent,
     if(anRowLen)
     {
       delete[]anRowLen;
-      anRowLen = NULL;
+      anRowLen = nullptr;
     }
   }
   else if(nCompressionMethod == 0)
@@ -2433,7 +2433,7 @@ bool CDecodePs::PhotoshopParseImageData(uint32_t &nPos, uint32_t nIndent, tsImag
     if(anRowLen)
     {
       delete[]anRowLen;
-      anRowLen = NULL;
+      anRowLen = nullptr;
     }
   }
   else if(nCompressionMethod == 0)

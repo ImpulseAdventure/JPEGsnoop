@@ -35,7 +35,7 @@ CSnoopConfig::CSnoopConfig(QObject *_parent) : QObject(_parent)
 {
   // Debug log
   strDebugLogFname = ".\\JPEGsnoop-debug.log";
-  fpDebugLog = NULL;
+  fpDebugLog = nullptr;
   bDebugLogEnable = false;
 
   // Default to showing message dialogs
@@ -478,7 +478,7 @@ bool CSnoopConfig::DebugLogCreate()
     return true;
   }
 
-  ASSERT(fpDebugLog == NULL);
+  ASSERT(fpDebugLog == nullptr);
 
   try
   {
@@ -495,7 +495,7 @@ bool CSnoopConfig::DebugLogCreate()
     e->Delete();
     strError.Format("ERROR: Couldn't open debug log file for write [%s]: [%s]", (LPCTSTR) strDebugLogFname, (LPCTSTR) msg);
     AfxMessageBox(strError);
-    fpDebugLog = NULL;
+    fpDebugLog = nullptr;
 
     return false;
   }
@@ -512,7 +512,7 @@ bool CSnoopConfig::DebugLogCreate()
     fpDebugLog->Close();
     delete fpDebugLog;
 
-    fpDebugLog = NULL;
+    fpDebugLog = nullptr;
   }
 
   // Extra code to record OS version
@@ -564,7 +564,7 @@ bool CSnoopConfig::DebugLogAdd(QString strText)
     return false;
   }
 
-  ASSERT(fpDebugLog == NULL);
+  ASSERT(fpDebugLog == nullptr);
 
   try
   {
@@ -582,7 +582,7 @@ bool CSnoopConfig::DebugLogAdd(QString strText)
     e->Delete();
     strError.Format("ERROR: Couldn't open debug log file for append [%s]: [%s]", (LPCTSTR) strDebugLogFname, (LPCTSTR) msg);
     AfxMessageBox(strError);
-    fpDebugLog = NULL;
+    fpDebugLog = nullptr;
 
     return false;
   }
@@ -619,7 +619,7 @@ bool CSnoopConfig::DebugLogAdd(QString strText)
     fpDebugLog->Close();
     delete fpDebugLog;
 
-    fpDebugLog = NULL;
+    fpDebugLog = nullptr;
   }
 
 #endif
