@@ -209,8 +209,6 @@ void CSnoopConfig::RegistryLoad()
     docImageDirty();
   }
 
-  bEulaAccepted = false;
-
   if(!bEulaAccepted)
   {
     Q_Eula *eulaDlg = new Q_Eula;
