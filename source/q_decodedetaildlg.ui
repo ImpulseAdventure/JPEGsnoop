@@ -60,7 +60,7 @@ QGroupBox::title {
    <property name="flat">
     <bool>true</bool>
    </property>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -178,7 +178,7 @@ QGroupBox::title {
    <property name="flat">
     <bool>true</bool>
    </property>
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
       <x>10</x>
@@ -249,7 +249,7 @@ QGroupBox::title {
     <string>Detailed Scan Decode will be reported in the next decode operation</string>
    </property>
   </widget>
-  <widget class="QWidget" name="">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
      <x>329</x>
@@ -262,7 +262,7 @@ QGroupBox::title {
     <item>
      <widget class="QLabel" name="label_5">
       <property name="text">
-       <string>Load X/Y/Len
+       <string>Load X/Y &amp; Len
 from last 2 clicks:</string>
       </property>
      </widget>

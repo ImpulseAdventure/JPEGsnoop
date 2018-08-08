@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>541</width>
-    <height>426</height>
+    <height>429</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -221,7 +221,7 @@ QGroupBox::title {
          <x>10</x>
          <y>20</y>
          <width>335</width>
-         <height>41</height>
+         <height>42</height>
         </rect>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_2">

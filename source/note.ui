@@ -58,7 +58,7 @@
     <item>
      <widget class="QCheckBox" name="cbHideMsg">
       <property name="text">
-       <string>In the future, do not show this message</string>
+       <string>In the future, do not show this coach message</string>
       </property>
       <property name="checked">
        <bool>true</bool>

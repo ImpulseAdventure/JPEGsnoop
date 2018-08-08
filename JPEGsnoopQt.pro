@@ -110,7 +110,8 @@ FORMS += \
     source/snoopconfigdialog.ui \
     source/q_decodedetaildlg.ui \
     source/note.ui \
-    source/eula.ui
+    source/eula.ui \
+    source/mainwindow.ui
 
 RESOURCES = JPEGsnoop.qrc
 

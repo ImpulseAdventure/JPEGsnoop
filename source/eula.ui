@@ -106,7 +106,7 @@
      </rect>
     </property>
     <property name="text">
-     <string>Automatically check for updates
+     <string>Periodically check for updates
 You can always change this option later in Configuration</string>
     </property>
    </widget>
