@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -22,48 +22,42 @@
 //
 // ==========================================================================
 
+#ifndef DOCLOG_H
+#define DOCLOG_H
 
-#pragma once
+#include <QString>
+#include <QPlainTextEdit>
 
 class CDocLog
 {
 public:
-	CDocLog();
-	~CDocLog(void);
+  CDocLog();
+  CDocLog(QPlainTextEdit *pDoc);
+  ~CDocLog(void);
 
-	void		AddLine(CString str);
-	void		AddLineHdr(CString str);
-	void		AddLineHdrDesc(CString str);
-	void		AddLineWarn(CString str);
-	void		AddLineErr(CString str);
-	void		AddLineGood(CString str);
+  void setDoc(QPlainTextEdit *pDoc);
 
-	void		Enable();
-	void		Disable();
-	void		SetQuickMode(bool bQuick);
-	bool		GetQuickMode();
+  void AddLine(QString str);
+  void AddLineHdr(QString str);
+  void AddLineHdrDesc(QString str);
+  void AddLineWarn(QString str);
+  void AddLineErr(QString str);
+  void AddLineGood(QString str);
 
-	void		SetDoc(CDocument *pDoc);
-	void		Clear();
+  void Clear();
 
-	unsigned	GetNumLinesLocal();
-	bool		GetLineLogLocal(unsigned nLine,CString &strOut,COLORREF &sCol);
-
-	void		DoLogSave(CString strLogName);
+  void Enable() { m_bEn = true; }
+  void Disable() { m_bEn = false; }
 
 private:
-	unsigned	AppendToLogLocal(CString strTxt, COLORREF sColor);
+  CDocLog &operator = (const CDocLog&);
+  CDocLog(CDocLog&);
 
-private:
+  void appendToLog(QString strTxt, QColor col);
+  QString rTrim(const QString& str);
 
-	bool			m_bUseDoc;		// Use Document or local buffer
-	CDocument*		m_pDoc;
-	bool			m_bEn;
-
-	// Local buffer
-	CStringArray	m_saLogQuickTxt;
-	CUIntArray		m_naLogQuickCol;
-
-	bool			m_bLogQuickMode;	// In m_bUseDoc=TRUE, do we write to local buffer instead?
-
+  QPlainTextEdit *m_pDoc;
+  bool m_bEn;
 };
+
+#endif

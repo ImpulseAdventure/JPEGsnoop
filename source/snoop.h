@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -22,9 +22,7 @@
 //
 // ==========================================================================
 
-
 #pragma once
-
 
 // Program Version / Release Number
 // - Format: "X.Y.Z"          - (full public release)
@@ -32,7 +30,7 @@
 // - Note that when the version number is incremented, I need
 //   to also update the corresponding version numbers in the
 //   JPEGsnoop.rc resource under "Version.VS_VERSION_INFO".
-#define VERSION_STR _T("1.8.0")
+#define VERSION_STR "1.8.0"
 
 // Version number for the database signatures
 // - This version number has been provided in case I decide
@@ -43,7 +41,7 @@
 
 // Enable debug log?
 //#define DEBUG_LOG_OUT
-#define DEBUG_EN		0
+#define DEBUG_EN		1
 
 //#define DEBUG_YCCK
 
@@ -55,7 +53,7 @@
 #define PS_IMG_DEC_EN
 
 // User Local Database filename
-#define DAT_FILE _T("JPEGsnoop_db.dat")
+#define DAT_FILE "JPEGsnoop_db.dat"
 
 // In QUICKLOG mode, we support batching up of writes to the
 // RichEdit window, which greatly speeds up the output
@@ -68,10 +66,9 @@
 //#define WWW_WINHTTP
 
 // The following DEFINEs are used in debugging and local batch operations
-//#define DEBUG_SIG				// Print debugging info for signature generation
+//#define DEBUG_SIG                             // Print debugging info for signature generation
 //#define BATCH_DO_DBSUBMIT
 //#define BATCH_DO_DBSUBMIT_ALL
-
 
 // Internet access parameters
 // - If the user has enabled sharing of the signature data with the online
@@ -79,15 +76,15 @@
 // - The URLs that are used to indicate new release availability are also
 //   provided here. These pages have specific formatting that JPEGsnoop
 //   parses to identify if a newer version is available.
-#define IA_HOST				_T("www.impulseadventure.com")
-#define IA_DB_SUBMIT_PAGE	_T("/photo/jpeg-snoop-submit.php")
-#define IA_UPDATES_CHK_PAGE	_T("/photo/jpeg-snoop.html")
-#define IA_UPDATES_DL_PAGE	_T("http://www.impulseadventure.com/photo/jpeg-snoop.html#download")
+#define IA_HOST				"www.impulseadventure.com"
+#define IA_DB_SUBMIT_PAGE	"/photo/jpeg-snoop-submit.php"
+#define IA_UPDATES_CHK_PAGE	"/photo/jpeg-snoop.html"
+#define IA_UPDATES_DL_PAGE	"http://www.impulseadventure.com/photo/jpeg-snoop.html#download"
 
 // Registry settings
-#define REG_KEY_PATH		_T("Software\\ImpulseAdventure\\JPEGsnoop\\")
-#define REG_COMPANY_NAME	_T("ImpulseAdventure")
-#define REG_SW_NAME			_T("JPEGsnoop")
+#define REG_KEY_PATH		"Software\\ImpulseAdventure\\JPEGsnoop\\"
+#define REG_COMPANY_NAME	"ImpulseAdventure"
+#define REG_SW_NAME			"JPEGsnoop"
 
 // Extra logging for debugging
 #define DEBUG_LOG
@@ -96,82 +93,97 @@
 #define	MAX_BUF_EX_ERR_MSG	512
 
 // Preview Modes
-enum tePreviewMode {
-	PREVIEW_NONE=0,			// Preview not calculated yet
-	PREVIEW_RGB,
-	PREVIEW_YCC,
-	PREVIEW_R,
-	PREVIEW_G,
-	PREVIEW_B,
-	PREVIEW_Y,
-	PREVIEW_CB,
-	PREVIEW_CR,
+enum tePreviewMode
+{
+  PREVIEW_NONE = 0,             // Preview not calculated yet
+  PREVIEW_RGB,
+  PREVIEW_YCC,
+  PREVIEW_R,
+  PREVIEW_G,
+  PREVIEW_B,
+  PREVIEW_Y,
+  PREVIEW_CB,
+  PREVIEW_CR
 };
 
-enum tePreviewZoom {
-	PRV_ZOOMBEGIN=0,
-	PRV_ZOOM_12,
-	PRV_ZOOM_25,
-	PRV_ZOOM_50,
-	PRV_ZOOM_100,
-	PRV_ZOOM_150,
-	PRV_ZOOM_200,
-	PRV_ZOOM_300,
-	PRV_ZOOM_400,
-	PRV_ZOOM_800,
-	PRV_ZOOMEND,
+enum tePreviewZoom
+{
+  PRV_ZOOMBEGIN = 0,
+  PRV_ZOOM_12,
+  PRV_ZOOM_25,
+  PRV_ZOOM_50,
+  PRV_ZOOM_100,
+  PRV_ZOOM_150,
+  PRV_ZOOM_200,
+  PRV_ZOOM_300,
+  PRV_ZOOM_400,
+  PRV_ZOOM_800,
+  PRV_ZOOMEND,
+  PRV_ZOOM_IN,
+  PRV_ZOOM_OUT
 };
 
 // DB Signature modes
-enum teSource {
-	ENUM_SOURCE_UNSET=0,
-	ENUM_SOURCE_CAM,
-	ENUM_SOURCE_SW,
-	ENUM_SOURCE_UNSURE,
+enum teSource
+{
+  ENUM_SOURCE_UNSET = 0,
+  ENUM_SOURCE_CAM,
+  ENUM_SOURCE_SW,
+  ENUM_SOURCE_UNSURE
 };
 
-enum teMaker {
-	ENUM_MAKER_UNSET=0,
-	ENUM_MAKER_PRESENT,
-	ENUM_MAKER_NONE,
+enum teMaker
+{
+  ENUM_MAKER_UNSET = 0,
+  ENUM_MAKER_PRESENT,
+  ENUM_MAKER_NONE
 };
 
-enum teEdited {
-	EDITED_UNSET=0,
-	EDITED_YES,
-	EDITED_NO,
-	EDITED_UNSURE,
-	EDITED_YESPROB,	// Probably edited
+enum teEdited
+{
+  EDITED_UNSET = 0,
+  EDITED_YES,
+  EDITED_NO,
+  EDITED_UNSURE,
+  EDITED_YESPROB               // Probably edited
 };
 
-enum teDbAdd {
-	DB_ADD_SUGGEST_UNSET=0,
-	DB_ADD_SUGGEST_CAM,
-	DB_ADD_SUGGEST_SW,
+enum teDbAdd
+{
+  DB_ADD_SUGGEST_UNSET = 0,
+  DB_ADD_SUGGEST_CAM,
+  DB_ADD_SUGGEST_SW
 };
 
-enum teEditor {
-	ENUM_EDITOR_UNSET=0,
-	ENUM_EDITOR_CAM,
-	ENUM_EDITOR_SW,
-	ENUM_EDITOR_UNSURE,
+enum teEditor
+{
+  ENUM_EDITOR_UNSET = 0,
+  ENUM_EDITOR_CAM,
+  ENUM_EDITOR_SW,
+  ENUM_EDITOR_UNSURE
 };
 
-enum teLandscape {
-	ENUM_LANDSCAPE_UNSET=0,
-	ENUM_LANDSCAPE_YES,
-	ENUM_LANDSCAPE_NO,
+enum teLandscape
+{
+  ENUM_LANDSCAPE_UNSET = 0,
+  ENUM_LANDSCAPE_YES,
+  ENUM_LANDSCAPE_NO
 };
 
-enum teOffsetMode {DEC_OFFSET_START,DEC_OFFSET_SRCH1,DEC_OFFSET_SRCH2,DEC_OFFSET_POS};
+enum teOffsetMode
+{
+  DEC_OFFSET_START,
+  DEC_OFFSET_SRCH1,
+  DEC_OFFSET_SRCH2,
+  DEC_OFFSET_POS
+};
+
 
 // Define a few coach messages
 
-#define COACH_REPROCESS_AUTO _T("You have changed a processing option. To see these changes, ")\
-	_T("you need to Reprocess the file or enable [Auto Reprocessing] in Configuration.")
-
-#define COACH_DECODE_IDCT_DC _T("Currently only decoding low-res view (DC-only). Full-resolution image decode ")\
-	_T("can be enabled in [Options->Scan Segment->Full IDCT], but it is slower.")
-#define COACH_DECODE_IDCT_AC _T("Currently decoding high-res view (AC+DC), which can be slow. For faster ")\
-	_T("operation, low-resolution image decode can be enabled in [Options->Scan Segment->No IDCT].")
-
+#define COACH_REPROCESS_AUTO "You have changed a processing option. To see these changes, "\
+	"you need to Reprocess the file or enable [Auto Reprocessing] in Configuration."
+#define COACH_DECODE_IDCT_DC "Currently only decoding low-res view (DC-only). Full-resolution image decode "\
+	"can be enabled in [Options->Scan Segment->Full IDCT], but it is slower."
+#define COACH_DECODE_IDCT_AC _T("Currently decoding high-res view (AC+DC), which can be slow. For faster "\
+	"operation, low-resolution image decode can be enabled in [Options->Scan Segment->No IDCT]."

@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -26,103 +26,113 @@
 //
 // ==========================================================================
 
+#ifndef WINDOWBUF_H
+#define WINDOWBUF_H
 
-#pragma once
+#include <QFile>
+#include <QMessageBox>
+#include <QString>
+#include <QStatusBar>
 
 #include "DocLog.h"
+
+class QPlainTextEdit;
+class CDocLog;
 
 // For now, we only ever use MAX_BUF_WINDOW bytes, even though we
 // have allocated MAX_BUF bytes up front. I might change this
 // later. We don't want the window size to be too large as it
 // could have an impact on performance.
-#define MAX_BUF				262144L
-#define MAX_BUF_WINDOW		131072L
-#define MAX_BUF_WINDOW_REV	16384L //1024L
+#define MAX_BUF				     262144
+#define MAX_BUF_WINDOW		 131072
+#define MAX_BUF_WINDOW_REV 16384  //1024L
 
 #define NUM_OVERLAYS		500
-#define MAX_OVERLAY			500		// 500 bytes
+#define MAX_OVERLAY			500     // 500 bytes
 
 #define NUM_HOLES			10
 
-#define	MAX_BUF_READ_STR	255	// Max number of bytes to fetch in BufReadStr()
+#define	MAX_BUF_READ_STR	255     // Max number of bytes to fetch in BufReadStr()
 
-typedef struct {
-	bool			bEn;					// Enabled? -- not used currently
-	unsigned		nStart;					// File position
-	unsigned		nLen;					// MCU Length
-	BYTE			anData[MAX_OVERLAY];	// Byte data
+typedef struct
+{
+  bool bEn;                     // Enabled? -- not used currently
+  uint32_t nStart;              // File position
+  uint32_t nLen;                // MCU Length
+  uint8_t anData[MAX_OVERLAY];  // Byte data
 
-	// For reporting purposes:
-	unsigned		nMcuX;			// Starting MCU X
-	unsigned		nMcuY;			// Starting MCU Y
-	unsigned		nMcuLen;		// Number of MCUs deleted
-	unsigned		nMcuLenIns;		// Number of MCUs inserted
-	int				nDcAdjustY;
-	int				nDcAdjustCb;
-	int				nDcAdjustCr;
-
+  // For reporting purposes:
+  uint32_t nMcuX;               // Starting MCU X
+  uint32_t nMcuY;               // Starting MCU Y
+  uint32_t nMcuLen;             // Number of MCUs deleted
+  uint32_t nMcuLenIns;          // Number of MCUs inserted
+  int nDcAdjustY;
+  int nDcAdjustCb;
+  int nDcAdjustCr;
 } sOverlay;
 
 class CwindowBuf
 {
 public:
-	CwindowBuf();
-	~CwindowBuf();
+  CwindowBuf(class CDocLog *pDocLog);
+  ~CwindowBuf();
 
 public:
-	void			SetStatusBar(CStatusBar* pStatBar);
+  void SetStatusBar(QStatusBar *pStatBar);
 
-	void			BufLoadWindow(unsigned long nPosition);
-	void			BufFileSet(CFile* inFile);
-	void			BufFileUnset();
-	BYTE			Buf(unsigned long nOffset,bool bClean=false);
-	unsigned		BufX(unsigned long nOffset,unsigned nSz,bool bByteSwap=false);
+  void BufLoadWindow(uint32_t nPosition);
+  void BufFileSet(QFile * inFile);
+  void BufFileUnset();
+  uint8_t Buf(uint32_t nOffset, bool bClean = false);
+  uint32_t BufX(uint32_t nOffset, uint32_t nSz, bool bByteSwap = false);
 
-	unsigned char	BufRdAdv1(unsigned long &nOffset,bool bByteSwap);
-	unsigned short	BufRdAdv2(unsigned long &nOffset,bool bByteSwap);
-	unsigned        BufRdAdv4(unsigned long &nOffset,bool bByteSwap);
+  unsigned char BufRdAdv1(uint32_t &nOffset, bool bByteSwap);
+  uint16_t BufRdAdv2(uint32_t &nOffset, bool bByteSwap);
+  uint32_t BufRdAdv4(uint32_t &nOffset, bool bByteSwap);
 
+  QString BufReadStr(uint32_t nPosition);
+  QString BufReadUniStr(uint32_t nPosition);
+  QString BufReadUniStr2(uint32_t nPos, uint32_t nBufLen);
+  QString BufReadStrn(uint32_t nPosition, uint32_t nLen);
 
-	CString			BufReadStr(unsigned long nPosition);
-	CString			BufReadUniStr(unsigned long nPosition);
-	CString			BufReadUniStr2(unsigned long nPos, unsigned nBufLen);
-	CString			BufReadStrn(unsigned long nPosition,unsigned nLen);
+  bool BufSearch(uint32_t nStartPos, uint32_t nSearchVal, uint32_t nSearchLen, bool bDirFwd, uint32_t &nFoundPos);
+  bool BufSearchX(uint32_t nStartPos, uint8_t * anSearchVal, uint32_t nSearchLen, bool bDirFwd, uint32_t &nFoundPos);
 
-	bool			BufSearch(unsigned long nStartPos, unsigned nSearchVal, unsigned nSearchLen,
-						   bool bDirFwd, unsigned long &nFoundPos);
-	bool			BufSearchX(unsigned long nStartPos, BYTE* anSearchVal, unsigned nSearchLen,
-						   bool bDirFwd, unsigned long &nFoundPos);
+  bool OverlayAlloc(uint32_t nInd);
+  bool OverlayInstall(uint32_t nOvrInd, uint8_t *pOverlay, uint32_t nLen, uint32_t nBegin,
+                      uint32_t nMcuX, uint32_t nMcuY, uint32_t nMcuLen, uint32_t nMcuLenIns, int nAdjY, int nAdjCb, int nAdjCr);
+  void OverlayRemove();
+  void OverlayRemoveAll();
+  bool OverlayGet(uint32_t nOvrInd, uint8_t *&pOverlay, uint32_t &nLen, uint32_t &nBegin);
+  uint32_t OverlayGetNum();
+  void ReportOverlays(CDocLog *pLog);
 
-	bool			OverlayAlloc(unsigned nInd);
-	bool			OverlayInstall(unsigned nOvrInd, BYTE* pOverlay,unsigned nLen,unsigned nBegin,
-							unsigned nMcuX,unsigned nMcuY,unsigned nMcuLen,unsigned nMcuLenIns,
-							int nAdjY,int nAdjCb,int nAdjCr);
-	void			OverlayRemove();
-	void			OverlayRemoveAll();
-	bool			OverlayGet(unsigned nOvrInd, BYTE* &pOverlay,unsigned &nLen,unsigned &nBegin);
-	unsigned		OverlayGetNum();
-	void			ReportOverlays(CDocLog* pLog);
-	
-	bool			GetBufOk();
-	unsigned long	GetPosEof();
+  bool GetBufOk();
+  uint32_t GetPosEof();
 
 private:
-	void			Reset();
+  void Reset();
 
+  CwindowBuf &operator = (const CwindowBuf&);
+  CwindowBuf(CwindowBuf&);
 
-private:
-	BYTE*			m_pBuffer;
-	CFile*			m_pBufFile;
-	unsigned long	m_nBufWinSize;
-	unsigned long	m_nBufWinStart;
+  CDocLog *m_pDocLog;
 
-	unsigned		m_nOverlayMax;	// Number of overlays allocated (limited by mem)
-	unsigned		m_nOverlayNum;
-	sOverlay*		m_psOverlay[NUM_OVERLAYS];
+  unsigned char *m_pBuffer;
+  QFile *m_pBufFile;
+  uint32_t m_nBufWinSize;
+  uint32_t m_nBufWinStart;
 
-	CStatusBar*		m_pStatBar;
+  uint32_t m_nOverlayMax;       // Number of overlays allocated (limited by mem)
+  uint32_t m_nOverlayNum;
+  sOverlay *m_psOverlay[NUM_OVERLAYS];
 
-	bool			m_bBufOK;
-	unsigned long	m_nPosEof;	// Byte count at EOF
+  QStatusBar *m_pStatBar;
 
+  QMessageBox msgBox;
+
+  bool m_bBufOK;
+  quint64 m_nPosEof;            // Byte count at EOF
 };
+
+#endif

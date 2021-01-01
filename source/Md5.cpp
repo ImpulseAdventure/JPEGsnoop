@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -79,9 +79,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "stdafx.h" //CAL! Added to avoid compile error C1010
+//#include "stdafx.h" //CAL! Added to avoid compile error C1010
 
-#include "MD5.h"
+#include "Md5.h"
 
 /* Padding */
 static unsigned char MD5_PADDING[64] = {
@@ -232,18 +232,19 @@ void MD5Init (MD5_CTX *mdContext, unsigned long pseudoRandomNumber)
 	mdContext->digest32[3] = 0;
 }
 
-void MD5Update (MD5_CTX *mdContext, unsigned char *inBuf, unsigned int inLen)
+void MD5Update (MD5_CTX *mdContext, unsigned char *inBuf, int32_t inLen)
 {
 	UINT4 in[16];
-	int mdi = 0;
-	unsigned int i = 0, ii = 0;
+  int32_t mdi = 0;
+  uint32_t i = 0, ii = 0;
 
 	/* Compute number of bytes mod 64 */
-	mdi = (int)((mdContext->i[0] >> 3) & 0x3F);
+  mdi = static_cast<int32_t>((mdContext->i[0] >> 3) & 0x3F);
 
 	/* Update number of bits */
 	if ((mdContext->i[0] + ((UINT4)inLen << 3)) < mdContext->i[0])
 		mdContext->i[1]++;
+
 	mdContext->i[0] += ((UINT4)inLen << 3);
 	mdContext->i[1] += ((UINT4)inLen >> 29);
 
@@ -270,15 +271,15 @@ void MD5Update (MD5_CTX *mdContext, unsigned char *inBuf, unsigned int inLen)
 void MD5Final (MD5_CTX *mdContext)
 {
 	UINT4 in[16];
-	int mdi = 0;
-	unsigned int i = 0, ii = 0, padLen = 0;
+  int32_t mdi = 0;
+  uint32_t i = 0, ii = 0, padLen = 0;
 
 	/* Save number of bits */
 	in[14] = mdContext->i[0];
 	in[15] = mdContext->i[1];
 
 	/* Compute number of bytes mod 64 */
-	mdi = (int)((mdContext->i[0] >> 3) & 0x3F);
+  mdi = static_cast<int32_t>((mdContext->i[0] >> 3) & 0x3F);
 
 	/* Pad out to 56 mod 64 */
 	padLen = (mdi < 56) ? (56 - mdi) : (120 - mdi);
@@ -307,6 +308,4 @@ void MD5Final (MD5_CTX *mdContext)
 									(((mdContext->buf[i] >> 16) & 0xFF) <<  8) +
 									 ((mdContext->buf[i] >> 24) & 0xFF);
 	}
-
-
 }

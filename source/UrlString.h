@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -39,13 +39,13 @@ Description: H URL Encoder/Decoder
 class CUrlString
 {
 private:
-	CString m_csUnsafe;
+        QString m_csUnsafe;
 
 public:
 	CUrlString();
 	virtual ~CUrlString() { };
-	CString Encode(CString csDecoded);
-	CString Decode(CString csEncoded);
+        QString Encode(QString csDecoded);
+        QString Decode(QString csEncoded);
 };
 
 #endif //__CURLSTRING_H_

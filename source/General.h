@@ -1,5 +1,5 @@
 // JPEGsnoop - JPEG Image Decoder & Analysis Utility
-// Copyright (C) 2017 - Calvin Hass
+// Copyright (C) 2018 - Calvin Hass
 // http://www.impulseadventure.com/photo/jpeg-snoop.html
 //
 //    This program is free software: you can redistribute it and/or modify
@@ -19,23 +19,23 @@
 #ifndef _GENERAL_H_
 #define _GENERAL_H_
 
-// General Global Functions
-CString			Dec2Bin(unsigned nVal,unsigned nLen,bool bSpace=true);
-unsigned short	Swap16(unsigned short nVal);
-CString			Uint2Chars(unsigned nVal);
-CString			Uint2DotByte(unsigned nVal);
-bool			TestBit(unsigned nVal,unsigned nBit);
-//CString			ByteStr2Unicode(BYTE* pBuf, unsigned nBufLen);
-bool			Str2Uint32(CString strVal,unsigned nBase,unsigned &nVal);
+#include <QString>
 
-bool		Uni2AscBuf(PBYTE pBuf,CString strIn,unsigned nMaxBytes,unsigned &nOffsetBytes);
+// General Global Functions
+QString Dec2Bin(uint32_t nVal, uint32_t nLen, bool bSpace = true);
+uint16_t Swap16(uint16_t nVal);
+QString Uint2Chars(uint32_t nVal);
+QString Uint2DotByte(uint32_t nVal);
+bool TestBit(uint32_t nVal, uint32_t nBit);
+//QString ByteStr2Unicode(quint8* pBuf, uint32_t nBufLen);
+bool Str2Uint32(QString strVal, uint32_t nBase, uint32_t & nVal);
+//bool Uni2AscBuf(quint8* pBuf,QString strIn,uint32_t nMaxBytes,uint32_t &nOffsetBytes);
 
 // General Global Constants
-extern const unsigned glb_anZigZag[64];
-extern const unsigned glb_anUnZigZag[64];
-
-extern const unsigned glb_anQuantRotate[64];
-extern const unsigned glb_anStdQuantLum[64];
-extern const unsigned glb_anStdQuantChr[64];
+extern const uint32_t glb_anZigZag[64];
+extern const uint32_t glb_anUnZigZag[64];
+extern const uint32_t glb_anQuantRotate[64];
+extern const uint32_t glb_anStdQuantLum[64];
+extern const uint32_t glb_anStdQuantChr[64];
 
 #endif
