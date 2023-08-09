@@ -729,6 +729,7 @@ void CDbSigs::DatabaseExtraAdd(CString strExifMake,CString strExifModel,
 	}
 
 		// Now append it to the local database and resave
+		m_sSigListExtra[m_nSigListExtraNum].bValid = true;
 		m_sSigListExtra[m_nSigListExtraNum].strXMake    = strExifMake;
 		m_sSigListExtra[m_nSigListExtraNum].strXModel   = strExifModel;
 		m_sSigListExtra[m_nSigListExtraNum].strUmQual   = strQual;
@@ -860,7 +861,6 @@ void CDbSigs::SetEntryValid(unsigned nInd,bool bValid)
 	ASSERT(nInd < m_nSigListExtraNum);
 	m_sSigListExtra[nInd].bValid = bValid;
 }
-
 
 unsigned CDbSigs::GetIjgNum()
 {
